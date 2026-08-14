@@ -6,6 +6,9 @@ import { Truss } from './elements/Truss';
 import { Purlins } from './elements/Purlins';
 import { PurlinBracing } from './elements/PurlinBracing';
 import { CrossBracing } from './elements/CrossBracing';
+import { BasePlates } from './elements/BasePlates';
+import { EndPlates } from './elements/EndPlates';
+import { RidgePlates } from './elements/RidgePlates';
 import type { HallParameters, CalculationResults } from '../types';
 
 interface HallModelProps {
@@ -33,6 +36,7 @@ export const HallModel = React.memo(function HallModel({ params, results }: Hall
     trussHeight,
     numberOfFrames,
     ridgeHeight,
+    connectionPlates,
   } = results;
 
   // Offset the model so it's roughly centered for better camera viewing
@@ -115,6 +119,33 @@ export const HallModel = React.memo(function HallModel({ params, results }: Hall
         numberOfFrames={numberOfFrames}
         hallLength={hallLength}
         bracingDiameter={bracingDiameter}
+      />
+
+      {/* Connection plates */}
+      <BasePlates
+        sideColumnProfile={sideColumnProfile}
+        endColumnProfile={endColumnProfile}
+        wallHeight={wallHeight}
+        span={span}
+        length={hallLength}
+        columnSpacing={columnSpacing}
+        numberOfFrames={numberOfFrames}
+        ridgeHeight={ridgeHeight}
+        connectionPlates={connectionPlates}
+      />
+      <EndPlates
+        wallHeight={wallHeight}
+        span={span}
+        columnSpacing={columnSpacing}
+        numberOfFrames={numberOfFrames}
+        connectionPlates={connectionPlates}
+      />
+      <RidgePlates
+        span={span}
+        columnSpacing={columnSpacing}
+        numberOfFrames={numberOfFrames}
+        ridgeHeight={ridgeHeight}
+        connectionPlates={connectionPlates}
       />
     </group>
   );

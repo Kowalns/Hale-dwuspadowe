@@ -32,3 +32,10 @@ export const bracingMaterial = new THREE.MeshStandardMaterial({
   metalness: 0.85,
   roughness: 0.3,
 });
+
+// Connection plates - darker gray
+export const plateMaterial = new THREE.MeshStandardMaterial({
+  color: 0x374151,
+  metalness: 0.85,
+  roughness: 0.3,
+});

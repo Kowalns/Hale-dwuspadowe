@@ -74,7 +74,7 @@ interface FormPanelProps {
   onCustomTrussHeightChange?: (height: number | null) => void;
 }
 
-export function FormPanel({ params, onParamsChange, profileOverrides, onProfileOverridesChange: _onProfileOverridesChange, rafterType, onRafterTypeChange: _onRafterTypeChange, customTrussHeight, onCustomTrussHeightChange: _onCustomTrussHeightChange }: FormPanelProps) {
+export function FormPanel({ params, onParamsChange, profileOverrides, onProfileOverridesChange, rafterType, onRafterTypeChange, customTrussHeight, onCustomTrussHeightChange }: FormPanelProps) {
   const { t } = useTranslation();
   const [wizardMode, setWizardMode] = useState(true);
   const [wizardStep, setWizardStep] = useState(0);
@@ -251,6 +251,69 @@ export function FormPanel({ params, onParamsChange, profileOverrides, onProfileO
     </div>
   );
 
+  // Determine if truss is active based on rafterType and span
+  const currentRafterType = rafterType ?? 'auto';
+  const isTrussActive = currentRafterType === 'force_truss' || (currentRafterType === 'auto' && params.span > 18);
+  const trussHeightMin = Math.round((params.span / 15) * 10) / 10;
+  const trussHeightMax = Math.round((params.span / 8) * 10) / 10;
+  const trussHeightDefault = Math.round((params.span / 10) * 10) / 10;
+  const currentTrussHeight = customTrussHeight ?? trussHeightDefault;
+
+  const RafterTypeSection = (
+    <div className="space-y-3">
+      <h3 className="text-xs font-mono font-bold text-text-primary uppercase tracking-wider border-b border-dark-tertiary pb-1">
+        {t('rafterType.title')}
+      </h3>
+      {/* Radio buttons for rafter type */}
+      <div className="space-y-1.5">
+        {(['auto', 'force_truss', 'force_rafter'] as const).map((type) => (
+          <label key={type} className="flex items-center gap-1.5 cursor-pointer">
+            <input
+              type="radio"
+              name="rafterType"
+              value={type}
+              checked={currentRafterType === type}
+              onChange={() => onRafterTypeChange?.(type)}
+              className="accent-accent-orange"
+            />
+            <span className="text-xs font-mono text-text-secondary">
+              {t(`rafterType.${type === 'force_truss' ? 'forceTruss' : type === 'force_rafter' ? 'forceRafter' : 'auto'}`)}
+            </span>
+          </label>
+        ))}
+      </div>
+      {/* Warning for forced IPE rafter with large span */}
+      {currentRafterType === 'force_rafter' && params.span > 18 && (
+        <p className="text-xs font-mono text-red-400">
+          ⚠️ {t('rafterType.spanWarning')}
+        </p>
+      )}
+      {/* Truss height slider when truss is active */}
+      {isTrussActive && (
+        <div className="space-y-1">
+          <div className="flex justify-between items-center">
+            <label className="text-xs text-text-secondary font-mono">{t('rafterType.trussHeight')}</label>
+            <span className="text-xs text-accent-orange font-mono font-bold">
+              {currentTrussHeight.toFixed(1)} m ({(currentTrussHeight * 1000).toFixed(0)} mm)
+            </span>
+          </div>
+          <input
+            type="range"
+            min={trussHeightMin}
+            max={trussHeightMax}
+            step={0.1}
+            value={currentTrussHeight}
+            onChange={(e) => onCustomTrussHeightChange?.(Number(e.target.value))}
+            className="w-full h-1.5 bg-dark-tertiary rounded-lg appearance-none cursor-pointer accent-accent-orange"
+          />
+          <p className="text-[10px] text-text-secondary font-mono">
+            {t('rafterType.trussHeightRange', { min: trussHeightMin.toFixed(1), max: trussHeightMax.toFixed(1) })}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+
   const renderWizardContent = () => {
     switch (wizardStep) {
       case 0:
@@ -327,6 +390,10 @@ export function FormPanel({ params, onParamsChange, profileOverrides, onProfileO
                 {t('wizard.next')}
               </button>
             </div>
+
+            {/* Rafter type section - always visible in wizard mode */}
+            <div className="my-3 border-t border-dark-tertiary" />
+            {RafterTypeSection}
           </>
         ) : (
           <>
@@ -335,12 +402,18 @@ export function FormPanel({ params, onParamsChange, profileOverrides, onProfileO
             {LoadsSection}
             <div className="my-3 border-t border-dark-tertiary" />
             {MaterialsSection}
+            <div className="my-3 border-t border-dark-tertiary" />
+            {RafterTypeSection}
           </>
         )}
 
         {/* Results - always visible */}
         <div className="mt-4 pt-3 border-t border-dark-tertiary">
-          <ResultsPanel results={results} />
+          <ResultsPanel
+            results={results}
+            profileOverrides={profileOverrides}
+            onProfileOverridesChange={onProfileOverridesChange}
+          />
         </div>
       </div>
     </div>
