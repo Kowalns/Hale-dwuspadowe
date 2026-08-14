@@ -91,6 +91,34 @@
       "strength": "Bending"
     }
   },
+  "connectionPlates": {
+    "title": "Connection plates",
+    "basePlate": "Base plate",
+    "endPlate": "End plate",
+    "ridgePlate": "Ridge plate",
+    "totalPlateMass": "Total plate mass",
+    "anchors": "Anchors",
+    "bolts": "Bolts",
+    "thickness": "Thickness",
+    "dimensions": "Dimensions",
+    "count": "Count"
+  },
+  "override": {
+    "manualOverride": "Manual profile override",
+    "resetToCalculated": "Reset to calculated",
+    "manuallyChanged": "Manually changed",
+    "overUtilized": "Over-utilized",
+    "utilizationWarning": "Utilization ratio > 1.0"
+  },
+  "rafterType": {
+    "title": "Rafter type",
+    "auto": "Automatic",
+    "forceTruss": "Force truss",
+    "forceRafter": "Force IPE rafter",
+    "trussHeight": "Truss height",
+    "trussHeightRange": "Range: {{min}} - {{max}} m",
+    "spanWarning": "Span > 18m, truss recommended"
+  },
   "sections": {
     "geometry": "Geometry",
     "materials": "Materials",

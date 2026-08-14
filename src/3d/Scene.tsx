@@ -1,7 +1,14 @@
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Grid } from '@react-three/drei'
+import { HallModel } from './HallModel'
+import type { HallParameters, CalculationResults } from '../types'
 
-function SceneContent() {
+interface SceneProps {
+  params: HallParameters;
+  results: CalculationResults;
+}
+
+function SceneContent({ params, results }: SceneProps) {
   return (
     <>
       {/* Lighting */}
@@ -34,6 +41,9 @@ function SceneContent() {
         infiniteGrid
       />
 
+      {/* 3D Hall Model */}
+      <HallModel params={params} results={results} />
+
       {/* Camera controls */}
       <OrbitControls
         makeDefault
@@ -47,7 +57,7 @@ function SceneContent() {
   )
 }
 
-export function Scene() {
+export function Scene({ params, results }: SceneProps) {
   return (
     <Canvas
       shadows
@@ -55,7 +65,7 @@ export function Scene() {
       gl={{ antialias: true }}
       className="w-full h-full"
     >
-      <SceneContent />
+      <SceneContent params={params} results={results} />
     </Canvas>
   )
 }

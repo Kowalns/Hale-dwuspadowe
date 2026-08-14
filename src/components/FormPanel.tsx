@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { HallParameters, CoveringType, SteelGrade, TerrainCategory, SnowExposure } from '../types';
+import type { HallParameters, CoveringType, SteelGrade, TerrainCategory, SnowExposure, ProfileOverrides, RafterType } from '../types';
 import { useHallCalculations } from '../hooks/useHallCalculations';
 import { ResultsPanel } from './ResultsPanel';
 
@@ -66,14 +66,20 @@ function SliderInput({ label, value, min, max, step, unit, onChange }: SliderInp
 interface FormPanelProps {
   params: HallParameters;
   onParamsChange: (params: HallParameters) => void;
+  profileOverrides?: ProfileOverrides;
+  onProfileOverridesChange?: (overrides: ProfileOverrides) => void;
+  rafterType?: RafterType;
+  onRafterTypeChange?: (type: RafterType) => void;
+  customTrussHeight?: number | null;
+  onCustomTrussHeightChange?: (height: number | null) => void;
 }
 
-export function FormPanel({ params, onParamsChange }: FormPanelProps) {
+export function FormPanel({ params, onParamsChange, profileOverrides, onProfileOverridesChange: _onProfileOverridesChange, rafterType, onRafterTypeChange: _onRafterTypeChange, customTrussHeight, onCustomTrussHeightChange: _onCustomTrussHeightChange }: FormPanelProps) {
   const { t } = useTranslation();
   const [wizardMode, setWizardMode] = useState(true);
   const [wizardStep, setWizardStep] = useState(0);
 
-  const results = useHallCalculations(params);
+  const results = useHallCalculations(params, profileOverrides, rafterType, customTrussHeight);
 
   const updateParam = <K extends keyof HallParameters>(key: K, value: HallParameters[K]) => {
     onParamsChange({ ...params, [key]: value });

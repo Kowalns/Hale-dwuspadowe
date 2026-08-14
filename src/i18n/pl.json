@@ -91,6 +91,34 @@
       "strength": "Zginanie"
     }
   },
+  "connectionPlates": {
+    "title": "Blachy polaczeniowe",
+    "basePlate": "Blacha stopowa",
+    "endPlate": "Blacha czolowa",
+    "ridgePlate": "Blacha kalenicowa",
+    "totalPlateMass": "Laczna masa blach",
+    "anchors": "Kotwy",
+    "bolts": "Sruby",
+    "thickness": "Grubosc",
+    "dimensions": "Wymiary",
+    "count": "Ilosc"
+  },
+  "override": {
+    "manualOverride": "Reczna zmiana profilu",
+    "resetToCalculated": "Resetuj do obliczonego",
+    "manuallyChanged": "Zmieniony recznie",
+    "overUtilized": "Przekroczona nosnosc",
+    "utilizationWarning": "Wspolczynnik wykorzystania > 1.0"
+  },
+  "rafterType": {
+    "title": "Typ wiezara",
+    "auto": "Automatyczny",
+    "forceTruss": "Wymusz kratownice",
+    "forceRafter": "Wymusz rygiel IPE",
+    "trussHeight": "Wysokosc kratownicy",
+    "trussHeightRange": "Zakres: {{min}} - {{max}} m",
+    "spanWarning": "Rozpietosc > 18m, zalecana kratownica"
+  },
   "sections": {
     "geometry": "Geometria",
     "materials": "Materialy",

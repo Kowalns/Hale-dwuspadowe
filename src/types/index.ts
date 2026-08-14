@@ -2,6 +2,31 @@ export type SteelGrade = 'S235' | 'S355';
 export type CoveringType = 'sheet' | 'sandwich';
 export type TerrainCategory = 1 | 2 | 3 | 4;
 export type SnowExposure = 'windy' | 'normal' | 'sheltered';
+export type RafterType = 'auto' | 'force_truss' | 'force_rafter';
+
+export interface ProfileOverrides {
+  sideColumn?: string;
+  endColumn?: string;
+  rafter?: string;
+  trussChord?: string;
+  purlin?: string;
+}
+
+export interface ConnectionPlateInfo {
+  width: number; // mm
+  height: number; // mm
+  thickness: number; // mm
+  mass: number; // kg per plate
+  count: number;
+  bolts: string; // description
+}
+
+export interface ConnectionPlateResults {
+  basePlate: ConnectionPlateInfo;
+  endPlate: ConnectionPlateInfo;
+  ridgePlate: ConnectionPlateInfo;
+  totalMass: number; // total kg for all plates
+}
 
 export interface HallParameters {
   span: number; // 10-30m
@@ -59,4 +84,7 @@ export interface CalculationResults {
   rafterDeflectionLimit: number; // mm
   deflectionCheck: boolean; // true = OK
   stabilityCheck: boolean; // true = OK
+  // Connection plates
+  connectionPlates: ConnectionPlateResults;
+  totalSteelMass: number; // total kg including plates
 }
