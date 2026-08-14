@@ -1,0 +1,46 @@
+{
+  "id": "FEAT-003",
+  "type": "feat",
+  "description": "Complete 3D structural model with semi-realistic profiles rendered using React Three Fiber. Displays all structural elements (side columns, end columns, rafters/trusses, purlins, bracing) with proper profile shapes, camera presets, and shadows. Model updates in real-time as form parameters change.",
+  "status": "completed",
+  "steps": [
+    "Create src/3d/profiles/IBeamGeometry.tsx - custom geometry for IPE/H-beam profiles with actual I-shape cross-section (flanges + web) extruded along length. Parametric based on h, b, tw, tf dimensions from profile data.",
+    "Create src/3d/profiles/RHSGeometry.tsx - hollow rectangular/square tube geometry with wall thickness. Parametric based on width, height, thickness.",
+    "Create src/3d/profiles/ZProfileGeometry.tsx - Z-shaped cold-formed profile geometry with flanges and web at angle.",
+    "Create src/3d/profiles/RoundBarGeometry.tsx - simple cylinder geometry for bracing rods (diameter 12/16/20mm).",
+    "Create src/3d/profiles/SquareTubeGeometry.tsx - square tube for truss chords, similar to RHS but optimized for truss elements.",
+    "Create src/3d/elements/SideColumns.tsx - renders side columns (IPE) along both long walls at calculated spacing. Columns are vertical, height = wallHeight.",
+    "Create src/3d/elements/EndColumns.tsx - renders gable end columns (RHS/SHS) on both short walls. Intermediate columns between corner columns, height varies from wallHeight at edges to ridge at center.",
+    "Create src/3d/elements/Rafter.tsx - for span<=18m: single IPE beam from wall top to ridge on each side. Angled at roof pitch. One pair per frame at each column position.",
+    "Create src/3d/elements/Truss.tsx - for span>18m: parallel chord truss with top chord following roof slope, bottom chord horizontal (or slight slope), vertical and diagonal web members (cross pattern) between chords. Square tube profiles. One truss per frame.",
+    "Create src/3d/elements/Purlins.tsx - Z-profile purlins running along building length on each roof slope. Spaced at calculated purlin spacing. Positioned perpendicular to roof slope.",
+    "Create src/3d/elements/PurlinBracing.tsx - small rectangular profiles (40x20x2) connecting purlins at mid-span, running between adjacent purlins on each slope.",
+    "Create src/3d/elements/CrossBracing.tsx - diagonal rod bracing (round bars) in X-pattern in first and last bay on both roof slopes and side walls.",
+    "Create src/3d/HallModel.tsx - main component assembling all structural elements. Receives HallParameters and CalculationResults as props. Positions everything correctly in 3D space with proper coordinate system.",
+    "Create src/3d/Scene.tsx - complete scene with: HallModel, ground plane, directional light with shadows, ambient light, OrbitControls, perspective camera.",
+    "Create src/components/ViewPresets.tsx - buttons for camera preset views: Perspective (isometric), Front (looking at gable end), Side (looking along length), Top (plan view). Uses camera position/target manipulation.",
+    "Add shadow casting/receiving to all structural elements and ground plane. Configure shadow map quality.",
+    "Connect form state to 3D model: when any parameter changes, CalculationResults update via useHallCalculations hook, and 3D model re-renders with new geometry/positions.",
+    "Add steel material with metallic appearance (slightly reflective gray) for all structural elements. Different shade for different element types for visual clarity.",
+    "Ensure performance: use instanced meshes where possible for repeated elements (purlins, bracing), memoize geometries that don't change frequently."
+  ],
+  "acceptance_criteria": [
+    "3D model shows all 6 element types: side columns, end columns, rafters or trusses, purlins, purlin ties, cross bracing",
+    "Changing span from 15m to 20m switches model from solid rafters to truss display",
+    "Changing length updates number of frames and column count in real-time",
+    "Column spacing visually matches calculated spacing (e.g., 48m length shows 10 equal bays)",
+    "IPE profiles have visible I-beam shape (not just boxes)",
+    "Truss shows clear chord and web member structure",
+    "Camera presets (Perspective/Front/Side/Top) work correctly",
+    "Orbit controls allow rotation, zoom, and pan",
+    "Shadows are visible on ground plane",
+    "pnpm build completes without errors",
+    "No visible z-fighting or geometry artifacts"
+  ],
+  "verification": [
+    "pnpm build",
+    "npx tsc --noEmit"
+  ],
+  "blocked_reason": null,
+  "findings": "three-stdlib types are available as a transitive dependency via @react-three/drei but not directly importable. Used ref typing with 'any' for OrbitControls ref instead. All geometry components use useMemo hooks for performance. ExtrudeGeometry extrudes along local Z axis - columns need rotation [-PI/2, 0, 0] to orient vertically. Purlins need rotation around Y to align extrusion with building length (X axis). fs_write tool writes to /projects/sandbox/ workspace, not /root/ where the git repo lives - had to use bash heredocs for file creation."
+}
