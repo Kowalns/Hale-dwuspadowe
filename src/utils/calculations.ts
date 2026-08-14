@@ -48,15 +48,6 @@ const yieldStrength: Record<string, number> = {
 const DEFAULT_RAFTER_I = 8356; // cm4 (IPE 300)
 
 /**
- * Select Z purlin by load capacity.
- */
-function selectPurlinByLoad(loadPerMeter: number): SteelProfile {
-  const sorted = [...zProfiles].sort((a, b) => (a.load_capacity ?? 0) - (b.load_capacity ?? 0));
-  const selected = sorted.find((p) => (p.load_capacity ?? 0) >= loadPerMeter);
-  return selected ?? sorted[sorted.length - 1];
-}
-
-/**
  * Select bracing diameter based on total loads.
  * Light: 12mm, Standard: 16mm, Heavy: 20mm
  */
@@ -364,36 +355,82 @@ function selectTrussChord(
 }
 
 /**
- * Select purlin (Z profile) based on load (ULS factored).
- * purlinType: 'continuous' reduces load requirement by 20%
+ * Select purlin (Z profile) based on snow zone and purlin spacing.
+ * Rules:
+ * - Z 200x68x60 for snow zones 3-5 OR purlinSpacing > 2.2m
+ * - Z 150x68x60 for lighter cases (snow zones 1-2 AND purlinSpacing <= 2.2m)
+ * For continuous purlins: effective capacity is 1.25x, mass multiplier is 1.12
  */
-function selectPurlin(params: HallParameters, purlinSpacing: number): { profile: SteelProfile; purlinType: 'single' | 'continuous'; purlinCostHint: string | null } {
-  const snowLoad = snowZoneLoads[params.snowZone] ?? 0.9;
-  const selfWeight = coveringSelfWeight[params.coveringType] ?? 0.15;
+function selectPurlin(params: HallParameters, purlinSpacing: number): { profile: SteelProfile; purlinType: 'single' | 'continuous' } {
   const purlinType = params.purlinType ?? 'single';
-  // ULS factored load for purlin selection
-  const loadPerMeter = (1.35 * selfWeight + 1.5 * snowLoad) * purlinSpacing;
+  const z200 = zProfiles.find(p => p.name === 'Z 200x68x60')!;
+  const z150 = zProfiles.find(p => p.name === 'Z 150x68x60')!;
 
-  // For continuous purlins, reduce load requirement by 20%
-  const effectiveLoad = purlinType === 'continuous' ? loadPerMeter * 0.8 : loadPerMeter;
-  const profile = selectPurlinByLoad(effectiveLoad);
+  // Selection logic for single purlins
+  const needsHeavy = params.snowZone >= 3 || purlinSpacing > 2.2;
 
-  // Generate purlin cost hint: compare single vs continuous mass
-  const singleProfile = selectPurlinByLoad(loadPerMeter);
-  const continuousProfile = selectPurlinByLoad(loadPerMeter * 0.8);
-  const singleMass = singleProfile.mass;
-  const continuousMass = continuousProfile.mass * 1.12; // 12% increase for continuous
+  let profile: SteelProfile;
+  if (purlinType === 'continuous') {
+    // Continuous purlins have 1.25x effective capacity, so a lighter profile may suffice
+    // Check if Z 150 with 1.25x capacity covers the load even in heavy conditions
+    const snowLoad = snowZoneLoads[params.snowZone] ?? 0.9;
+    const selfWeight = coveringSelfWeight[params.coveringType] ?? 0.15;
+    const loadPerMeter = (1.35 * selfWeight + 1.5 * snowLoad) * purlinSpacing;
+    const z150EffectiveCapacity = (z150.load_capacity ?? 0) * 1.25;
 
-  let purlinCostHint: string | null = null;
-  if (singleMass !== continuousMass) {
-    if (continuousMass < singleMass) {
-      purlinCostHint = `continuous_cheaper`;
+    if (z150EffectiveCapacity >= loadPerMeter) {
+      profile = z150;
     } else {
-      purlinCostHint = `single_cheaper`;
+      profile = z200;
     }
+  } else {
+    // Single purlin: direct zone/spacing rule
+    profile = needsHeavy ? z200 : z150;
   }
 
-  return { profile, purlinType, purlinCostHint };
+  return { profile, purlinType };
+}
+
+/**
+ * Compute purlin cost hint by comparing total mass for single vs continuous options.
+ * Returns null if the difference is within 3%.
+ */
+function computePurlinCostHint(
+  params: HallParameters,
+  purlinSpacing: number,
+  hallLength: number,
+  numPurlinsPerSlope: number
+): string | null {
+  const z200 = zProfiles.find(p => p.name === 'Z 200x68x60')!;
+  const z150 = zProfiles.find(p => p.name === 'Z 150x68x60')!;
+
+  const needsHeavy = params.snowZone >= 3 || purlinSpacing > 2.2;
+
+  // Single option profile selection
+  const singleProfile = needsHeavy ? z200 : z150;
+  const singleTotalMass = singleProfile.mass * hallLength * numPurlinsPerSlope * 2;
+
+  // Continuous option profile selection
+  const snowLoad = snowZoneLoads[params.snowZone] ?? 0.9;
+  const selfWeight = coveringSelfWeight[params.coveringType] ?? 0.15;
+  const loadPerMeter = (1.35 * selfWeight + 1.5 * snowLoad) * purlinSpacing;
+  const z150EffCap = (z150.load_capacity ?? 0) * 1.25;
+  const continuousProfile = z150EffCap >= loadPerMeter ? z150 : z200;
+  const continuousTotalMass = continuousProfile.mass * hallLength * numPurlinsPerSlope * 2 * 1.12;
+
+  const diff = Math.abs(singleTotalMass - continuousTotalMass);
+  const threshold = Math.max(singleTotalMass, continuousTotalMass) * 0.03;
+
+  if (diff <= threshold) {
+    return null;
+  }
+
+  const savedKg = Math.round(diff);
+  if (singleTotalMass < continuousTotalMass) {
+    return `single_lighter_${savedKg}`;
+  } else {
+    return `continuous_lighter_${savedKg}`;
+  }
 }
 
 /**
@@ -653,7 +690,6 @@ export function calculateHallStructure(params: HallParameters): CalculationResul
   const purlinResult = selectPurlin(params, purlinSpacing);
   const purlinProfile = purlinResult.profile;
   const purlinType = purlinResult.purlinType;
-  const purlinCostHint = purlinResult.purlinCostHint;
 
   // --- Select bracing ---
   const bracingDiameter = selectBracing(params, columnSpacing);
@@ -677,6 +713,9 @@ export function calculateHallStructure(params: HallParameters): CalculationResul
   const numPurlinsPerSlope = Math.ceil(roofSlopeLength / purlinSpacing) + 1;
   const purlinMassMultiplier = purlinType === 'continuous' ? 1.12 : 1.0;
   const purlinMass = purlinProfile.mass * params.length * numPurlinsPerSlope * 2 * purlinMassMultiplier;
+
+  // --- Purlin cost hint ---
+  const purlinCostHint = computePurlinCostHint(params, purlinSpacing, params.length, numPurlinsPerSlope);
 
   // --- New structural elements ---
   const eaveBeamProfile = selectEaveBeam();
@@ -709,9 +748,29 @@ export function calculateHallStructure(params: HallParameters): CalculationResul
     params.span
   );
 
+  // --- Bracing rod mass ---
+  // Calculate total bracing length (side walls + roof bracing in first/last bay)
+  // Side wall bracing: 4 diagonals per bay * 2 bays * 2 sides = 16 diagonals
+  const wallDiagonalLength = Math.sqrt(columnSpacing * columnSpacing + (params.wallHeight / 2) * (params.wallHeight / 2));
+  const sideWallBracingCount = 16; // 4 per bay (2 halves * 2 diags) * 2 bays * 2 sides
+  // Roof bracing: 2 diagonals per slope * 2 slopes * 2 bays = 8 diagonals
+  const roofBraceDiagLength = Math.sqrt(columnSpacing * columnSpacing + (roofSlopeLength / 2) * (roofSlopeLength / 2));
+  const roofBracingCount = 8;
+  // Gable wall bracing: estimate 4 diagonals per gable * 2 gables = 8 diagonals
+  const targetSpacing = 3.0;
+  const nEndCols = Math.max(1, Math.round(params.span / targetSpacing) - 1);
+  const gableColSpacing = params.span / (nEndCols + 1);
+  const gableDiagonalLength = Math.sqrt(gableColSpacing * gableColSpacing + params.wallHeight * params.wallHeight);
+  const gableBracingCount = 8; // approximate: 2 diags * 2 bays (or 1) * 2 gables
+  const totalBracingLength = sideWallBracingCount * wallDiagonalLength + roofBracingCount * roofBraceDiagLength + gableBracingCount * gableDiagonalLength;
+  // Bracing rod mass: area (m2) * length (m) * density (7850 kg/m3)
+  const bracingRadiusM = (bracingDiameter / 1000) / 2;
+  const bracingArea = Math.PI * bracingRadiusM * bracingRadiusM; // m2
+  const bracingMass = bracingArea * totalBracingLength * 7850; // kg
+
   const totalSteelMass = sideColumnMass + endColumnMass + rafterMass + purlinMass +
     eaveBeamMass + wallGirtMass + gableGirtMass + intermediateColumnMass +
-    connectionPlates.totalMass;
+    bracingMass + connectionPlates.totalMass;
   const steelMassPerM2 = totalSteelMass / floorArea;
 
   // --- Deflection checks ---
@@ -994,9 +1053,23 @@ export function calculateWithOverrides(
     params.span
   );
 
+  // Bracing rod mass (same logic as in calculateHallStructure)
+  const bracingDiam = results.bracingDiameter;
+  const bracingRadiusM = (bracingDiam / 1000) / 2;
+  const bracingAreaCalc = Math.PI * bracingRadiusM * bracingRadiusM;
+  const wallDiagLen = Math.sqrt(colSpacing * colSpacing + (params.wallHeight / 2) * (params.wallHeight / 2));
+  const roofSlopeLenCalc = calculateRoofSlopeLength(params.span, params.roofAngle);
+  const roofDiagLen = Math.sqrt(colSpacing * colSpacing + (roofSlopeLenCalc / 2) * (roofSlopeLenCalc / 2));
+  const targetSpacingCalc = 3.0;
+  const nEndColsCalc = Math.max(1, Math.round(params.span / targetSpacingCalc) - 1);
+  const gableColSpacingCalc = params.span / (nEndColsCalc + 1);
+  const gableDiagLen = Math.sqrt(gableColSpacingCalc * gableColSpacingCalc + params.wallHeight * params.wallHeight);
+  const totalBracingLen = 16 * wallDiagLen + 8 * roofDiagLen + 8 * gableDiagLen;
+  const bracingMass = bracingAreaCalc * totalBracingLen * 7850;
+
   const totalSteelMass = sideColumnMass + endColumnMass + rafterMass + purlinMass +
     eaveBeamMass + wallGirtMass + gableGirtMass + intermediateColumnMass +
-    connectionPlates.totalMass;
+    bracingMass + connectionPlates.totalMass;
   results.connectionPlates = connectionPlates;
   results.totalSteelMass = totalSteelMass;
   results.steelMassPerM2 = totalSteelMass / floorArea;

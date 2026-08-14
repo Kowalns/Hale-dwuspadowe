@@ -117,6 +117,47 @@ export const CrossBracing = React.memo(function CrossBracing({
       });
     }
 
+    // Gable wall (end wall) bracing at X=0 and X=hallLength
+    // Compute end column Z positions using the same targetSpacing=3m logic as EndColumns.tsx
+    const targetSpacing = 3.0;
+    const nEndCols = Math.max(1, Math.round(span / targetSpacing) - 1);
+    const endColPositions: number[] = [0]; // Start with Z=0 (corner)
+    for (let i = 1; i <= nEndCols; i++) {
+      endColPositions.push((i / (nEndCols + 1)) * span);
+    }
+    endColPositions.push(span); // End with Z=span (corner)
+
+    // Determine number of bays between end columns
+    const nGableBays = endColPositions.length - 1;
+    // Pick 1-2 central bays: if odd number of bays pick central one, if even pick central two
+    const centralBayIndices: number[] = [];
+    if (nGableBays % 2 === 1) {
+      // Odd: pick the middle bay
+      centralBayIndices.push(Math.floor(nGableBays / 2));
+    } else {
+      // Even: pick the two central bays
+      centralBayIndices.push(nGableBays / 2 - 1);
+      centralBayIndices.push(nGableBays / 2);
+    }
+
+    // Place X-bracing on both gable walls (X=0 and X=hallLength)
+    const gableXPositions = [0, hallLength];
+    for (const gableX of gableXPositions) {
+      for (const bayIdx of centralBayIndices) {
+        const zLeft = endColPositions[bayIdx];
+        const zRight = endColPositions[bayIdx + 1];
+        // Full-height X-bracing from ground to wallHeight
+        result.push({
+          start: new THREE.Vector3(gableX, 0, zLeft),
+          end: new THREE.Vector3(gableX, wallHeight, zRight),
+        });
+        result.push({
+          start: new THREE.Vector3(gableX, 0, zRight),
+          end: new THREE.Vector3(gableX, wallHeight, zLeft),
+        });
+      }
+    }
+
     return result;
   }, [wallHeight, span, roofAngle, ridgeHeight, columnSpacing, numberOfFrames, hallLength]);
 
