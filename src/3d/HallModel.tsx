@@ -56,7 +56,10 @@ export const HallModel = React.memo(function HallModel({ params, results }: Hall
 
   // Column flange offset: half the column profile width (b/2) in meters
   // This shifts rafters/trusses inward so they start at the inner flange surface
-  const columnFlangeOffset = sideColumnProfile.b / 2 / 1000;
+  const columnFlangeOffset = sideColumnProfile.b / 2 / 1000 + 0.015; // half-flange + 15mm end plate gap
+
+  // Rafter top offset: half the rafter/truss chord height in meters
+  const rafterTopOffset = ((rafterProfile?.h ?? trussChordProfile?.h ?? 200) / 2) / 1000;
 
   return (
     <group position={[offsetX, 0, offsetZ]}>
@@ -77,6 +80,7 @@ export const HallModel = React.memo(function HallModel({ params, results }: Hall
         roofAngle={roofAngle}
         columnSpacing={columnSpacing}
         numberOfFrames={numberOfFrames}
+        rafterTopOffset={rafterTopOffset}
       />
 
       {/* End columns on gable ends */}

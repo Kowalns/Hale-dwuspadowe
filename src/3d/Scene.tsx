@@ -49,9 +49,10 @@ function SceneContent({ params, results }: SceneProps) {
         makeDefault
         enableDamping
         dampingFactor={0.1}
-        minDistance={5}
-        maxDistance={100}
+        minDistance={2}
+        maxDistance={200}
         maxPolarAngle={Math.PI / 2.1}
+        zoomToCursor={true}
       />
     </>
   )

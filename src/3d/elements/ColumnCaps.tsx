@@ -9,6 +9,7 @@ interface ColumnCapsProps {
   roofAngle: number;
   columnSpacing: number;
   numberOfFrames: number;
+  rafterTopOffset: number;
 }
 
 /**
@@ -26,6 +27,7 @@ export const ColumnCaps = React.memo(function ColumnCaps({
   roofAngle,
   columnSpacing,
   numberOfFrames,
+  rafterTopOffset,
 }: ColumnCapsProps) {
   const roofAngleRad = (roofAngle * Math.PI) / 180;
 
@@ -49,7 +51,7 @@ export const ColumnCaps = React.memo(function ColumnCaps({
           {/* Left side (Z=0): plate tilted toward +Z (toward ridge) */}
           <mesh
             material={plateMaterial}
-            position={[x, wallHeight, 0]}
+            position={[x, wallHeight + rafterTopOffset - plateThickness / 2, 0]}
             rotation={[-roofAngleRad, 0, 0]}
             castShadow
             receiveShadow
@@ -59,7 +61,7 @@ export const ColumnCaps = React.memo(function ColumnCaps({
           {/* Right side (Z=span): plate tilted toward -Z (toward ridge) */}
           <mesh
             material={plateMaterial}
-            position={[x, wallHeight, span]}
+            position={[x, wallHeight + rafterTopOffset - plateThickness / 2, span]}
             rotation={[roofAngleRad, 0, 0]}
             castShadow
             receiveShadow
