@@ -12,7 +12,7 @@ function SceneContent({ params, results }: SceneProps) {
   return (
     <>
       {/* Lighting */}
-      <ambientLight intensity={0.4} />
+      <ambientLight intensity={0.7} />
       <directionalLight
         position={[10, 20, 10]}
         intensity={1.2}
@@ -33,10 +33,10 @@ function SceneContent({ params, results }: SceneProps) {
         args={[50, 50]}
         cellSize={1}
         cellThickness={0.5}
-        cellColor="#0f3460"
+        cellColor="#cbd5e1"
         sectionSize={5}
         sectionThickness={1}
-        sectionColor="#16213e"
+        sectionColor="#94a3b8"
         fadeDistance={50}
         infiniteGrid
       />
@@ -65,6 +65,7 @@ export function Scene({ params, results }: SceneProps) {
       gl={{ antialias: true }}
       className="w-full h-full"
     >
+      <color attach="background" args={['#f0f4f8']} />
       <SceneContent params={params} results={results} />
     </Canvas>
   )

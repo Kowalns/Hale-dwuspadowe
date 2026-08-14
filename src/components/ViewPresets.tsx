@@ -53,7 +53,7 @@ export function ViewPresets({ onSelectView, hallLength, hallSpan, ridgeHeight }:
         <button
           key={preset.key}
           onClick={() => onSelectView(preset)}
-          className="px-3 py-1.5 bg-dark-secondary/80 hover:bg-dark-tertiary border border-dark-tertiary rounded text-sm text-gray-300 hover:text-accent-orange transition-colors backdrop-blur-sm"
+          className="px-3 py-1.5 bg-white/80 hover:bg-surface-tertiary border border-border rounded text-sm text-text-primary hover:text-accent-blue transition-colors backdrop-blur-sm"
         >
           {preset.label}
         </button>

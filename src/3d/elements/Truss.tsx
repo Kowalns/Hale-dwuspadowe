@@ -147,7 +147,7 @@ function TrussFrame({
         geometry={topChordGeometry}
         material={rafterMaterial}
         position={[x, wallHeight + trussHeight, 0]}
-        rotation={[roofAngleRad, 0, 0]}
+        rotation={[-roofAngleRad, 0, 0]}
         castShadow
         receiveShadow
       />
@@ -156,7 +156,7 @@ function TrussFrame({
         geometry={topChordGeometry}
         material={rafterMaterial}
         position={[x, wallHeight + trussHeight, span]}
-        rotation={[-roofAngleRad, Math.PI, 0]}
+        rotation={[roofAngleRad, Math.PI, 0]}
         castShadow
         receiveShadow
       />

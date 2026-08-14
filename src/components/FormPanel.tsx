@@ -30,8 +30,8 @@ function SliderInput({ label, value, min, max, step, unit, onChange }: SliderInp
   return (
     <div className="space-y-1">
       <div className="flex justify-between items-center">
-        <label className="text-xs text-text-secondary font-mono">{label}</label>
-        <span className="text-xs text-accent-orange font-mono font-bold">
+        <label className="text-xs text-text-secondary font-sans">{label}</label>
+        <span className="text-xs text-accent-blue font-sans font-bold">
           {value}{unit}
         </span>
       </div>
@@ -43,7 +43,7 @@ function SliderInput({ label, value, min, max, step, unit, onChange }: SliderInp
           step={step}
           value={value}
           onChange={(e) => onChange(Number(e.target.value))}
-          className="flex-1 h-1.5 bg-dark-tertiary rounded-lg appearance-none cursor-pointer accent-accent-orange"
+          className="flex-1 h-1.5 bg-surface-tertiary rounded-lg appearance-none cursor-pointer accent-accent-blue"
         />
         <input
           type="number"
@@ -55,7 +55,7 @@ function SliderInput({ label, value, min, max, step, unit, onChange }: SliderInp
             const v = Number(e.target.value);
             if (v >= min && v <= max) onChange(v);
           }}
-          className="w-16 px-1.5 py-0.5 text-xs font-mono text-text-primary bg-dark-primary border border-dark-tertiary rounded focus:outline-none focus:ring-1 focus:ring-accent-orange"
+          className="w-16 px-1.5 py-0.5 text-xs font-sans text-text-primary bg-white border border-border rounded focus:outline-none focus:ring-1 focus:ring-accent-blue"
         />
       </div>
     </div>
@@ -91,7 +91,7 @@ export function FormPanel({ params, onParamsChange, results, profileOverrides, o
 
   const GeometrySection = (
     <div className="space-y-3">
-      <h3 className="text-xs font-mono font-bold text-text-primary uppercase tracking-wider border-b border-dark-tertiary pb-1">
+      <h3 className="text-xs font-sans font-bold text-text-primary uppercase tracking-wider border-b border-border pb-1">
         {t('sections.geometry')}
       </h3>
       <SliderInput
@@ -135,16 +135,16 @@ export function FormPanel({ params, onParamsChange, results, profileOverrides, o
 
   const LoadsSection = (
     <div className="space-y-3">
-      <h3 className="text-xs font-mono font-bold text-text-primary uppercase tracking-wider border-b border-dark-tertiary pb-1">
+      <h3 className="text-xs font-sans font-bold text-text-primary uppercase tracking-wider border-b border-border pb-1">
         {t('sections.loads')}
       </h3>
       {/* Snow zone */}
       <div className="space-y-1">
-        <label className="text-xs text-text-secondary font-mono">{t('form.snowZone')}</label>
+        <label className="text-xs text-text-secondary font-sans">{t('form.snowZone')}</label>
         <select
           value={params.snowZone}
           onChange={(e) => updateParam('snowZone', Number(e.target.value))}
-          className="w-full px-2 py-1.5 text-xs font-mono text-text-primary bg-dark-primary border border-dark-tertiary rounded focus:outline-none focus:ring-1 focus:ring-accent-orange"
+          className="w-full px-2 py-1.5 text-xs font-sans text-text-primary bg-white border border-border rounded focus:outline-none focus:ring-1 focus:ring-accent-blue"
         >
           {[1, 2, 3, 4, 5].map((zone) => (
             <option key={zone} value={zone}>
@@ -155,11 +155,11 @@ export function FormPanel({ params, onParamsChange, results, profileOverrides, o
       </div>
       {/* Wind zone */}
       <div className="space-y-1">
-        <label className="text-xs text-text-secondary font-mono">{t('form.windZone')}</label>
+        <label className="text-xs text-text-secondary font-sans">{t('form.windZone')}</label>
         <select
           value={params.windZone}
           onChange={(e) => updateParam('windZone', Number(e.target.value))}
-          className="w-full px-2 py-1.5 text-xs font-mono text-text-primary bg-dark-primary border border-dark-tertiary rounded focus:outline-none focus:ring-1 focus:ring-accent-orange"
+          className="w-full px-2 py-1.5 text-xs font-sans text-text-primary bg-white border border-border rounded focus:outline-none focus:ring-1 focus:ring-accent-blue"
         >
           {[1, 2, 3].map((zone) => (
             <option key={zone} value={zone}>
@@ -170,11 +170,11 @@ export function FormPanel({ params, onParamsChange, results, profileOverrides, o
       </div>
       {/* Terrain category */}
       <div className="space-y-1">
-        <label className="text-xs text-text-secondary font-mono">{t('form.terrainCategory')}</label>
+        <label className="text-xs text-text-secondary font-sans">{t('form.terrainCategory')}</label>
         <select
           value={params.terrainCategory ?? 2}
           onChange={(e) => updateParam('terrainCategory', Number(e.target.value) as TerrainCategory)}
-          className="w-full px-2 py-1.5 text-xs font-mono text-text-primary bg-dark-primary border border-dark-tertiary rounded focus:outline-none focus:ring-1 focus:ring-accent-orange"
+          className="w-full px-2 py-1.5 text-xs font-sans text-text-primary bg-white border border-border rounded focus:outline-none focus:ring-1 focus:ring-accent-blue"
         >
           {([1, 2, 3, 4] as TerrainCategory[]).map((cat) => (
             <option key={cat} value={cat}>
@@ -185,11 +185,11 @@ export function FormPanel({ params, onParamsChange, results, profileOverrides, o
       </div>
       {/* Snow exposure */}
       <div className="space-y-1">
-        <label className="text-xs text-text-secondary font-mono">{t('form.snowExposure')}</label>
+        <label className="text-xs text-text-secondary font-sans">{t('form.snowExposure')}</label>
         <select
           value={params.snowExposure ?? 'normal'}
           onChange={(e) => updateParam('snowExposure', e.target.value as SnowExposure)}
-          className="w-full px-2 py-1.5 text-xs font-mono text-text-primary bg-dark-primary border border-dark-tertiary rounded focus:outline-none focus:ring-1 focus:ring-accent-orange"
+          className="w-full px-2 py-1.5 text-xs font-sans text-text-primary bg-white border border-border rounded focus:outline-none focus:ring-1 focus:ring-accent-blue"
         >
           {(['windy', 'normal', 'sheltered'] as SnowExposure[]).map((exp) => (
             <option key={exp} value={exp}>
@@ -200,7 +200,7 @@ export function FormPanel({ params, onParamsChange, results, profileOverrides, o
       </div>
       {/* Covering type */}
       <div className="space-y-1">
-        <label className="text-xs text-text-secondary font-mono">{t('form.coveringType')}</label>
+        <label className="text-xs text-text-secondary font-sans">{t('form.coveringType')}</label>
         <div className="flex gap-3">
           {(['sheet', 'sandwich'] as CoveringType[]).map((type) => (
             <label key={type} className="flex items-center gap-1.5 cursor-pointer">
@@ -210,9 +210,9 @@ export function FormPanel({ params, onParamsChange, results, profileOverrides, o
                 value={type}
                 checked={params.coveringType === type}
                 onChange={() => updateParam('coveringType', type)}
-                className="accent-accent-orange"
+                className="accent-accent-blue"
               />
-              <span className="text-xs font-mono text-text-secondary">
+              <span className="text-xs font-sans text-text-secondary">
                 {t(`form.covering.${type}`)}
               </span>
             </label>
@@ -224,12 +224,12 @@ export function FormPanel({ params, onParamsChange, results, profileOverrides, o
 
   const MaterialsSection = (
     <div className="space-y-3">
-      <h3 className="text-xs font-mono font-bold text-text-primary uppercase tracking-wider border-b border-dark-tertiary pb-1">
+      <h3 className="text-xs font-sans font-bold text-text-primary uppercase tracking-wider border-b border-border pb-1">
         {t('sections.materials')}
       </h3>
       {/* Steel grade */}
       <div className="space-y-1">
-        <label className="text-xs text-text-secondary font-mono">{t('form.steelGrade')}</label>
+        <label className="text-xs text-text-secondary font-sans">{t('form.steelGrade')}</label>
         <div className="flex gap-3">
           {(['S235', 'S355'] as SteelGrade[]).map((grade) => (
             <label key={grade} className="flex items-center gap-1.5 cursor-pointer">
@@ -239,16 +239,16 @@ export function FormPanel({ params, onParamsChange, results, profileOverrides, o
                 value={grade}
                 checked={params.steelGrade === grade}
                 onChange={() => updateParam('steelGrade', grade)}
-                className="accent-accent-orange"
+                className="accent-accent-blue"
               />
-              <span className="text-xs font-mono text-text-secondary">{grade}</span>
+              <span className="text-xs font-sans text-text-secondary">{grade}</span>
             </label>
           ))}
         </div>
       </div>
       {/* Purlin type */}
       <div className="space-y-1">
-        <label className="text-xs text-text-secondary font-mono">{t('form.purlinType')}</label>
+        <label className="text-xs text-text-secondary font-sans">{t('form.purlinType')}</label>
         <div className="flex gap-3">
           {(['single', 'continuous'] as const).map((type) => (
             <label key={type} className="flex items-center gap-1.5 cursor-pointer">
@@ -258,9 +258,9 @@ export function FormPanel({ params, onParamsChange, results, profileOverrides, o
                 value={type}
                 checked={(params.purlinType ?? 'single') === type}
                 onChange={() => updateParam('purlinType', type)}
-                className="accent-accent-orange"
+                className="accent-accent-blue"
               />
-              <span className="text-xs font-mono text-text-secondary">
+              <span className="text-xs font-sans text-text-secondary">
                 {t(`form.purlinTypes.${type}`)}
               </span>
             </label>
@@ -280,7 +280,7 @@ export function FormPanel({ params, onParamsChange, results, profileOverrides, o
 
   const RafterTypeSection = (
     <div className="space-y-3">
-      <h3 className="text-xs font-mono font-bold text-text-primary uppercase tracking-wider border-b border-dark-tertiary pb-1">
+      <h3 className="text-xs font-sans font-bold text-text-primary uppercase tracking-wider border-b border-border pb-1">
         {t('rafterType.title')}
       </h3>
       {/* Radio buttons for rafter type */}
@@ -293,9 +293,9 @@ export function FormPanel({ params, onParamsChange, results, profileOverrides, o
               value={type}
               checked={currentRafterType === type}
               onChange={() => onRafterTypeChange?.(type)}
-              className="accent-accent-orange"
+              className="accent-accent-blue"
             />
-            <span className="text-xs font-mono text-text-secondary">
+            <span className="text-xs font-sans text-text-secondary">
               {t(`rafterType.${type === 'force_truss' ? 'forceTruss' : type === 'force_rafter' ? 'forceRafter' : 'auto'}`)}
             </span>
           </label>
@@ -303,7 +303,7 @@ export function FormPanel({ params, onParamsChange, results, profileOverrides, o
       </div>
       {/* Warning for forced IPE rafter with large span */}
       {currentRafterType === 'force_rafter' && params.span > 18 && (
-        <p className="text-xs font-mono text-red-400">
+        <p className="text-xs font-sans text-red-400">
           ⚠️ {t('rafterType.spanWarning')}
         </p>
       )}
@@ -311,8 +311,8 @@ export function FormPanel({ params, onParamsChange, results, profileOverrides, o
       {isTrussActive && (
         <div className="space-y-1">
           <div className="flex justify-between items-center">
-            <label className="text-xs text-text-secondary font-mono">{t('rafterType.trussHeight')}</label>
-            <span className="text-xs text-accent-orange font-mono font-bold">
+            <label className="text-xs text-text-secondary font-sans">{t('rafterType.trussHeight')}</label>
+            <span className="text-xs text-accent-blue font-sans font-bold">
               {currentTrussHeight.toFixed(1)} m ({(currentTrussHeight * 1000).toFixed(0)} mm)
             </span>
           </div>
@@ -323,9 +323,9 @@ export function FormPanel({ params, onParamsChange, results, profileOverrides, o
             step={0.1}
             value={currentTrussHeight}
             onChange={(e) => onCustomTrussHeightChange?.(Number(e.target.value))}
-            className="w-full h-1.5 bg-dark-tertiary rounded-lg appearance-none cursor-pointer accent-accent-orange"
+            className="w-full h-1.5 bg-surface-tertiary rounded-lg appearance-none cursor-pointer accent-accent-blue"
           />
-          <p className="text-[10px] text-text-secondary font-mono">
+          <p className="text-[10px] text-text-secondary font-sans">
             {t('rafterType.trussHeightRange', { min: trussHeightMin.toFixed(1), max: trussHeightMax.toFixed(1) })}
           </p>
         </div>
@@ -350,12 +350,12 @@ export function FormPanel({ params, onParamsChange, results, profileOverrides, o
     <div className="h-full overflow-y-auto p-4 flex flex-col">
       {/* Header */}
       <div className="flex justify-between items-center mb-3">
-        <h2 className="text-base font-mono font-bold text-accent-orange uppercase tracking-wider">
+        <h2 className="text-base font-sans font-bold text-accent-blue uppercase tracking-wider">
           {t('form.title')}
         </h2>
         <button
           onClick={() => setWizardMode(!wizardMode)}
-          className="text-[10px] font-mono px-2 py-0.5 rounded border border-dark-tertiary text-text-secondary hover:text-accent-orange hover:border-accent-orange transition-colors"
+          className="text-[10px] font-sans px-2 py-0.5 rounded border border-border text-text-secondary hover:text-accent-blue hover:border-accent-blue transition-colors"
         >
           {wizardMode ? t('form.expertMode') : t('form.wizardMode')}
         </button>
@@ -372,15 +372,15 @@ export function FormPanel({ params, onParamsChange, results, profileOverrides, o
                   <div
                     className={`w-full h-1 rounded-full ${
                       idx === wizardStep
-                        ? 'bg-accent-orange'
+                        ? 'bg-accent-blue'
                         : idx < wizardStep
-                          ? 'bg-accent-yellow'
-                          : 'bg-dark-tertiary'
+                          ? 'bg-accent-blue-light'
+                          : 'bg-surface-tertiary'
                     }`}
                   />
                   <span
-                    className={`text-[9px] font-mono ${
-                      idx === wizardStep ? 'text-accent-orange' : 'text-text-secondary'
+                    className={`text-[9px] font-sans ${
+                      idx === wizardStep ? 'text-accent-blue' : 'text-text-secondary'
                     }`}
                   >
                     {step}
@@ -397,37 +397,37 @@ export function FormPanel({ params, onParamsChange, results, profileOverrides, o
               <button
                 onClick={() => setWizardStep((s) => Math.max(0, s - 1))}
                 disabled={wizardStep === 0}
-                className="px-3 py-1 text-xs font-mono rounded border border-dark-tertiary text-text-secondary hover:text-accent-orange hover:border-accent-orange disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                className="px-3 py-1 text-xs font-sans rounded border border-border text-text-secondary hover:text-accent-blue hover:border-accent-blue disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               >
                 {t('wizard.back')}
               </button>
               <button
                 onClick={() => setWizardStep((s) => Math.min(2, s + 1))}
                 disabled={wizardStep === 2}
-                className="px-3 py-1 text-xs font-mono rounded border border-accent-orange text-accent-orange hover:bg-accent-orange hover:text-dark-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                className="px-3 py-1 text-xs font-sans rounded border border-accent-blue text-accent-blue hover:bg-accent-blue hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               >
                 {t('wizard.next')}
               </button>
             </div>
 
             {/* Rafter type section - always visible in wizard mode */}
-            <div className="my-3 border-t border-dark-tertiary" />
+            <div className="my-3 border-t border-border" />
             {RafterTypeSection}
           </>
         ) : (
           <>
             {GeometrySection}
-            <div className="my-3 border-t border-dark-tertiary" />
+            <div className="my-3 border-t border-border" />
             {LoadsSection}
-            <div className="my-3 border-t border-dark-tertiary" />
+            <div className="my-3 border-t border-border" />
             {MaterialsSection}
-            <div className="my-3 border-t border-dark-tertiary" />
+            <div className="my-3 border-t border-border" />
             {RafterTypeSection}
           </>
         )}
 
         {/* Results - always visible */}
-        <div className="mt-4 pt-3 border-t border-dark-tertiary">
+        <div className="mt-4 pt-3 border-t border-border">
           <ResultsPanel
             results={results}
             profileOverrides={profileOverrides}

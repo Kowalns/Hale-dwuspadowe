@@ -48,7 +48,7 @@ export const SideColumns = React.memo(function SideColumns({
           geometry={geometry}
           material={columnMaterial}
           position={[pos.x, 0, pos.z]}
-          rotation={[Math.PI / 2, 0, 0]}
+          rotation={[-Math.PI / 2, 0, 0]}
           castShadow
           receiveShadow
         />

@@ -9,9 +9,9 @@ interface ResultsPanelProps {
 }
 
 function getUtilizationColor(eta: number): string {
-  if (eta < 0.85) return 'text-green-400';
-  if (eta <= 0.95) return 'text-yellow-400';
-  return 'text-red-400';
+  if (eta < 0.85) return 'text-green-600';
+  if (eta <= 0.95) return 'text-yellow-600';
+  return 'text-red-600';
 }
 
 /** Get available profiles for a given profile type */
@@ -65,12 +65,12 @@ function ProfileCardWithOverride({
     : profile;
 
   return (
-    <div className={`p-2 rounded border ${isOverUtilized ? 'border-red-500' : 'border-dark-tertiary'} bg-dark-primary/50`}>
+    <div className={`p-2 rounded border ${isOverUtilized ? 'border-red-500' : 'border-border'} bg-surface-tertiary/50`}>
       <div className="flex items-center justify-between">
-        <p className="text-xs text-text-secondary font-mono uppercase">{label}</p>
+        <p className="text-xs text-text-secondary font-sans uppercase">{label}</p>
         <div className="flex items-center gap-1">
           {isOverridden && (
-            <span className="text-[10px] text-accent-yellow" title={t('override.manuallyChanged')}>
+            <span className="text-[10px] text-accent-blue-light" title={t('override.manuallyChanged')}>
               ✱
             </span>
           )}
@@ -86,7 +86,7 @@ function ProfileCardWithOverride({
                 delete newOverrides[overrideKey];
                 onProfileOverridesChange(newOverrides);
               }}
-              className="text-[10px] font-mono text-text-secondary hover:text-accent-orange transition-colors"
+              className="text-[10px] font-sans text-text-secondary hover:text-accent-blue transition-colors"
               title={t('override.resetToCalculated')}
             >
               🔄
@@ -112,7 +112,7 @@ function ProfileCardWithOverride({
               });
             }
           }}
-          className="w-full mt-0.5 px-1.5 py-0.5 text-sm font-mono font-bold text-accent-orange bg-dark-primary border border-dark-tertiary rounded focus:outline-none focus:ring-1 focus:ring-accent-orange appearance-none cursor-pointer"
+          className="w-full mt-0.5 px-1.5 py-0.5 text-sm font-sans font-bold text-accent-blue bg-white border border-border rounded focus:outline-none focus:ring-1 focus:ring-accent-blue appearance-none cursor-pointer"
         >
           {availableProfiles.map((p) => (
             <option key={p.name} value={p.name}>
@@ -121,14 +121,14 @@ function ProfileCardWithOverride({
           ))}
         </select>
       ) : (
-        <p className="text-sm text-accent-orange font-mono font-bold mt-0.5">{displayedProfile.name}</p>
+        <p className="text-sm text-accent-blue font-sans font-bold mt-0.5">{displayedProfile.name}</p>
       )}
-      <div className="flex gap-3 mt-1 text-xs text-text-secondary font-mono">
+      <div className="flex gap-3 mt-1 text-xs text-text-secondary font-sans">
         <span>{displayedProfile.mass} kg/m</span>
         <span>W<sub>pl</sub>={displayedProfile.W_pl} cm&sup3;</span>
       </div>
       {isOverUtilized && utilizationRatio !== undefined && (
-        <p className="text-[10px] font-mono text-red-400 mt-0.5">
+        <p className="text-[10px] font-sans text-red-400 mt-0.5">
           ⚠️ &eta; = {utilizationRatio.toFixed(2)} {t('override.overUtilized')}
         </p>
       )}
@@ -143,73 +143,73 @@ export function ResultsPanel({ results, profileOverrides, onProfileOverridesChan
 
   return (
     <div className="space-y-2">
-      <h3 className="text-sm font-mono font-bold text-accent-yellow uppercase tracking-wider">
+      <h3 className="text-sm font-sans font-bold text-accent-blue uppercase tracking-wider">
         {t('results.title')}
       </h3>
 
       {/* Utilization and governing info */}
-      <div className="p-2 rounded border border-dark-tertiary bg-dark-primary/50 space-y-1">
-        <p className="text-xs text-text-secondary font-mono">
+      <div className="p-2 rounded border border-border bg-surface-tertiary/50 space-y-1">
+        <p className="text-xs text-text-secondary font-sans">
           {t('results.utilization')}:{' '}
           <span className={`font-bold ${utilizationColor}`}>
             {results.sideColumnProfile.name}, &eta; = {results.utilizationRatio.toFixed(2)}
           </span>
         </p>
-        <p className="text-xs text-text-secondary font-mono">
+        <p className="text-xs text-text-secondary font-sans">
           {t('results.governingCombination')}:{' '}
           <span className="text-text-primary">{results.governingCombination}</span>
         </p>
-        <p className="text-xs text-text-secondary font-mono">
+        <p className="text-xs text-text-secondary font-sans">
           {t('results.governingCondition')}:{' '}
           <span className="text-text-primary">{t(`results.conditions.${results.governingCondition}`)}</span>
         </p>
-        <p className="text-xs text-text-secondary font-mono">
+        <p className="text-xs text-text-secondary font-sans">
           {t('results.steelMass')}:{' '}
           <span className="text-text-primary">{results.steelMassPerM2.toFixed(1)} kg/m&sup2;</span>
         </p>
       </div>
 
       {/* Deflection check */}
-      <div className="p-2 rounded border border-dark-tertiary bg-dark-primary/50 space-y-1">
-        <p className="text-xs text-text-secondary font-mono font-bold uppercase">
+      <div className="p-2 rounded border border-border bg-surface-tertiary/50 space-y-1">
+        <p className="text-xs text-text-secondary font-sans font-bold uppercase">
           {t('results.deflection')}
         </p>
-        <p className="text-xs text-text-secondary font-mono">
+        <p className="text-xs text-text-secondary font-sans">
           {t('results.columnDeflection')}:{' '}
-          <span className={results.columnDeflection <= results.columnDeflectionLimit ? 'text-green-400' : 'text-red-400'}>
+          <span className={results.columnDeflection <= results.columnDeflectionLimit ? 'text-green-600' : 'text-red-600'}>
             {results.columnDeflection.toFixed(1)} / {results.columnDeflectionLimit.toFixed(1)} mm
           </span>
         </p>
-        <p className="text-xs text-text-secondary font-mono">
+        <p className="text-xs text-text-secondary font-sans">
           {t('results.rafterDeflection')}:{' '}
-          <span className={results.rafterDeflection <= results.rafterDeflectionLimit ? 'text-green-400' : 'text-red-400'}>
+          <span className={results.rafterDeflection <= results.rafterDeflectionLimit ? 'text-green-600' : 'text-red-600'}>
             {results.rafterDeflection.toFixed(1)} / {results.rafterDeflectionLimit.toFixed(1)} mm
           </span>
         </p>
-        <p className="text-xs text-text-secondary font-mono">
+        <p className="text-xs text-text-secondary font-sans">
           {t('results.deflectionStatus')}:{' '}
-          <span className={results.deflectionCheck ? 'text-green-400' : 'text-red-400'}>
+          <span className={results.deflectionCheck ? 'text-green-600' : 'text-red-600'}>
             {results.deflectionCheck ? 'OK' : t('results.exceeded')}
           </span>
         </p>
       </div>
 
       {/* Geometry summary */}
-      <div className="p-2 rounded border border-dark-tertiary bg-dark-primary/50 space-y-1">
-        <p className="text-xs text-text-secondary font-mono">
+      <div className="p-2 rounded border border-border bg-surface-tertiary/50 space-y-1">
+        <p className="text-xs text-text-secondary font-sans">
           {t('results.columnSpacing')}: <span className="text-text-primary">{results.columnSpacing.toFixed(2)} m</span>
         </p>
-        <p className="text-xs text-text-secondary font-mono">
+        <p className="text-xs text-text-secondary font-sans">
           {t('results.purlinSpacing')}: <span className="text-text-primary">{results.purlinSpacing.toFixed(2)} m</span>
         </p>
-        <p className="text-xs text-text-secondary font-mono">
+        <p className="text-xs text-text-secondary font-sans">
           {t('results.ridgeHeight')}: <span className="text-text-primary">{results.ridgeHeight.toFixed(2)} m</span>
         </p>
-        <p className="text-xs text-text-secondary font-mono">
+        <p className="text-xs text-text-secondary font-sans">
           {t('results.numberOfFrames')}: <span className="text-text-primary">{results.numberOfFrames}</span>
         </p>
         {results.trussHeight && (
-          <p className="text-xs text-text-secondary font-mono">
+          <p className="text-xs text-text-secondary font-sans">
             {t('results.trussHeight')}: <span className="text-text-primary">{results.trussHeight.toFixed(2)} m</span>
           </p>
         )}
@@ -262,7 +262,7 @@ export function ResultsPanel({ results, profileOverrides, onProfileOverridesChan
           utilizationRatio={results.purlinUtilization}
         />
         {results.purlinCostHint && (
-          <div className="bg-yellow-900/30 border border-yellow-600/30 rounded p-1.5 text-xs text-yellow-300 font-mono">
+          <div className="bg-yellow-50 border border-yellow-200 rounded p-1.5 text-xs text-yellow-700 font-sans">
             {results.purlinCostHint.type === 'continuous'
               ? t('results.purlinCostHintContinuous', { kg: results.purlinCostHint.kg })
               : t('results.purlinCostHintSingle', { kg: results.purlinCostHint.kg })}
@@ -308,65 +308,65 @@ export function ResultsPanel({ results, profileOverrides, onProfileOverridesChan
             utilizationRatio={results.intermediateColumnUtilization}
           />
         )}
-        <div className="p-2 rounded border border-dark-tertiary bg-dark-primary/50">
-          <p className="text-xs text-text-secondary font-mono uppercase">{t('results.bracing')}</p>
-          <p className="text-sm text-accent-orange font-mono font-bold mt-0.5">
+        <div className="p-2 rounded border border-border bg-surface-tertiary/50">
+          <p className="text-xs text-text-secondary font-sans uppercase">{t('results.bracing')}</p>
+          <p className="text-sm text-accent-blue font-sans font-bold mt-0.5">
             &empty;{results.bracingDiameter} mm
           </p>
         </div>
       </div>
 
       {/* Connection plates */}
-      <div className="p-2 rounded border border-dark-tertiary bg-dark-primary/50 space-y-1.5">
-        <p className="text-xs text-text-secondary font-mono font-bold uppercase">
+      <div className="p-2 rounded border border-border bg-surface-tertiary/50 space-y-1.5">
+        <p className="text-xs text-text-secondary font-sans font-bold uppercase">
           {t('connectionPlates.title')}
         </p>
-        <p className="text-xs text-text-secondary font-mono">
+        <p className="text-xs text-text-secondary font-sans">
           {t('connectionPlates.totalPlateMass')}:{' '}
-          <span className="text-accent-orange font-bold">{results.connectionPlates.totalMass.toFixed(1)} kg</span>
+          <span className="text-accent-blue font-bold">{results.connectionPlates.totalMass.toFixed(1)} kg</span>
         </p>
         {/* Base plate */}
-        <div className="pl-2 border-l border-dark-tertiary space-y-0.5">
-          <p className="text-[10px] text-text-secondary font-mono">
+        <div className="pl-2 border-l border-border space-y-0.5">
+          <p className="text-[10px] text-text-secondary font-sans">
             {t('connectionPlates.basePlate')}:{' '}
             <span className="text-text-primary">
               {results.connectionPlates.basePlate.count}x {results.connectionPlates.basePlate.mass.toFixed(1)} kg
             </span>
           </p>
-          <p className="text-[10px] text-text-secondary font-mono">
+          <p className="text-[10px] text-text-secondary font-sans">
             {t('connectionPlates.dimensions')}: {results.connectionPlates.basePlate.width}x{results.connectionPlates.basePlate.height}x{results.connectionPlates.basePlate.thickness} mm
           </p>
-          <p className="text-[10px] text-text-secondary font-mono">
+          <p className="text-[10px] text-text-secondary font-sans">
             {t('connectionPlates.anchors')}: {results.connectionPlates.basePlate.bolts}
           </p>
         </div>
         {/* End plate */}
-        <div className="pl-2 border-l border-dark-tertiary space-y-0.5">
-          <p className="text-[10px] text-text-secondary font-mono">
+        <div className="pl-2 border-l border-border space-y-0.5">
+          <p className="text-[10px] text-text-secondary font-sans">
             {t('connectionPlates.endPlate')}:{' '}
             <span className="text-text-primary">
               {results.connectionPlates.endPlate.count}x {results.connectionPlates.endPlate.mass.toFixed(1)} kg
             </span>
           </p>
-          <p className="text-[10px] text-text-secondary font-mono">
+          <p className="text-[10px] text-text-secondary font-sans">
             {t('connectionPlates.dimensions')}: {results.connectionPlates.endPlate.width}x{results.connectionPlates.endPlate.height}x{results.connectionPlates.endPlate.thickness} mm
           </p>
-          <p className="text-[10px] text-text-secondary font-mono">
+          <p className="text-[10px] text-text-secondary font-sans">
             {t('connectionPlates.bolts')}: {results.connectionPlates.endPlate.bolts}
           </p>
         </div>
         {/* Ridge plate */}
-        <div className="pl-2 border-l border-dark-tertiary space-y-0.5">
-          <p className="text-[10px] text-text-secondary font-mono">
+        <div className="pl-2 border-l border-border space-y-0.5">
+          <p className="text-[10px] text-text-secondary font-sans">
             {t('connectionPlates.ridgePlate')}:{' '}
             <span className="text-text-primary">
               {results.connectionPlates.ridgePlate.count}x {results.connectionPlates.ridgePlate.mass.toFixed(1)} kg
             </span>
           </p>
-          <p className="text-[10px] text-text-secondary font-mono">
+          <p className="text-[10px] text-text-secondary font-sans">
             {t('connectionPlates.dimensions')}: {results.connectionPlates.ridgePlate.width}x{results.connectionPlates.ridgePlate.height}x{results.connectionPlates.ridgePlate.thickness} mm
           </p>
-          <p className="text-[10px] text-text-secondary font-mono">
+          <p className="text-[10px] text-text-secondary font-sans">
             {t('connectionPlates.bolts')}: {results.connectionPlates.ridgePlate.bolts}
           </p>
         </div>

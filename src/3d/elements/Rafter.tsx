@@ -54,7 +54,7 @@ export const Rafter = React.memo(function Rafter({
             geometry={geometry}
             material={rafterMaterial}
             position={[0, 0, 0]}
-            rotation={[roofAngleRad, 0, 0]}
+            rotation={[-roofAngleRad, 0, 0]}
             castShadow
             receiveShadow
           />
@@ -63,7 +63,7 @@ export const Rafter = React.memo(function Rafter({
             geometry={geometry}
             material={rafterMaterial}
             position={[0, 0, span]}
-            rotation={[-roofAngleRad, Math.PI, 0]}
+            rotation={[roofAngleRad, Math.PI, 0]}
             castShadow
             receiveShadow
           />
