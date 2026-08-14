@@ -104,7 +104,7 @@ export interface CalculationResults {
   intermediateColumnProfile: SteelProfile | null;
   intermediateColumnActive: boolean;
   purlinType: 'single' | 'continuous';
-  purlinCostHint: string | null;
+  purlinCostHint: { type: 'continuous' | 'single'; kg: number } | null;
   eaveBeamUtilization?: number;
   wallGirtUtilization?: number;
   gableGirtUtilization?: number;

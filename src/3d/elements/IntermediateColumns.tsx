@@ -33,9 +33,10 @@ export const IntermediateColumns = React.memo(function IntermediateColumns({
   const geometry = useRHSGeometry({ width, height, thickness, length: wallHeight });
 
   // Calculate X positions for intermediate columns
+  // numberOfFrames - 1 = numberOfBays: one column per bay midpoint (not beyond building envelope)
   const xPositions = useMemo(() => {
     const positions: number[] = [];
-    for (let i = 0; i < numberOfFrames; i++) {
+    for (let i = 0; i < numberOfFrames - 1; i++) {
       positions.push(i * columnSpacing + columnSpacing / 2);
     }
     return positions;

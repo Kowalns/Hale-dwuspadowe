@@ -8,7 +8,6 @@ interface GableGirtsProps {
   wallHeight: number;
   span: number;
   hallLength: number;
-  ridgeHeight: number;
 }
 
 /**
@@ -22,7 +21,6 @@ export const GableGirts = React.memo(function GableGirts({
   wallHeight,
   span,
   hallLength,
-  ridgeHeight: _ridgeHeight,
 }: GableGirtsProps) {
   const width = profile.b / 1000;
   const height = profile.h / 1000;

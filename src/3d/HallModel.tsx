@@ -184,7 +184,6 @@ export const HallModel = React.memo(function HallModel({ params, results }: Hall
           wallHeight={wallHeight}
           span={span}
           hallLength={hallLength}
-          ridgeHeight={ridgeHeight}
         />
       )}
 

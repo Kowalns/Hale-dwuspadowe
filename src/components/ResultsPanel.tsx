@@ -263,7 +263,9 @@ export function ResultsPanel({ results, profileOverrides, onProfileOverridesChan
         />
         {results.purlinCostHint && (
           <div className="bg-yellow-900/30 border border-yellow-600/30 rounded p-1.5 text-xs text-yellow-300 font-mono">
-            {results.purlinCostHint}
+            {results.purlinCostHint.type === 'continuous'
+              ? t('results.purlinCostHintContinuous', { kg: results.purlinCostHint.kg })
+              : t('results.purlinCostHintSingle', { kg: results.purlinCostHint.kg })}
           </div>
         )}
         {results.eaveBeamProfile && (

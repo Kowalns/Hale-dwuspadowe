@@ -186,7 +186,13 @@ function checkColumnDeflection(
 /**
  * Select side column using iterative approach:
  * Start from smallest IPE, check stability interaction + deflection, pick smallest passing.
- * hasWallGirts: when true, use wallHeight/2 for out-of-plane buckling length
+ * hasWallGirts: when true, use wallHeight/2 for out-of-plane buckling length.
+ *
+ * Note: hasWallGirts defaults to true because wall girts are always present in this
+ * configurator (selectWallGirt() unconditionally returns Rk 80x80x2). The half-height
+ * buckling length (Lcr = H/2) assumes the girt is connected to the column's compression
+ * flange, providing lateral restraint at mid-height. If girt selection ever becomes
+ * conditional, this parameter must be passed explicitly as wallGirtProfile !== null.
  */
 function selectSideColumn(
   governingCombo: LoadCombinationForces,
@@ -394,13 +400,14 @@ function selectPurlin(params: HallParameters, purlinSpacing: number): { profile:
 /**
  * Compute purlin cost hint by comparing total mass for single vs continuous options.
  * Returns null if the difference is within 3%.
+ * Returns an object { type, kg } indicating which option is lighter and by how much.
  */
 function computePurlinCostHint(
   params: HallParameters,
   purlinSpacing: number,
   hallLength: number,
   numPurlinsPerSlope: number
-): string | null {
+): { type: 'continuous' | 'single'; kg: number } | null {
   const z200 = zProfiles.find(p => p.name === 'Z 200x68x60')!;
   const z150 = zProfiles.find(p => p.name === 'Z 150x68x60')!;
 
@@ -427,9 +434,9 @@ function computePurlinCostHint(
 
   const savedKg = Math.round(diff);
   if (singleTotalMass < continuousTotalMass) {
-    return `single_lighter_${savedKg}`;
+    return { type: 'single', kg: savedKg };
   } else {
-    return `continuous_lighter_${savedKg}`;
+    return { type: 'continuous', kg: savedKg };
   }
 }
 
@@ -756,12 +763,16 @@ export function calculateHallStructure(params: HallParameters): CalculationResul
   // Roof bracing: 2 diagonals per slope * 2 slopes * 2 bays = 8 diagonals
   const roofBraceDiagLength = Math.sqrt(columnSpacing * columnSpacing + (roofSlopeLength / 2) * (roofSlopeLength / 2));
   const roofBracingCount = 8;
-  // Gable wall bracing: estimate 4 diagonals per gable * 2 gables = 8 diagonals
+  // Gable wall bracing: dynamically compute count based on central bay selection
+  // (same logic as CrossBracing.tsx - 1 central bay if odd number of gable bays, 2 if even)
   const targetSpacing = 3.0;
   const nEndCols = Math.max(1, Math.round(params.span / targetSpacing) - 1);
   const gableColSpacing = params.span / (nEndCols + 1);
   const gableDiagonalLength = Math.sqrt(gableColSpacing * gableColSpacing + params.wallHeight * params.wallHeight);
-  const gableBracingCount = 8; // approximate: 2 diags * 2 bays (or 1) * 2 gables
+  const nGableBays = nEndCols + 1; // number of bays between end columns (including corner-to-first and last-to-corner)
+  const centralBayCount = nGableBays % 2 === 1 ? 1 : 2;
+  // 2 diagonals per bay (X-bracing) * centralBayCount bays * 2 gable walls
+  const gableBracingCount = 2 * centralBayCount * 2;
   const totalBracingLength = sideWallBracingCount * wallDiagonalLength + roofBracingCount * roofBraceDiagLength + gableBracingCount * gableDiagonalLength;
   // Bracing rod mass: area (m2) * length (m) * density (7850 kg/m3)
   const bracingRadiusM = (bracingDiameter / 1000) / 2;
@@ -1064,7 +1075,10 @@ export function calculateWithOverrides(
   const nEndColsCalc = Math.max(1, Math.round(params.span / targetSpacingCalc) - 1);
   const gableColSpacingCalc = params.span / (nEndColsCalc + 1);
   const gableDiagLen = Math.sqrt(gableColSpacingCalc * gableColSpacingCalc + params.wallHeight * params.wallHeight);
-  const totalBracingLen = 16 * wallDiagLen + 8 * roofDiagLen + 8 * gableDiagLen;
+  const nGableBaysCalc = nEndColsCalc + 1;
+  const centralBayCountCalc = nGableBaysCalc % 2 === 1 ? 1 : 2;
+  const gableBracingCountCalc = 2 * centralBayCountCalc * 2;
+  const totalBracingLen = 16 * wallDiagLen + 8 * roofDiagLen + gableBracingCountCalc * gableDiagLen;
   const bracingMass = bracingAreaCalc * totalBracingLen * 7850;
 
   const totalSteelMass = sideColumnMass + endColumnMass + rafterMass + purlinMass +
