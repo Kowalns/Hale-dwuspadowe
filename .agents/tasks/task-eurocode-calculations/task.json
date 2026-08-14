@@ -1,7 +1,0 @@
-{
-  "task_id": "task-eurocode-calculations",
-  "task_description": "Implement complete Eurocode-compliant (PN-EN 1990/1991/1993) structural calculation engine for steel gable-roof halls. Replaces simplified calculations with proper snow/wind loads, load combinations, frame analysis, stability checks (buckling + LTB interaction), and deflection verification (SGU).",
-  "status": "in_progress",
-  "feature_order": ["FEAT-001", "FEAT-002"],
-  "blocked_reason": null
-}
