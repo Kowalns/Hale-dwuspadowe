@@ -18,7 +18,7 @@ interface TrussProps {
  * Each frame has a truss spanning the full width.
  * - Top chord follows the roof slope (on both sides)
  * - Bottom chord is PARALLEL to the top chord, offset down by trussHeight
- * - Web members: diagonals in a W/V pattern between top and bottom chords
+ * - Web members: V-pattern diagonals with vertical members (Pratt/Warren style)
  */
 export const Truss = React.memo(function Truss({
   chordProfile,
@@ -37,7 +37,7 @@ export const Truss = React.memo(function Truss({
     return positions;
   }, [numberOfFrames, columnSpacing]);
 
-  const chordRadius = (chordProfile.h / 1000) / 2;
+  const chordSize = chordProfile.h / 1000;
 
   return (
     <group name="trusses">
@@ -49,7 +49,7 @@ export const Truss = React.memo(function Truss({
           span={span}
           roofAngle={roofAngle}
           trussHeight={trussHeight}
-          chordRadius={chordRadius}
+          chordSize={chordSize}
         />
       ))}
     </group>
@@ -62,7 +62,7 @@ interface TrussFrameProps {
   span: number;
   roofAngle: number;
   trussHeight: number;
-  chordRadius: number;
+  chordSize: number;
 }
 
 function TrussFrame({
@@ -71,10 +71,13 @@ function TrussFrame({
   span,
   roofAngle,
   trussHeight,
-  chordRadius,
+  chordSize,
 }: TrussFrameProps) {
   const roofAngleRad = (roofAngle * Math.PI) / 180;
   const halfSpan = span / 2;
+
+  // Web member size: 30x30mm square tube
+  const webSize = 0.03;
 
   // Compute nodes for both slopes
   const { chordSegments, webMembers } = useMemo(() => {
@@ -110,41 +113,57 @@ function TrussFrame({
     }
 
     // Generate chord segments (connecting consecutive nodes)
-    const segments: Array<{ start: THREE.Vector3; end: THREE.Vector3; isChord: true }> = [];
+    const segments: Array<{ start: THREE.Vector3; end: THREE.Vector3 }> = [];
 
     // Top chord segments
     for (let i = 0; i < topNodesLeft.length - 1; i++) {
-      segments.push({ start: topNodesLeft[i], end: topNodesLeft[i + 1], isChord: true });
+      segments.push({ start: topNodesLeft[i], end: topNodesLeft[i + 1] });
     }
     for (let i = 0; i < topNodesRight.length - 1; i++) {
-      segments.push({ start: topNodesRight[i], end: topNodesRight[i + 1], isChord: true });
+      segments.push({ start: topNodesRight[i], end: topNodesRight[i + 1] });
     }
 
     // Bottom chord segments
     for (let i = 0; i < bottomNodesLeft.length - 1; i++) {
-      segments.push({ start: bottomNodesLeft[i], end: bottomNodesLeft[i + 1], isChord: true });
+      segments.push({ start: bottomNodesLeft[i], end: bottomNodesLeft[i + 1] });
     }
     for (let i = 0; i < bottomNodesRight.length - 1; i++) {
-      segments.push({ start: bottomNodesRight[i], end: bottomNodesRight[i + 1], isChord: true });
+      segments.push({ start: bottomNodesRight[i], end: bottomNodesRight[i + 1] });
     }
 
-    // Web members (diagonals) - W pattern in each panel
+    // Web members - V pattern with vertical members
     const webs: Array<{ start: THREE.Vector3; end: THREE.Vector3 }> = [];
 
-    // Left slope web members
+    // Left slope web members - alternating V pattern
     for (let i = 0; i < numPanelsPerSlope; i++) {
-      // Diagonal from bottom-left to top-right
-      webs.push({ start: bottomNodesLeft[i], end: topNodesLeft[i + 1] });
-      // Diagonal from top-left to bottom-right
-      webs.push({ start: topNodesLeft[i], end: bottomNodesLeft[i + 1] });
+      if (i % 2 === 0) {
+        // Even panel: diagonal from bottom-left to top-right (/)
+        webs.push({ start: bottomNodesLeft[i], end: topNodesLeft[i + 1] });
+      } else {
+        // Odd panel: diagonal from top-left to bottom-right (\)
+        webs.push({ start: topNodesLeft[i], end: bottomNodesLeft[i + 1] });
+      }
     }
 
-    // Right slope web members
+    // Left slope vertical members (interior nodes only)
+    for (let i = 1; i < numPanelsPerSlope; i++) {
+      webs.push({ start: bottomNodesLeft[i], end: topNodesLeft[i] });
+    }
+
+    // Right slope web members - alternating V pattern
     for (let i = 0; i < numPanelsPerSlope; i++) {
-      // Diagonal from bottom-left to top-right
-      webs.push({ start: bottomNodesRight[i], end: topNodesRight[i + 1] });
-      // Diagonal from top-left to bottom-right
-      webs.push({ start: topNodesRight[i], end: bottomNodesRight[i + 1] });
+      if (i % 2 === 0) {
+        // Even panel: diagonal from bottom-left to top-right (/)
+        webs.push({ start: bottomNodesRight[i], end: topNodesRight[i + 1] });
+      } else {
+        // Odd panel: diagonal from top-left to bottom-right (\)
+        webs.push({ start: topNodesRight[i], end: bottomNodesRight[i + 1] });
+      }
+    }
+
+    // Right slope vertical members (interior nodes only)
+    for (let i = 1; i < numPanelsPerSlope; i++) {
+      webs.push({ start: bottomNodesRight[i], end: topNodesRight[i] });
     }
 
     return {
@@ -161,17 +180,17 @@ function TrussFrame({
           key={`chord-${i}`}
           start={seg.start}
           end={seg.end}
-          radius={chordRadius}
+          size={chordSize}
           material={rafterMaterial}
         />
       ))}
-      {/* Web members (diagonals) */}
+      {/* Web members (diagonals + verticals) */}
       {webMembers.map((member, i) => (
         <TrussMember
           key={`web-${i}`}
           start={member.start}
           end={member.end}
-          radius={0.015}
+          size={webSize}
           material={bracingMaterial}
         />
       ))}
@@ -182,17 +201,17 @@ function TrussFrame({
 interface TrussMemberProps {
   start: THREE.Vector3;
   end: THREE.Vector3;
-  radius: number;
+  size: number;
   material: THREE.Material;
 }
 
-function TrussMember({ start, end, radius, material }: TrussMemberProps) {
+function TrussMember({ start, end, size, material }: TrussMemberProps) {
   const { position, rotation, memberLength } = useMemo(() => {
     const direction = new THREE.Vector3().subVectors(end, start);
     const len = direction.length();
     const mid = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
 
-    // Align cylinder (Y-axis default) with the direction
+    // Align box (Y-axis default) with the direction
     const dir = direction.normalize();
     const up = new THREE.Vector3(0, 1, 0);
     const quaternion = new THREE.Quaternion();
@@ -214,7 +233,7 @@ function TrussMember({ start, end, radius, material }: TrussMemberProps) {
       receiveShadow
       material={material}
     >
-      <cylinderGeometry args={[radius, radius, memberLength, 8]} />
+      <boxGeometry args={[size, memberLength, size]} />
     </mesh>
   );
 }

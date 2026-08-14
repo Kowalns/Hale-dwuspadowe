@@ -35,7 +35,7 @@ export const BasePlates = React.memo(function BasePlates({
   // Side column positions (same logic as SideColumns.tsx)
   const sidePositions = useMemo(() => {
     const pos: Array<{ x: number; z: number }> = [];
-    for (let i = 0; i <= numberOfFrames; i++) {
+    for (let i = 0; i < numberOfFrames; i++) {
       const x = i * columnSpacing;
       pos.push({ x, z: 0 });
       pos.push({ x, z: span });

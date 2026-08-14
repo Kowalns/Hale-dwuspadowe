@@ -31,7 +31,7 @@ export const RidgePlates = React.memo(function RidgePlates({
 
   const positions = useMemo(() => {
     const pos: number[] = [];
-    for (let i = 0; i <= numberOfFrames; i++) {
+    for (let i = 0; i < numberOfFrames; i++) {
       pos.push(i * columnSpacing);
     }
     return pos;
