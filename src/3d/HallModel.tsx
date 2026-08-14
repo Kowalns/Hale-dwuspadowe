@@ -13,6 +13,7 @@ import { EaveBeams } from './elements/EaveBeams';
 import { WallGirts } from './elements/WallGirts';
 import { GableGirts } from './elements/GableGirts';
 import { IntermediateColumns } from './elements/IntermediateColumns';
+import { TrussColumnHead } from './elements/TrussColumnHead';
 import type { HallParameters, CalculationResults } from '../types';
 
 interface HallModelProps {
@@ -148,6 +149,7 @@ export const HallModel = React.memo(function HallModel({ params, results }: Hall
         columnSpacing={columnSpacing}
         numberOfFrames={numberOfFrames}
         connectionPlates={connectionPlates}
+        rafterType={rafterProfile ? 'ipe' : 'truss'}
       />
       <RidgePlates
         span={span}
@@ -156,6 +158,20 @@ export const HallModel = React.memo(function HallModel({ params, results }: Hall
         ridgeHeight={ridgeHeight}
         connectionPlates={connectionPlates}
       />
+
+      {/* Truss column heads (only when truss is active) */}
+      {trussChordProfile && trussHeight != null && (
+        <TrussColumnHead
+          chordProfile={trussChordProfile}
+          wallHeight={wallHeight}
+          span={span}
+          roofAngle={roofAngle}
+          trussHeight={trussHeight}
+          columnSpacing={columnSpacing}
+          numberOfFrames={numberOfFrames}
+          connectionPlates={connectionPlates}
+        />
+      )}
 
       {/* Eave beams */}
       {eaveBeamProfile && (

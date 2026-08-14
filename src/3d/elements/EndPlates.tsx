@@ -8,10 +8,13 @@ interface EndPlatesProps {
   columnSpacing: number;
   numberOfFrames: number;
   connectionPlates: ConnectionPlateResults;
+  rafterType: 'ipe' | 'truss';
 }
 
 /**
  * Renders vertical end plates (column-to-rafter connection) at the top of each side column.
+ * Only rendered when rafterType === 'ipe' (IPE rafter).
+ * When truss is active, TrussColumnHead provides its own end plates.
  * Positioned at Y=wallHeight, oriented vertically in the XY plane.
  * 2 per frame (one at Z=0, one at Z=span).
  */
@@ -21,7 +24,13 @@ export const EndPlates = React.memo(function EndPlates({
   columnSpacing,
   numberOfFrames,
   connectionPlates,
+  rafterType,
 }: EndPlatesProps) {
+  // When truss is active, do not render end plates (TrussColumnHead has its own)
+  if (rafterType === 'truss') {
+    return null;
+  }
+
   const { width, height, thickness } = connectionPlates.endPlate;
 
   // Convert mm to meters
@@ -49,7 +58,7 @@ export const EndPlates = React.memo(function EndPlates({
           castShadow
           receiveShadow
         >
-          <boxGeometry args={[plateW, plateT, plateH]} />
+          <boxGeometry args={[plateW, plateH, plateT]} />
         </mesh>
       ))}
     </group>
