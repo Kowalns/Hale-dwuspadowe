@@ -1,6 +1,5 @@
 import React, { useMemo } from 'react';
 import * as THREE from 'three';
-import { useSquareTubeGeometry } from '../profiles/SquareTubeGeometry';
 import { rafterMaterial, bracingMaterial } from '../materials';
 import type { SteelProfile } from '../../types';
 
@@ -17,9 +16,9 @@ interface TrussProps {
 /**
  * Renders parallel chord trusses for span > 18m.
  * Each frame has a truss spanning the full width.
- * - Top chord follows the roof slope
- * - Bottom chord is horizontal at wallHeight
- * - Web members: verticals + diagonals in a V/W pattern
+ * - Top chord follows the roof slope (on both sides)
+ * - Bottom chord is PARALLEL to the top chord, offset down by trussHeight
+ * - Web members: diagonals in a W/V pattern between top and bottom chords
  */
 export const Truss = React.memo(function Truss({
   chordProfile,
@@ -30,16 +29,6 @@ export const Truss = React.memo(function Truss({
   columnSpacing,
   numberOfFrames,
 }: TrussProps) {
-  const size = chordProfile.h / 1000; // Square tube size in meters
-  const thickness = (chordProfile.t ?? 4) / 1000;
-
-  const roofAngleRad = (roofAngle * Math.PI) / 180;
-  const halfSpan = span / 2;
-  const slopeLength = halfSpan / Math.cos(roofAngleRad);
-
-  const topChordGeometry = useSquareTubeGeometry({ size, thickness, length: slopeLength });
-  const bottomChordGeometry = useSquareTubeGeometry({ size, thickness, length: span });
-
   const framePositions = useMemo(() => {
     const positions: number[] = [];
     for (let i = 0; i < numberOfFrames; i++) {
@@ -47,6 +36,8 @@ export const Truss = React.memo(function Truss({
     }
     return positions;
   }, [numberOfFrames, columnSpacing]);
+
+  const chordRadius = (chordProfile.h / 1000) / 2;
 
   return (
     <group name="trusses">
@@ -56,10 +47,9 @@ export const Truss = React.memo(function Truss({
           x={x}
           wallHeight={wallHeight}
           span={span}
-          roofAngleRad={roofAngleRad}
+          roofAngle={roofAngle}
           trussHeight={trussHeight}
-          topChordGeometry={topChordGeometry}
-          bottomChordGeometry={bottomChordGeometry}
+          chordRadius={chordRadius}
         />
       ))}
     </group>
@@ -70,133 +60,147 @@ interface TrussFrameProps {
   x: number;
   wallHeight: number;
   span: number;
-  roofAngleRad: number;
+  roofAngle: number;
   trussHeight: number;
-  topChordGeometry: THREE.ExtrudeGeometry;
-  bottomChordGeometry: THREE.ExtrudeGeometry;
+  chordRadius: number;
 }
 
 function TrussFrame({
   x,
   wallHeight,
   span,
-  roofAngleRad,
+  roofAngle,
   trussHeight,
-  topChordGeometry,
-  bottomChordGeometry,
+  chordRadius,
 }: TrussFrameProps) {
+  const roofAngleRad = (roofAngle * Math.PI) / 180;
   const halfSpan = span / 2;
 
-  // Web members: divide span into segments
-  const webMembers = useMemo(() => {
-    const numPanels = Math.max(4, Math.round(span / 2)); // panels along the truss
-    const panelWidth = span / numPanels;
-    const members: Array<{
-      start: [number, number, number];
-      end: [number, number, number];
-    }> = [];
+  // Compute nodes for both slopes
+  const { chordSegments, webMembers } = useMemo(() => {
+    // Panel size: approximately 2m along slope
+    const panelTargetSize = 2.0;
+    const slopeLength = halfSpan / Math.cos(roofAngleRad);
+    const numPanelsPerSlope = Math.max(3, Math.round(slopeLength / panelTargetSize));
 
-    for (let i = 0; i <= numPanels; i++) {
-      const z = i * panelWidth;
-      // Calculate top chord height at this Z position
-      const distFromCenter = Math.abs(z - halfSpan);
-      const topY = wallHeight + trussHeight + (halfSpan - distFromCenter) * Math.tan(roofAngleRad);
-      const bottomY = wallHeight;
+    // Generate nodes along each slope
+    // Left slope: Z goes from 0 (eave) to span/2 (ridge)
+    // Right slope: Z goes from span (eave) to span/2 (ridge)
+    const topNodesLeft: THREE.Vector3[] = [];
+    const bottomNodesLeft: THREE.Vector3[] = [];
+    const topNodesRight: THREE.Vector3[] = [];
+    const bottomNodesRight: THREE.Vector3[] = [];
 
-      // Vertical members
-      if (i > 0 && i < numPanels) {
-        members.push({
-          start: [x, bottomY, z],
-          end: [x, topY, z],
-        });
-      }
+    for (let i = 0; i <= numPanelsPerSlope; i++) {
+      const t = i / numPanelsPerSlope;
 
-      // Diagonals
-      if (i < numPanels) {
-        const nextZ = (i + 1) * panelWidth;
-        const nextDistFromCenter = Math.abs(nextZ - halfSpan);
-        const nextTopY = wallHeight + trussHeight + (halfSpan - nextDistFromCenter) * Math.tan(roofAngleRad);
+      // Left slope
+      const zLeft = t * halfSpan;
+      const yTopLeft = wallHeight + zLeft * Math.tan(roofAngleRad);
+      const yBottomLeft = yTopLeft - trussHeight;
+      topNodesLeft.push(new THREE.Vector3(x, yTopLeft, zLeft));
+      bottomNodesLeft.push(new THREE.Vector3(x, yBottomLeft, zLeft));
 
-        // Diagonal from bottom-left to top-right
-        members.push({
-          start: [x, bottomY, z],
-          end: [x, nextTopY, nextZ],
-        });
-        // Diagonal from top-left to bottom-right
-        members.push({
-          start: [x, topY, z],
-          end: [x, bottomY, nextZ],
-        });
-      }
+      // Right slope
+      const zRight = span - t * halfSpan;
+      const yTopRight = wallHeight + (span - zRight) * Math.tan(roofAngleRad);
+      const yBottomRight = yTopRight - trussHeight;
+      topNodesRight.push(new THREE.Vector3(x, yTopRight, zRight));
+      bottomNodesRight.push(new THREE.Vector3(x, yBottomRight, zRight));
     }
-    return members;
-  }, [span, halfSpan, wallHeight, trussHeight, roofAngleRad, x]);
+
+    // Generate chord segments (connecting consecutive nodes)
+    const segments: Array<{ start: THREE.Vector3; end: THREE.Vector3; isChord: true }> = [];
+
+    // Top chord segments
+    for (let i = 0; i < topNodesLeft.length - 1; i++) {
+      segments.push({ start: topNodesLeft[i], end: topNodesLeft[i + 1], isChord: true });
+    }
+    for (let i = 0; i < topNodesRight.length - 1; i++) {
+      segments.push({ start: topNodesRight[i], end: topNodesRight[i + 1], isChord: true });
+    }
+
+    // Bottom chord segments
+    for (let i = 0; i < bottomNodesLeft.length - 1; i++) {
+      segments.push({ start: bottomNodesLeft[i], end: bottomNodesLeft[i + 1], isChord: true });
+    }
+    for (let i = 0; i < bottomNodesRight.length - 1; i++) {
+      segments.push({ start: bottomNodesRight[i], end: bottomNodesRight[i + 1], isChord: true });
+    }
+
+    // Web members (diagonals) - W pattern in each panel
+    const webs: Array<{ start: THREE.Vector3; end: THREE.Vector3 }> = [];
+
+    // Left slope web members
+    for (let i = 0; i < numPanelsPerSlope; i++) {
+      // Diagonal from bottom-left to top-right
+      webs.push({ start: bottomNodesLeft[i], end: topNodesLeft[i + 1] });
+      // Diagonal from top-left to bottom-right
+      webs.push({ start: topNodesLeft[i], end: bottomNodesLeft[i + 1] });
+    }
+
+    // Right slope web members
+    for (let i = 0; i < numPanelsPerSlope; i++) {
+      // Diagonal from bottom-left to top-right
+      webs.push({ start: bottomNodesRight[i], end: topNodesRight[i + 1] });
+      // Diagonal from top-left to bottom-right
+      webs.push({ start: topNodesRight[i], end: bottomNodesRight[i + 1] });
+    }
+
+    return {
+      chordSegments: segments,
+      webMembers: webs,
+    };
+  }, [x, wallHeight, span, halfSpan, roofAngleRad, trussHeight]);
 
   return (
     <group>
-      {/* Bottom chord - horizontal at wallHeight, spans along Z */}
-      <mesh
-        geometry={bottomChordGeometry}
-        material={rafterMaterial}
-        position={[x, wallHeight, 0]}
-        castShadow
-        receiveShadow
-      />
-      {/* Top chord left side - from Z=0 sloping up */}
-      <mesh
-        geometry={topChordGeometry}
-        material={rafterMaterial}
-        position={[x, wallHeight + trussHeight, 0]}
-        rotation={[-roofAngleRad, 0, 0]}
-        castShadow
-        receiveShadow
-      />
-      {/* Top chord right side - from Z=span sloping down (mirror) */}
-      <mesh
-        geometry={topChordGeometry}
-        material={rafterMaterial}
-        position={[x, wallHeight + trussHeight, span]}
-        rotation={[roofAngleRad, Math.PI, 0]}
-        castShadow
-        receiveShadow
-      />
-      {/* Web members as cylinders */}
+      {/* Chord segments (top and bottom) */}
+      {chordSegments.map((seg, i) => (
+        <TrussMember
+          key={`chord-${i}`}
+          start={seg.start}
+          end={seg.end}
+          radius={chordRadius}
+          material={rafterMaterial}
+        />
+      ))}
+      {/* Web members (diagonals) */}
       {webMembers.map((member, i) => (
-        <WebMember
-          key={i}
+        <TrussMember
+          key={`web-${i}`}
           start={member.start}
           end={member.end}
+          radius={0.015}
+          material={bracingMaterial}
         />
       ))}
     </group>
   );
 }
 
-interface WebMemberProps {
-  start: [number, number, number];
-  end: [number, number, number];
+interface TrussMemberProps {
+  start: THREE.Vector3;
+  end: THREE.Vector3;
+  radius: number;
+  material: THREE.Material;
 }
 
-function WebMember({ start, end }: WebMemberProps) {
+function TrussMember({ start, end, radius, material }: TrussMemberProps) {
   const { position, rotation, memberLength } = useMemo(() => {
-    const dx = end[0] - start[0];
-    const dy = end[1] - start[1];
-    const dz = end[2] - start[2];
-    const len = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    const direction = new THREE.Vector3().subVectors(end, start);
+    const len = direction.length();
+    const mid = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
 
-    const midX = (start[0] + end[0]) / 2;
-    const midY = (start[1] + end[1]) / 2;
-    const midZ = (start[2] + end[2]) / 2;
-
-    // Calculate rotation to align cylinder (Y-axis) with direction
-    const direction = new THREE.Vector3(dx, dy, dz).normalize();
+    // Align cylinder (Y-axis default) with the direction
+    const dir = direction.normalize();
     const up = new THREE.Vector3(0, 1, 0);
     const quaternion = new THREE.Quaternion();
-    quaternion.setFromUnitVectors(up, direction);
+    quaternion.setFromUnitVectors(up, dir);
     const euler = new THREE.Euler().setFromQuaternion(quaternion);
 
     return {
-      position: [midX, midY, midZ] as [number, number, number],
+      position: [mid.x, mid.y, mid.z] as [number, number, number],
       rotation: [euler.x, euler.y, euler.z] as [number, number, number],
       memberLength: len,
     };
@@ -208,9 +212,9 @@ function WebMember({ start, end }: WebMemberProps) {
       rotation={rotation}
       castShadow
       receiveShadow
-      material={bracingMaterial}
+      material={material}
     >
-      <cylinderGeometry args={[0.015, 0.015, memberLength, 6]} />
+      <cylinderGeometry args={[radius, radius, memberLength, 8]} />
     </mesh>
   );
 }

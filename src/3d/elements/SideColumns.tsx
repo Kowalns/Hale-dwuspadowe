@@ -32,7 +32,7 @@ export const SideColumns = React.memo(function SideColumns({
 
   const positions = useMemo(() => {
     const pos: Array<{ x: number; z: number }> = [];
-    for (let i = 0; i <= numberOfFrames; i++) {
+    for (let i = 0; i < numberOfFrames; i++) {
       const x = i * columnSpacing;
       pos.push({ x, z: 0 });     // Side wall Z=0
       pos.push({ x, z: span });   // Side wall Z=span
