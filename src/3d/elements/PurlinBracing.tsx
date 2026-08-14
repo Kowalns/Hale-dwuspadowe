@@ -40,7 +40,7 @@ export const PurlinBracing = React.memo(function PurlinBracing({
     const positions: Array<{ x: number; y: number; z: number; side: 'left' | 'right' }> = [];
     const numPurlins = Math.floor(slopeLength / purlinSpacing);
 
-    for (let frame = 0; frame < numberOfFrames; frame++) {
+    for (let frame = 0; frame < numberOfFrames - 1; frame++) {
       const midX = (frame + 0.5) * columnSpacing;
 
       for (let p = 1; p < numPurlins; p++) {

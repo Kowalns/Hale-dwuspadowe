@@ -60,8 +60,6 @@ export const Truss = React.memo(function Truss({
           trussHeight={trussHeight}
           topChordGeometry={topChordGeometry}
           bottomChordGeometry={bottomChordGeometry}
-          webMemberSize={size * 0.5}
-          webMemberThickness={thickness * 0.5}
         />
       ))}
     </group>
@@ -76,8 +74,6 @@ interface TrussFrameProps {
   trussHeight: number;
   topChordGeometry: THREE.ExtrudeGeometry;
   bottomChordGeometry: THREE.ExtrudeGeometry;
-  webMemberSize: number;
-  webMemberThickness: number;
 }
 
 function TrussFrame({
@@ -88,8 +84,6 @@ function TrussFrame({
   trussHeight,
   topChordGeometry,
   bottomChordGeometry,
-  webMemberSize,
-  webMemberThickness,
 }: TrussFrameProps) {
   const halfSpan = span / 2;
 
@@ -137,9 +131,6 @@ function TrussFrame({
     }
     return members;
   }, [span, halfSpan, wallHeight, trussHeight, roofAngleRad, x]);
-
-  // Use a small tube geometry for reference (unused directly but kept for potential future use)
-  useSquareTubeGeometry({ size: webMemberSize, thickness: webMemberThickness, length: 1 });
 
   return (
     <group>
