@@ -1,0 +1,46 @@
+{
+  "app": {
+    "title": "Konfigurator Hal Stalowych",
+    "subtitle": "Hale dwuspadowe"
+  },
+  "language": {
+    "pl": "PL",
+    "en": "EN",
+    "switch": "Zmien jezyk"
+  },
+  "form": {
+    "title": "Parametry hali",
+    "span": "Rozpietosc (szerokosc)",
+    "length": "Dlugosc",
+    "wallHeight": "Wysokosc sciany bocznej",
+    "roofAngle": "Kat nachylenia dachu",
+    "steelGrade": "Gatunek stali",
+    "unit": {
+      "meters": "m",
+      "degrees": "\u00b0"
+    },
+    "range": {
+      "span": "10-30 m",
+      "length": "20-100 m",
+      "wallHeight": "4-10 m",
+      "roofAngle": "5\u00b0-25\u00b0"
+    },
+    "steelGrades": {
+      "S235": "S235",
+      "S355": "S355"
+    },
+    "submit": "Oblicz",
+    "reset": "Resetuj"
+  },
+  "view": {
+    "perspective": "Perspektywa",
+    "front": "Przod",
+    "side": "Bok",
+    "top": "Gora"
+  },
+  "sections": {
+    "geometry": "Geometria",
+    "materials": "Materialy",
+    "results": "Wyniki"
+  }
+}
