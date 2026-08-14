@@ -1,0 +1,34 @@
+{
+  "id": "FEAT-002",
+  "type": "feat",
+  "description": "Steel profile data catalog, structural calculation engine, and parameter form. Implements the complete geometry form with wizard/expert modes, steel profile database (IPE, RHS/SHS, Z-profiles, square tubes), load calculations (snow/wind zones), and profile selection algorithms.",
+  "status": "completed",
+  "steps": [
+    "Create src/data/profiles.ts with complete steel profile catalog as typed JSON objects: IPE profiles (80-600) with W_pl, I, A, mass, h, b, tw, tf; RHS/SHS profiles (60x60x3 to 200x200x8) with A, I, W_pl, mass, dimensions; Z profiles (Z140-Z300) with properties; Square tubes for truss chords (80x80x4 to 150x150x6) with properties",
+    "Create src/data/loads.ts with snow zone values (zones 1-5: 0.7, 0.9, 1.2, 1.6, 2.0 kN/m2), wind zone values (zones 1-3: 0.3, 0.45, 0.55 kN/m2), and covering self-weight (sheet: 0.15, sandwich: 0.25 kN/m2)",
+    "Create src/utils/geometry.ts with column spacing algorithm: base spacing 5m, n = round(L/5), actual spacing = L/n. Also purlin spacing calculation (~2-2.5m), roof height from angle, ridge height calculation.",
+    "Create src/utils/calculations.ts with profile selection algorithms: (a) Side columns IPE - wind load per column = q_wind * spacing, M = q*h^2/2, W_pl_required = M/f_y, select smallest IPE where W_pl >= required; (b) Rafter IPE (span<=18m) - q = (snow+self_weight)*frame_spacing, M_max = q*L^2/8, select IPE; (c) Truss (span>18m) - height = L/12, N = M_max/h_truss, select square tube where A >= N/f_y; (d) Z-purlins - load = (snow+covering)*purlin_spacing, select Z profile; (e) Bracing - light/standard/heavy based on total loads",
+    "Create src/types/index.ts with TypeScript interfaces: HallParameters (span, length, wallHeight, roofAngle, steelGrade, snowZone, windZone, coveringType), CalculationResults (sideColumnProfile, endColumnProfile, rafterProfile or trussProfile, purlinProfile, bracingDiameter, columnSpacing, purlinSpacing, trussHeight), SteelProfile interface",
+    "Create src/hooks/useHallCalculations.ts - custom hook that takes HallParameters and returns CalculationResults using useMemo, calling all calculation functions",
+    "Create src/components/FormPanel.tsx with full parameter form: wizard mode (step-by-step: 1-Geometry, 2-Loads, 3-Steel grade) and expert mode (all sections visible). Include inputs for: span (10-30m slider+input), length (20-100m), wall height (4-10m), roof angle (5-25 degrees), steel grade (S235/S355 radio), snow zone (1-5 select), wind zone (1-3 select), covering type (sheet/sandwich radio)",
+    "Create src/components/ResultsPanel.tsx showing calculated profile selections - displays chosen profiles for each element with key properties (name, mass, W_pl)",
+    "Add all form labels and result labels to i18n translation files (PL + EN)",
+    "Style form with dark industrial theme: dark inputs with orange focus rings, section dividers, step indicators for wizard mode, toggle button for wizard/expert mode switch"
+  ],
+  "acceptance_criteria": [
+    "Profile catalog contains all specified profiles with correct properties (W_pl, I, A, mass, dimensions)",
+    "Changing span from 15m to 20m (crossing 18m threshold) switches from rafter IPE to truss calculation",
+    "Column spacing for L=48m correctly calculates n=10, spacing=4.8m",
+    "Form validates ranges (span 10-30, length 20-100, height 4-10, angle 5-25)",
+    "Wizard mode shows steps sequentially, expert mode shows all at once",
+    "Results panel updates immediately when parameters change",
+    "All text is translated in both PL and EN",
+    "pnpm build completes without TypeScript errors"
+  ],
+  "verification": [
+    "pnpm build",
+    "npx tsc --noEmit"
+  ],
+  "blocked_reason": null,
+  "findings": "fs_write tool creates files in a virtual snapshot layer, not on the actual disk at /root/Hale-dwuspadowe. Had to use bash heredocs (cat > file << ENDOFFILE) to write files directly to the filesystem. The workspace root for file tools is /projects/sandbox/ which maps to a different physical path than where the git repo lives at /root/Hale-dwuspadowe/."
+}
