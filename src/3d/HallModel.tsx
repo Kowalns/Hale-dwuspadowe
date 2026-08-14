@@ -14,6 +14,7 @@ import { WallGirts } from './elements/WallGirts';
 import { GableGirts } from './elements/GableGirts';
 import { IntermediateColumns } from './elements/IntermediateColumns';
 import { TrussColumnHead } from './elements/TrussColumnHead';
+import { ColumnCaps } from './elements/ColumnCaps';
 import type { HallParameters, CalculationResults } from '../types';
 
 interface HallModelProps {
@@ -53,6 +54,10 @@ export const HallModel = React.memo(function HallModel({ params, results }: Hall
   const offsetX = -hallLength / 2;
   const offsetZ = -span / 2;
 
+  // Column flange offset: half the column profile width (b/2) in meters
+  // This shifts rafters/trusses inward so they start at the inner flange surface
+  const columnFlangeOffset = sideColumnProfile.b / 2 / 1000;
+
   return (
     <group position={[offsetX, 0, offsetZ]}>
       {/* Side columns along both long walls */}
@@ -60,6 +65,16 @@ export const HallModel = React.memo(function HallModel({ params, results }: Hall
         profile={sideColumnProfile}
         wallHeight={wallHeight}
         span={span}
+        columnSpacing={columnSpacing}
+        numberOfFrames={numberOfFrames}
+      />
+
+      {/* Cap plates at the top of side columns */}
+      <ColumnCaps
+        sideColumnProfile={sideColumnProfile}
+        wallHeight={wallHeight}
+        span={span}
+        roofAngle={roofAngle}
         columnSpacing={columnSpacing}
         numberOfFrames={numberOfFrames}
       />
@@ -82,6 +97,7 @@ export const HallModel = React.memo(function HallModel({ params, results }: Hall
           roofAngle={roofAngle}
           columnSpacing={columnSpacing}
           numberOfFrames={numberOfFrames}
+          columnFlangeOffset={columnFlangeOffset}
         />
       )}
 
@@ -94,6 +110,7 @@ export const HallModel = React.memo(function HallModel({ params, results }: Hall
           trussHeight={trussHeight}
           columnSpacing={columnSpacing}
           numberOfFrames={numberOfFrames}
+          columnFlangeOffset={columnFlangeOffset}
         />
       )}
 
@@ -170,6 +187,7 @@ export const HallModel = React.memo(function HallModel({ params, results }: Hall
           columnSpacing={columnSpacing}
           numberOfFrames={numberOfFrames}
           connectionPlates={connectionPlates}
+          columnFlangeOffset={columnFlangeOffset}
         />
       )}
 

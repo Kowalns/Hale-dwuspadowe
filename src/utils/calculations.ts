@@ -873,12 +873,12 @@ export function calculateWithOverrides(
     // Approximate ULS load
     const q_rafter_ULS = (1.35 * g_roof + 1.5 * s_roof) * columnSpacing;
 
-    // Clamp customTrussHeight to valid range [span/15, span/8]
-    const minHeight = params.span / 15;
+    // Clamp customTrussHeight to valid range [0.5m, span/8]
+    const minHeight = 0.5;
     const maxHeight = params.span / 8;
     const effectiveTrussHeight = customTrussHeight != null
       ? Math.min(Math.max(customTrussHeight, minHeight), maxHeight)
-      : params.span / 10;
+      : Math.max(params.span / 10, minHeight);
     const trussResult = selectTrussChordWithHeight(q_rafter_ULS, q_rafter_SLS, params.span, fy, effectiveTrussHeight);
     results.rafterProfile = null;
     results.trussChordProfile = trussResult.profile;
@@ -912,8 +912,8 @@ export function calculateWithOverrides(
     const q_rafter_SLS = (g_roof + s_roof) * columnSpacing;
     const q_rafter_ULS = (1.35 * g_roof + 1.5 * s_roof) * columnSpacing;
 
-    // Clamp customTrussHeight to valid range [span/15, span/8]
-    const minHeight = params.span / 15;
+    // Clamp customTrussHeight to valid range [0.5m, span/8]
+    const minHeight = 0.5;
     const maxHeight = params.span / 8;
     const clampedTrussHeight = Math.min(Math.max(customTrussHeight, minHeight), maxHeight);
 

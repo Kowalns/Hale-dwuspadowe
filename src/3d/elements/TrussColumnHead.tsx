@@ -12,6 +12,7 @@ interface TrussColumnHeadProps {
   columnSpacing: number;
   numberOfFrames: number;
   connectionPlates: ConnectionPlateResults;
+  columnFlangeOffset: number;
 }
 
 /**
@@ -33,6 +34,7 @@ export const TrussColumnHead = React.memo(function TrussColumnHead({
   columnSpacing,
   numberOfFrames,
   connectionPlates,
+  columnFlangeOffset,
 }: TrussColumnHeadProps) {
   const framePositions = useMemo(() => {
     const positions: number[] = [];
@@ -71,6 +73,7 @@ export const TrussColumnHead = React.memo(function TrussColumnHead({
             plateH={plateH}
             plateT={plateT}
             side="left"
+            columnFlangeOffset={columnFlangeOffset}
           />
           {/* Right side (Z=span): head extends toward -Z */}
           <ColumnHead
@@ -86,6 +89,7 @@ export const TrussColumnHead = React.memo(function TrussColumnHead({
             plateT={plateT}
             side="right"
             span={span}
+            columnFlangeOffset={columnFlangeOffset}
           />
         </React.Fragment>
       ))}
@@ -106,6 +110,7 @@ interface ColumnHeadProps {
   plateT: number;
   side: 'left' | 'right';
   span?: number;
+  columnFlangeOffset: number;
 }
 
 function ColumnHead({
@@ -121,6 +126,7 @@ function ColumnHead({
   plateT,
   side,
   span = 0,
+  columnFlangeOffset,
 }: ColumnHeadProps) {
   const members = useMemo(() => {
     // Rise over the 500mm horizontal run
@@ -132,21 +138,22 @@ function ColumnHead({
     let bottomEnd: THREE.Vector3;
 
     if (side === 'left') {
-      // Left side: Z=0, extends toward +Z
-      topStart = new THREE.Vector3(x, wallHeight, 0);
-      topEnd = new THREE.Vector3(x, wallHeight + rise, headLength);
-      bottomStart = new THREE.Vector3(x, wallHeight - trussHeight, 0);
-      bottomEnd = new THREE.Vector3(x, wallHeight - trussHeight + rise, headLength);
+      // Left side: starts at Z=columnFlangeOffset, extends toward +Z
+      topStart = new THREE.Vector3(x, wallHeight, columnFlangeOffset);
+      topEnd = new THREE.Vector3(x, wallHeight + rise, columnFlangeOffset + headLength);
+      bottomStart = new THREE.Vector3(x, wallHeight - trussHeight, columnFlangeOffset);
+      bottomEnd = new THREE.Vector3(x, wallHeight - trussHeight + rise, columnFlangeOffset + headLength);
     } else {
-      // Right side: Z=span, extends toward -Z (mirror)
-      topStart = new THREE.Vector3(x, wallHeight, span);
-      topEnd = new THREE.Vector3(x, wallHeight + rise, span - headLength);
-      bottomStart = new THREE.Vector3(x, wallHeight - trussHeight, span);
-      bottomEnd = new THREE.Vector3(x, wallHeight - trussHeight + rise, span - headLength);
+      // Right side: starts at Z=span - columnFlangeOffset, extends toward -Z (mirror)
+      const startZ = span - columnFlangeOffset;
+      topStart = new THREE.Vector3(x, wallHeight, startZ);
+      topEnd = new THREE.Vector3(x, wallHeight + rise, startZ - headLength);
+      bottomStart = new THREE.Vector3(x, wallHeight - trussHeight, startZ);
+      bottomEnd = new THREE.Vector3(x, wallHeight - trussHeight + rise, startZ - headLength);
     }
 
     return { topStart, topEnd, bottomStart, bottomEnd };
-  }, [x, wallHeight, roofAngleRad, trussHeight, headLength, side, span]);
+  }, [x, wallHeight, roofAngleRad, trussHeight, headLength, side, span, columnFlangeOffset]);
 
   // End plate positions: at the far ends of both chords, vertical (XY plane)
   const platePosition = useMemo(() => {

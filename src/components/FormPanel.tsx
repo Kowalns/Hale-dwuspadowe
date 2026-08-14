@@ -273,9 +273,9 @@ export function FormPanel({ params, onParamsChange, results, profileOverrides, o
   // Determine if truss is active based on rafterType and span
   const currentRafterType = rafterType ?? 'auto';
   const isTrussActive = currentRafterType === 'force_truss' || (currentRafterType === 'auto' && params.span > 18);
-  const trussHeightMin = Math.round((params.span / 15) * 10) / 10;
+  const trussHeightMin = 0.5;
   const trussHeightMax = Math.round((params.span / 8) * 10) / 10;
-  const trussHeightDefault = Math.round((params.span / 10) * 10) / 10;
+  const trussHeightDefault = Math.max(Math.round((params.span / 10) * 10) / 10, 0.5);
   const currentTrussHeight = customTrussHeight ?? trussHeightDefault;
 
   const RafterTypeSection = (
