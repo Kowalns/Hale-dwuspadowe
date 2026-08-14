@@ -13,11 +13,14 @@ interface ColumnCapsProps {
 
 /**
  * Renders cap plates (10mm thick) at the top of each side column.
- * Each cap plate matches the column cross-section dimensions and lies
- * flat (horizontal) on top of the column.
+ * Each cap plate matches the column cross-section dimensions and is rotated
+ * around its TOP surface to follow the roof angle.
+ *
+ * Approach: A group is positioned at wallHeight (top of column) and rotated
+ * by the roof angle. The mesh inside is offset by -plateThickness/2 in local Y,
+ * so that the top surface of the plate aligns with the rotation pivot point.
  *
  * Dimensions: b (along X) x 10mm (Y) x h (along Z)
- * After column rotation [-PI/2, 0, 0], profile b goes along X and h goes along Z.
  */
 export const ColumnCaps = React.memo(function ColumnCaps({
   sideColumnProfile,
@@ -45,26 +48,18 @@ export const ColumnCaps = React.memo(function ColumnCaps({
     <group name="column-caps">
       {framePositions.map((x, i) => (
         <React.Fragment key={i}>
-          {/* Left side (Z=0): horizontal cap plate */}
-          <mesh
-            material={plateMaterial}
-            position={[x, wallHeight - plateThickness / 2, 0]}
-            rotation={[-roofAngleRad, 0, 0]}
-            castShadow
-            receiveShadow
-          >
-            <boxGeometry args={[profileB, plateThickness, profileH]} />
-          </mesh>
-          {/* Right side (Z=span): horizontal cap plate */}
-          <mesh
-            material={plateMaterial}
-            position={[x, wallHeight - plateThickness / 2, span]}
-            rotation={[roofAngleRad, 0, 0]}
-            castShadow
-            receiveShadow
-          >
-            <boxGeometry args={[profileB, plateThickness, profileH]} />
-          </mesh>
+          {/* Left side (Z=0): cap plate rotated around its top surface */}
+          <group position={[x, wallHeight, 0]} rotation={[-roofAngleRad, 0, 0]}>
+            <mesh material={plateMaterial} position={[0, -plateThickness / 2, 0]} castShadow receiveShadow>
+              <boxGeometry args={[profileB, plateThickness, profileH]} />
+            </mesh>
+          </group>
+          {/* Right side (Z=span): cap plate rotated around its top surface */}
+          <group position={[x, wallHeight, span]} rotation={[roofAngleRad, 0, 0]}>
+            <mesh material={plateMaterial} position={[0, -plateThickness / 2, 0]} castShadow receiveShadow>
+              <boxGeometry args={[profileB, plateThickness, profileH]} />
+            </mesh>
+          </group>
         </React.Fragment>
       ))}
     </group>
