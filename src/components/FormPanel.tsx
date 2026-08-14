@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { HallParameters, CoveringType, SteelGrade } from '../types';
+import type { HallParameters, CoveringType, SteelGrade, CalculationResults } from '../types';
 import { ResultsPanel } from './ResultsPanel';
-import { useHallCalculations } from '../hooks/useHallCalculations';
 
 const DEFAULT_PARAMS: HallParameters = {
   span: 18,
@@ -64,14 +63,13 @@ function SliderInput({ label, value, min, max, step, unit, onChange }: SliderInp
 interface FormPanelProps {
   params: HallParameters;
   onParamsChange: (params: HallParameters) => void;
+  results: CalculationResults;
 }
 
-export function FormPanel({ params, onParamsChange }: FormPanelProps) {
+export function FormPanel({ params, onParamsChange, results }: FormPanelProps) {
   const { t } = useTranslation();
   const [wizardMode, setWizardMode] = useState(true);
   const [wizardStep, setWizardStep] = useState(0);
-
-  const results = useHallCalculations(params);
 
   const updateParam = <K extends keyof HallParameters>(key: K, value: HallParameters[K]) => {
     onParamsChange({ ...params, [key]: value });
@@ -121,7 +119,7 @@ export function FormPanel({ params, onParamsChange }: FormPanelProps) {
         min={5}
         max={25}
         step={1}
-        unit={"\u00b0"}
+        unit="°"
         onChange={(v) => updateParam('roofAngle', v)}
       />
     </div>

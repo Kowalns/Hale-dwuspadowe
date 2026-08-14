@@ -16,8 +16,10 @@ interface TrussProps {
 
 /**
  * Renders parallel chord trusses for span > 18m.
- * Bottom chord horizontal at wallHeight, top chord follows roof slope.
- * Web members: verticals + diagonals.
+ * Each frame has a truss spanning the full width.
+ * - Top chord follows the roof slope
+ * - Bottom chord is horizontal at wallHeight
+ * - Web members: verticals + diagonals in a V/W pattern
  */
 export const Truss = React.memo(function Truss({
   chordProfile,
@@ -28,7 +30,7 @@ export const Truss = React.memo(function Truss({
   columnSpacing,
   numberOfFrames,
 }: TrussProps) {
-  const size = chordProfile.h / 1000;
+  const size = chordProfile.h / 1000; // Square tube size in meters
   const thickness = (chordProfile.t ?? 4) / 1000;
 
   const roofAngleRad = (roofAngle * Math.PI) / 180;
@@ -40,7 +42,7 @@ export const Truss = React.memo(function Truss({
 
   const framePositions = useMemo(() => {
     const positions: number[] = [];
-    for (let i = 0; i <= numberOfFrames; i++) {
+    for (let i = 0; i < numberOfFrames; i++) {
       positions.push(i * columnSpacing);
     }
     return positions;
@@ -54,11 +56,12 @@ export const Truss = React.memo(function Truss({
           x={x}
           wallHeight={wallHeight}
           span={span}
-          halfSpan={halfSpan}
           roofAngleRad={roofAngleRad}
           trussHeight={trussHeight}
           topChordGeometry={topChordGeometry}
           bottomChordGeometry={bottomChordGeometry}
+          webMemberSize={size * 0.5}
+          webMemberThickness={thickness * 0.5}
         />
       ))}
     </group>
@@ -69,26 +72,30 @@ interface TrussFrameProps {
   x: number;
   wallHeight: number;
   span: number;
-  halfSpan: number;
   roofAngleRad: number;
   trussHeight: number;
   topChordGeometry: THREE.ExtrudeGeometry;
   bottomChordGeometry: THREE.ExtrudeGeometry;
+  webMemberSize: number;
+  webMemberThickness: number;
 }
 
 function TrussFrame({
   x,
   wallHeight,
   span,
-  halfSpan,
   roofAngleRad,
   trussHeight,
   topChordGeometry,
   bottomChordGeometry,
+  webMemberSize,
+  webMemberThickness,
 }: TrussFrameProps) {
+  const halfSpan = span / 2;
+
   // Web members: divide span into segments
   const webMembers = useMemo(() => {
-    const numPanels = Math.max(4, Math.round(span / 2));
+    const numPanels = Math.max(4, Math.round(span / 2)); // panels along the truss
     const panelWidth = span / numPanels;
     const members: Array<{
       start: [number, number, number];
@@ -97,11 +104,12 @@ function TrussFrame({
 
     for (let i = 0; i <= numPanels; i++) {
       const z = i * panelWidth;
+      // Calculate top chord height at this Z position
       const distFromCenter = Math.abs(z - halfSpan);
       const topY = wallHeight + trussHeight + (halfSpan - distFromCenter) * Math.tan(roofAngleRad);
       const bottomY = wallHeight;
 
-      // Vertical members (skip ends)
+      // Vertical members
       if (i > 0 && i < numPanels) {
         members.push({
           start: [x, bottomY, z],
@@ -115,10 +123,12 @@ function TrussFrame({
         const nextDistFromCenter = Math.abs(nextZ - halfSpan);
         const nextTopY = wallHeight + trussHeight + (halfSpan - nextDistFromCenter) * Math.tan(roofAngleRad);
 
+        // Diagonal from bottom-left to top-right
         members.push({
           start: [x, bottomY, z],
           end: [x, nextTopY, nextZ],
         });
+        // Diagonal from top-left to bottom-right
         members.push({
           start: [x, topY, z],
           end: [x, bottomY, nextZ],
@@ -128,9 +138,12 @@ function TrussFrame({
     return members;
   }, [span, halfSpan, wallHeight, trussHeight, roofAngleRad, x]);
 
+  // Use a small tube geometry for reference (unused directly but kept for potential future use)
+  useSquareTubeGeometry({ size: webMemberSize, thickness: webMemberThickness, length: 1 });
+
   return (
     <group>
-      {/* Bottom chord - horizontal at wallHeight, along Z */}
+      {/* Bottom chord - horizontal at wallHeight, spans along Z */}
       <mesh
         geometry={bottomChordGeometry}
         material={rafterMaterial}
@@ -138,7 +151,7 @@ function TrussFrame({
         castShadow
         receiveShadow
       />
-      {/* Top chord left side */}
+      {/* Top chord left side - from Z=0 sloping up */}
       <mesh
         geometry={topChordGeometry}
         material={rafterMaterial}
@@ -147,18 +160,22 @@ function TrussFrame({
         castShadow
         receiveShadow
       />
-      {/* Top chord right side (mirror) */}
+      {/* Top chord right side - from Z=span sloping down (mirror) */}
       <mesh
         geometry={topChordGeometry}
         material={rafterMaterial}
         position={[x, wallHeight + trussHeight, span]}
-        rotation={[-roofAngleRad, 0, 0]}
+        rotation={[-roofAngleRad, Math.PI, 0]}
         castShadow
         receiveShadow
       />
-      {/* Web members */}
+      {/* Web members as cylinders */}
       {webMembers.map((member, i) => (
-        <WebMember key={i} start={member.start} end={member.end} />
+        <WebMember
+          key={i}
+          start={member.start}
+          end={member.end}
+        />
       ))}
     </group>
   );
@@ -170,7 +187,7 @@ interface WebMemberProps {
 }
 
 function WebMember({ start, end }: WebMemberProps) {
-  const { position, quaternion, memberLength } = useMemo(() => {
+  const { position, rotation, memberLength } = useMemo(() => {
     const dx = end[0] - start[0];
     const dy = end[1] - start[1];
     const dz = end[2] - start[2];
@@ -180,14 +197,16 @@ function WebMember({ start, end }: WebMemberProps) {
     const midY = (start[1] + end[1]) / 2;
     const midZ = (start[2] + end[2]) / 2;
 
+    // Calculate rotation to align cylinder (Y-axis) with direction
     const direction = new THREE.Vector3(dx, dy, dz).normalize();
     const up = new THREE.Vector3(0, 1, 0);
-    const quat = new THREE.Quaternion();
-    quat.setFromUnitVectors(up, direction);
+    const quaternion = new THREE.Quaternion();
+    quaternion.setFromUnitVectors(up, direction);
+    const euler = new THREE.Euler().setFromQuaternion(quaternion);
 
     return {
-      position: new THREE.Vector3(midX, midY, midZ),
-      quaternion: quat,
+      position: [midX, midY, midZ] as [number, number, number],
+      rotation: [euler.x, euler.y, euler.z] as [number, number, number],
       memberLength: len,
     };
   }, [start, end]);
@@ -195,7 +214,7 @@ function WebMember({ start, end }: WebMemberProps) {
   return (
     <mesh
       position={position}
-      quaternion={quaternion}
+      rotation={rotation}
       castShadow
       receiveShadow
       material={bracingMaterial}

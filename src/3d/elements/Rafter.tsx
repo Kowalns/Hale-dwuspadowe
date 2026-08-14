@@ -16,7 +16,8 @@ interface RafterProps {
 /**
  * Renders IPE rafters for span <= 18m.
  * Each frame has a pair of rafters going from wall top to ridge.
- * ExtrudeGeometry goes along local Z. We rotate to follow roof slope.
+ * Left rafter: from (X, wallHeight, 0) to (X, ridgeHeight, span/2)
+ * Right rafter: mirror
  */
 export const Rafter = React.memo(function Rafter({
   profile,
@@ -38,7 +39,7 @@ export const Rafter = React.memo(function Rafter({
 
   const framePositions = useMemo(() => {
     const positions: number[] = [];
-    for (let i = 0; i <= numberOfFrames; i++) {
+    for (let i = 0; i < numberOfFrames; i++) {
       positions.push(i * columnSpacing);
     }
     return positions;
@@ -47,22 +48,22 @@ export const Rafter = React.memo(function Rafter({
   return (
     <group name="rafters">
       {framePositions.map((x, i) => (
-        <group key={i}>
-          {/* Left rafter - starts at (x, wallHeight, 0), slopes up towards center */}
+        <group key={i} position={[x, wallHeight, 0]}>
+          {/* Left rafter (Z=0 to Z=span/2) */}
           <mesh
             geometry={geometry}
             material={rafterMaterial}
-            position={[x, wallHeight, 0]}
+            position={[0, 0, 0]}
             rotation={[roofAngleRad, 0, 0]}
             castShadow
             receiveShadow
           />
-          {/* Right rafter - starts at (x, wallHeight, span), slopes up towards center */}
+          {/* Right rafter (Z=span to Z=span/2) - mirror */}
           <mesh
             geometry={geometry}
             material={rafterMaterial}
-            position={[x, wallHeight, span]}
-            rotation={[-roofAngleRad, 0, 0]}
+            position={[0, 0, span]}
+            rotation={[-roofAngleRad, Math.PI, 0]}
             castShadow
             receiveShadow
           />

@@ -48,8 +48,10 @@ function selectPurlinByLoad(loadPerMeter: number): SteelProfile {
 function selectSideColumn(params: HallParameters, columnSpacing: number): SteelProfile {
   const q_wind = windZoneLoads[params.windZone] * columnSpacing; // kN/m
   const M = (q_wind * params.wallHeight * params.wallHeight) / 2; // kNm
-  const f_y = yieldStrength[params.steelGrade]; // MPa = N/mm2
-  // W_pl_required: M [kNm] * 10^6 [Nmm/kNm] / f_y [N/mm2] / 1000 [mm3->cm3]
+  const f_y = yieldStrength[params.steelGrade]; // MPa = N/mm2 = 10^-3 kN/mm2
+  // W_pl_required = M / f_y (M in kNm, f_y in MPa)
+  // M [kNm] = M * 10^6 [Nmm], f_y [N/mm2]
+  // W_pl [mm3] = M*10^6 / f_y -> convert to cm3: / 1000
   const wPlRequired = (M * 1e6) / f_y / 1000; // cm3
   return selectByWpl(ipeProfiles, wPlRequired);
 }
@@ -68,13 +70,15 @@ function selectEndColumn(params: HallParameters, columnSpacing: number): SteelPr
 /**
  * Select rafter (IPE) for span <= 18m.
  * Simple beam model: M_max = q * L^2 / 8
+ * Snow load is per horizontal plan area (PN-EN 1991-1-3),
+ * so use half-span as the beam span.
  */
 function selectRafter(params: HallParameters, columnSpacing: number): SteelProfile {
   const snowLoad = snowZoneLoads[params.snowZone];
   const selfWeight = coveringSelfWeight[params.coveringType];
-  const roofSlopeLength = calculateRoofSlopeLength(params.span, params.roofAngle);
-  const q = (snowLoad + selfWeight) * columnSpacing; // kN/m along rafter
-  const M = (q * roofSlopeLength * roofSlopeLength) / 8; // kNm
+  const halfSpan = params.span / 2;
+  const q = (snowLoad + selfWeight) * columnSpacing; // kN/m (load per plan projection)
+  const M = (q * halfSpan * halfSpan) / 8; // kNm
   const f_y = yieldStrength[params.steelGrade];
   const wPlRequired = (M * 1e6) / f_y / 1000; // cm3
   return selectByWpl(ipeProfiles, wPlRequired);
@@ -85,6 +89,8 @@ function selectRafter(params: HallParameters, columnSpacing: number): SteelProfi
  * Truss height = span / 12
  * N = M_max / h_truss
  * A_required = N / f_y
+ * Snow load is per horizontal plan area (PN-EN 1991-1-3),
+ * so use half-span as the beam span.
  */
 function selectTrussChord(
   params: HallParameters,
@@ -92,13 +98,13 @@ function selectTrussChord(
 ): { profile: SteelProfile; trussHeight: number } {
   const snowLoad = snowZoneLoads[params.snowZone];
   const selfWeight = coveringSelfWeight[params.coveringType];
-  const roofSlopeLength = calculateRoofSlopeLength(params.span, params.roofAngle);
-  const q = (snowLoad + selfWeight) * columnSpacing; // kN/m
-  const M_max = (q * roofSlopeLength * roofSlopeLength) / 8; // kNm
+  const halfSpan = params.span / 2;
+  const q = (snowLoad + selfWeight) * columnSpacing; // kN/m (load per plan projection)
+  const M_max = (q * halfSpan * halfSpan) / 8; // kNm
   const trussHeight = params.span / 12; // m
-  const N = M_max / trussHeight; // kN (M in kNm / h in m = kN)
-  const f_y = yieldStrength[params.steelGrade]; // N/mm2
-  // A_required [mm2] = N[kN] * 1000 / f_y[N/mm2], convert to cm2: / 100
+  const N = M_max / trussHeight; // kN (M in kNm, h in m -> N in kN)
+  const f_y = yieldStrength[params.steelGrade]; // MPa = N/mm2
+  // A_required [mm2] = N[kN]*1000 / f_y[N/mm2], convert to cm2: / 100
   const aRequired = (N * 1000) / f_y / 100; // cm2
   const profile = selectByArea(trussChordProfiles, aRequired);
   return { profile, trussHeight };

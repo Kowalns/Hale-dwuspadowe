@@ -21,7 +21,6 @@ export const CrossBracing = React.memo(function CrossBracing({
   span,
   ridgeHeight,
   columnSpacing,
-  numberOfFrames,
   hallLength,
   bracingDiameter,
 }: CrossBracingProps) {
@@ -30,17 +29,15 @@ export const CrossBracing = React.memo(function CrossBracing({
   const braces = useMemo(() => {
     const result: Array<{ start: THREE.Vector3; end: THREE.Vector3 }> = [];
 
-    // Only place bracing if we have at least 2 bays
-    if (numberOfFrames < 1) return result;
-
     const firstBayStart = 0;
     const firstBayEnd = columnSpacing;
     const lastBayStart = hallLength - columnSpacing;
     const lastBayEnd = hallLength;
 
-    const bays = numberOfFrames === 1
-      ? [[firstBayStart, firstBayEnd]]
-      : [[firstBayStart, firstBayEnd], [lastBayStart, lastBayEnd]];
+    const bays = [
+      [firstBayStart, firstBayEnd],
+      [lastBayStart, lastBayEnd],
+    ];
 
     // Wall bracing - both side walls
     for (const [bayX0, bayX1] of bays) {
@@ -65,32 +62,47 @@ export const CrossBracing = React.memo(function CrossBracing({
     }
 
     // Roof bracing - both slopes, first and last bay
+    // Proper X-pattern: two diagonals spanning opposite corners of each bay panel on the roof
     const halfSpan = span / 2;
 
     for (const [bayX0, bayX1] of bays) {
-      // Left roof slope
+      // Left roof slope - corners at eave (wallHeight, Z=0) and ridge (ridgeHeight, Z=halfSpan)
+      const leftEaveY = wallHeight;
+      const leftEaveZ = 0;
+      const leftRidgeY = ridgeHeight;
+      const leftRidgeZ = halfSpan;
+
+      // Diagonal 1: (bayX0, eave) to (bayX1, ridge)
       result.push({
-        start: new THREE.Vector3(bayX0, wallHeight, 0),
-        end: new THREE.Vector3(bayX1, (wallHeight + ridgeHeight) / 2, halfSpan / 2),
+        start: new THREE.Vector3(bayX0, leftEaveY, leftEaveZ),
+        end: new THREE.Vector3(bayX1, leftRidgeY, leftRidgeZ),
       });
+      // Diagonal 2: (bayX1, eave) to (bayX0, ridge)
       result.push({
-        start: new THREE.Vector3(bayX1, wallHeight, 0),
-        end: new THREE.Vector3(bayX0, (wallHeight + ridgeHeight) / 2, halfSpan / 2),
+        start: new THREE.Vector3(bayX1, leftEaveY, leftEaveZ),
+        end: new THREE.Vector3(bayX0, leftRidgeY, leftRidgeZ),
       });
 
-      // Right roof slope
+      // Right roof slope - corners at eave (wallHeight, Z=span) and ridge (ridgeHeight, Z=halfSpan)
+      const rightEaveY = wallHeight;
+      const rightEaveZ = span;
+      const rightRidgeY = ridgeHeight;
+      const rightRidgeZ = halfSpan;
+
+      // Diagonal 1: (bayX0, eave) to (bayX1, ridge)
       result.push({
-        start: new THREE.Vector3(bayX0, wallHeight, span),
-        end: new THREE.Vector3(bayX1, (wallHeight + ridgeHeight) / 2, span - halfSpan / 2),
+        start: new THREE.Vector3(bayX0, rightEaveY, rightEaveZ),
+        end: new THREE.Vector3(bayX1, rightRidgeY, rightRidgeZ),
       });
+      // Diagonal 2: (bayX1, eave) to (bayX0, ridge)
       result.push({
-        start: new THREE.Vector3(bayX1, wallHeight, span),
-        end: new THREE.Vector3(bayX0, (wallHeight + ridgeHeight) / 2, span - halfSpan / 2),
+        start: new THREE.Vector3(bayX1, rightEaveY, rightEaveZ),
+        end: new THREE.Vector3(bayX0, rightRidgeY, rightRidgeZ),
       });
     }
 
     return result;
-  }, [wallHeight, span, ridgeHeight, columnSpacing, numberOfFrames, hallLength]);
+  }, [wallHeight, span, ridgeHeight, columnSpacing, hallLength]);
 
   return (
     <group name="cross-bracing">
@@ -113,19 +125,21 @@ interface BracingRodProps {
 }
 
 function BracingRod({ start, end, radius }: BracingRodProps) {
-  const { position, quaternion, rodLength } = useMemo(() => {
+  const { position, rotation, rodLength } = useMemo(() => {
     const direction = new THREE.Vector3().subVectors(end, start);
     const len = direction.length();
     const mid = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
 
+    // Align cylinder (Y-axis default) with the direction
     const dir = direction.normalize();
     const up = new THREE.Vector3(0, 1, 0);
-    const quat = new THREE.Quaternion();
-    quat.setFromUnitVectors(up, dir);
+    const quaternion = new THREE.Quaternion();
+    quaternion.setFromUnitVectors(up, dir);
+    const euler = new THREE.Euler().setFromQuaternion(quaternion);
 
     return {
-      position: mid,
-      quaternion: quat,
+      position: [mid.x, mid.y, mid.z] as [number, number, number],
+      rotation: [euler.x, euler.y, euler.z] as [number, number, number],
       rodLength: len,
     };
   }, [start, end]);
@@ -133,7 +147,7 @@ function BracingRod({ start, end, radius }: BracingRodProps) {
   return (
     <mesh
       position={position}
-      quaternion={quaternion}
+      rotation={rotation}
       castShadow
       receiveShadow
       material={bracingMaterial}
