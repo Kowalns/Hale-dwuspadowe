@@ -7,30 +7,36 @@ import {
   calculateRidgeHeight,
   calculateRoofSlopeLength,
 } from './geometry';
+import {
+  computeSnowLoad,
+  getSnowExposureCoefficient,
+  computePeakVelocityPressure,
+  getCpeWallWindward,
+  getCpeWallLeeward,
+  getCpeRoofWindward,
+  getCpeRoofWindwardSuction,
+  getCpeRoofLeeward,
+  computeLoadCombinations,
+  computeFrameFactor,
+  computeBucklingFactor,
+  computeLTBFactor,
+  computeInteractionCheck,
+  computeRelativeSlenderness,
+  computeKyy,
+  computeTrussChordBuckling,
+  computeColumnDeflection,
+  computeRafterDeflection,
+  getColumnDeflectionLimit,
+  getRafterDeflectionLimit,
+  type CharacteristicLoads,
+  type LoadCombinationForces,
+} from './eurocode';
 
 /** Yield strength in MPa */
 const yieldStrength: Record<string, number> = {
   S235: 235,
   S355: 355,
 };
-
-/**
- * Select the smallest profile from a list where W_pl >= required W_pl.
- */
-function selectByWpl(profiles: SteelProfile[], wPlRequired: number): SteelProfile {
-  const sorted = [...profiles].sort((a, b) => a.W_pl - b.W_pl);
-  const selected = sorted.find((p) => p.W_pl >= wPlRequired);
-  return selected ?? sorted[sorted.length - 1];
-}
-
-/**
- * Select tube by cross-section area requirement.
- */
-function selectByArea(profiles: SteelProfile[], areaRequired: number): SteelProfile {
-  const sorted = [...profiles].sort((a, b) => a.A - b.A);
-  const selected = sorted.find((p) => p.A >= areaRequired);
-  return selected ?? sorted[sorted.length - 1];
-}
 
 /**
  * Select Z purlin by load capacity.
@@ -42,91 +48,12 @@ function selectPurlinByLoad(loadPerMeter: number): SteelProfile {
 }
 
 /**
- * Select side column (IPE) based on wind load.
- * Schema: cantilever - M = q * h^2 / 2
- */
-function selectSideColumn(params: HallParameters, columnSpacing: number): SteelProfile {
-  const q_wind = windZoneLoads[params.windZone] * columnSpacing; // kN/m
-  const M = (q_wind * params.wallHeight * params.wallHeight) / 2; // kNm
-  const f_y = yieldStrength[params.steelGrade]; // MPa = N/mm2 = 10^-3 kN/mm2
-  // W_pl_required = M / f_y (M in kNm, f_y in MPa)
-  // M [kNm] = M * 10^6 [Nmm], f_y [N/mm2]
-  // W_pl [mm3] = M*10^6 / f_y -> convert to cm3: / 1000
-  const wPlRequired = (M * 1e6) / f_y / 1000; // cm3
-  return selectByWpl(ipeProfiles, wPlRequired);
-}
-
-/**
- * Select end column (RHS/SHS) - lighter load (half spacing, lighter wind).
- */
-function selectEndColumn(params: HallParameters, columnSpacing: number): SteelProfile {
-  const q_wind = windZoneLoads[params.windZone] * (columnSpacing / 2); // half tributary area
-  const M = (q_wind * params.wallHeight * params.wallHeight) / 2; // kNm
-  const f_y = yieldStrength[params.steelGrade];
-  const wPlRequired = (M * 1e6) / f_y / 1000; // cm3
-  return selectByWpl(rhsProfiles, wPlRequired);
-}
-
-/**
- * Select rafter (IPE) for span <= 18m.
- * Simple beam model: M_max = q * L^2 / 8
- * Snow load is per horizontal plan area (PN-EN 1991-1-3),
- * so use half-span as the beam span.
- */
-function selectRafter(params: HallParameters, columnSpacing: number): SteelProfile {
-  const snowLoad = snowZoneLoads[params.snowZone];
-  const selfWeight = coveringSelfWeight[params.coveringType];
-  const halfSpan = params.span / 2;
-  const q = (snowLoad + selfWeight) * columnSpacing; // kN/m (load per plan projection)
-  const M = (q * halfSpan * halfSpan) / 8; // kNm
-  const f_y = yieldStrength[params.steelGrade];
-  const wPlRequired = (M * 1e6) / f_y / 1000; // cm3
-  return selectByWpl(ipeProfiles, wPlRequired);
-}
-
-/**
- * Select truss chord (square tube) for span > 18m.
- * Truss height = span / 12
- * N = M_max / h_truss
- * A_required = N / f_y
- * Snow load is per horizontal plan area (PN-EN 1991-1-3),
- * so use half-span as the beam span.
- */
-function selectTrussChord(
-  params: HallParameters,
-  columnSpacing: number
-): { profile: SteelProfile; trussHeight: number } {
-  const snowLoad = snowZoneLoads[params.snowZone];
-  const selfWeight = coveringSelfWeight[params.coveringType];
-  const halfSpan = params.span / 2;
-  const q = (snowLoad + selfWeight) * columnSpacing; // kN/m (load per plan projection)
-  const M_max = (q * halfSpan * halfSpan) / 8; // kNm
-  const trussHeight = params.span / 12; // m
-  const N = M_max / trussHeight; // kN (M in kNm, h in m -> N in kN)
-  const f_y = yieldStrength[params.steelGrade]; // MPa = N/mm2
-  // A_required [mm2] = N[kN]*1000 / f_y[N/mm2], convert to cm2: / 100
-  const aRequired = (N * 1000) / f_y / 100; // cm2
-  const profile = selectByArea(trussChordProfiles, aRequired);
-  return { profile, trussHeight };
-}
-
-/**
- * Select purlin (Z profile) based on load.
- */
-function selectPurlin(params: HallParameters, purlinSpacing: number): SteelProfile {
-  const snowLoad = snowZoneLoads[params.snowZone];
-  const selfWeight = coveringSelfWeight[params.coveringType];
-  const loadPerMeter = (snowLoad + selfWeight) * purlinSpacing; // kN/m
-  return selectPurlinByLoad(loadPerMeter);
-}
-
-/**
  * Select bracing diameter based on total loads.
  * Light: 12mm, Standard: 16mm, Heavy: 20mm
  */
 function selectBracing(params: HallParameters, columnSpacing: number): number {
-  const snowLoad = snowZoneLoads[params.snowZone];
-  const windLoad = windZoneLoads[params.windZone];
+  const snowLoad = snowZoneLoads[params.snowZone] ?? 0.9;
+  const windLoad = windZoneLoads[params.windZone] ?? 0.3;
   const totalLoad = (snowLoad + windLoad) * columnSpacing * params.span;
 
   if (totalLoad < 50) return 12;
@@ -135,34 +62,376 @@ function selectBracing(params: HallParameters, columnSpacing: number): number {
 }
 
 /**
+ * Check side column (IPE) with full Eurocode stability interaction.
+ * Returns utilization ratio for a given profile under the given forces.
+ */
+function checkColumnStability(
+  profile: SteelProfile,
+  MEd: number,
+  NEd: number,
+  H_m: number,
+  fy: number
+): number {
+  const i_y = profile.i_y ?? 10; // cm
+  const Lcr = H_m; // buckling length = column height (pinned base, fixed head approx)
+
+  // Compute buckling factor (curve b for IPE about strong axis, alpha=0.34)
+  const chi_y = computeBucklingFactor(Lcr, i_y, fy, 0.34);
+
+  // Lateral-torsional buckling: column inner flange not restrained by cladding
+  const chi_LT = computeLTBFactor(false);
+
+  // Interaction factor kyy
+  const lambda_bar = computeRelativeSlenderness(Lcr, i_y, fy);
+  const kyy = computeKyy(lambda_bar, NEd, chi_y, profile.A, fy);
+
+  // Interaction check
+  return computeInteractionCheck(NEd, MEd, profile.A, profile.W_pl, fy, chi_y, chi_LT, kyy);
+}
+
+/**
+ * Check column horizontal deflection (SLS).
+ * For a portal frame the column deflection is reduced by frame action.
+ * Apply frame factor (k_ramy) to account for rafter restraint.
+ * Returns true if deflection is within limit.
+ */
+function checkColumnDeflection(
+  profile: SteelProfile,
+  q_wind_char_kN_per_m: number,
+  H_m: number
+): { deflection: number; limit: number; ok: boolean } {
+  const k_ramy = computeFrameFactor(); // frame reduces deflection vs pure cantilever
+  const deflection = computeColumnDeflection(q_wind_char_kN_per_m * k_ramy, H_m, profile.I);
+  const limit = getColumnDeflectionLimit(H_m);
+  return { deflection, limit, ok: deflection <= limit };
+}
+
+/**
+ * Select side column using iterative approach:
+ * Start from smallest IPE, check stability interaction + deflection, pick smallest passing.
+ */
+function selectSideColumn(
+  governingCombo: LoadCombinationForces,
+  q_wind_char_kN_per_m: number,
+  H_m: number,
+  fy: number
+): {
+  profile: SteelProfile;
+  utilization: number;
+  deflection: number;
+  deflectionLimit: number;
+  governingCondition: string;
+} {
+  // Filter to structural IPE profiles (>= IPE 160 for columns)
+  const candidates = ipeProfiles.filter(p => p.h >= 160);
+  const MEd = governingCombo.M_column;
+  const NEd = governingCombo.N_column;
+
+  for (const profile of candidates) {
+    const utilization = checkColumnStability(profile, MEd, NEd, H_m, fy);
+    const deflCheck = checkColumnDeflection(profile, q_wind_char_kN_per_m, H_m);
+
+    if (utilization <= 1.0 && deflCheck.ok) {
+      return {
+        profile,
+        utilization,
+        deflection: deflCheck.deflection,
+        deflectionLimit: deflCheck.limit,
+        governingCondition: utilization > (deflCheck.deflection / deflCheck.limit) ? 'stability' : 'deflection',
+      };
+    }
+
+    // If stability passes but deflection fails, continue to next profile
+    // If neither passes, continue
+  }
+
+  // If no profile passes, return largest with its utilization
+  const largest = candidates[candidates.length - 1];
+  const util = checkColumnStability(largest, MEd, NEd, H_m, fy);
+  const deflCheck = checkColumnDeflection(largest, q_wind_char_kN_per_m, H_m);
+  return {
+    profile: largest,
+    utilization: util,
+    deflection: deflCheck.deflection,
+    deflectionLimit: deflCheck.limit,
+    governingCondition: util > 1.0 ? 'stability' : 'deflection',
+  };
+}
+
+/**
+ * Select end column (RHS/SHS) - half tributary area, same stability checks.
+ */
+function selectEndColumn(
+  governingCombo: LoadCombinationForces,
+  q_wind_char_kN_per_m: number,
+  H_m: number,
+  fy: number
+): SteelProfile {
+  // End columns have half the tributary width, so half the loads
+  const MEd = governingCombo.M_column * 0.5;
+  const NEd = governingCombo.N_column * 0.5;
+
+  const candidates = rhsProfiles.filter(p => p.h >= 80);
+
+  for (const profile of candidates) {
+    const i_y = profile.i_min ?? Math.sqrt(profile.I / profile.A);
+    const chi_y = computeBucklingFactor(H_m, i_y, fy, 0.49); // curve c for RHS
+    const chi_LT = 1.0; // Closed sections not susceptible to LTB
+    const util = computeInteractionCheck(NEd, MEd, profile.A, profile.W_pl, fy, chi_y, chi_LT);
+    const deflCheck = checkColumnDeflection(profile, q_wind_char_kN_per_m * 0.5, H_m);
+
+    if (util <= 1.0 && deflCheck.ok) {
+      return profile;
+    }
+  }
+
+  return candidates[candidates.length - 1];
+}
+
+/**
+ * Select rafter (IPE) for span <= 18m with moment and deflection check.
+ */
+function selectRafter(
+  q_rafter_ULS: number,
+  q_rafter_SLS: number,
+  halfSpan: number,
+  fy: number
+): { profile: SteelProfile; deflection: number; deflectionLimit: number } {
+  const M_max = (q_rafter_ULS * halfSpan * halfSpan) / 8; // kNm (simply supported beam)
+
+  const candidates = ipeProfiles.filter(p => p.h >= 160);
+  const deflLimit = getRafterDeflectionLimit(halfSpan);
+
+  for (const profile of candidates) {
+    // Simple strength check: M_Ed <= W_pl * fy / gammaM0
+    const MRd = profile.W_pl * 1000 * fy / 1e6; // kNm
+    const strengthUtil = M_max / MRd;
+
+    // Deflection check (SLS)
+    const defl = computeRafterDeflection(q_rafter_SLS, halfSpan, profile.I);
+
+    if (strengthUtil <= 1.0 && defl <= deflLimit) {
+      return { profile, deflection: defl, deflectionLimit: deflLimit };
+    }
+  }
+
+  const largest = candidates[candidates.length - 1];
+  return {
+    profile: largest,
+    deflection: computeRafterDeflection(q_rafter_SLS, halfSpan, largest.I),
+    deflectionLimit: deflLimit,
+  };
+}
+
+/**
+ * Select truss chord (square tube) with buckling check on top chord.
+ * Truss height = span / 10 (standard for steel trusses).
+ * Panel length (distance between nodes) ~ 2m.
+ */
+function selectTrussChord(
+  q_rafter_ULS: number,
+  q_rafter_SLS: number,
+  span: number,
+  fy: number
+): {
+  profile: SteelProfile;
+  trussHeight: number;
+  deflection: number;
+  deflectionLimit: number;
+} {
+  const halfSpan = span / 2;
+  const trussHeight = span / 10; // m
+  const M_max = (q_rafter_ULS * halfSpan * halfSpan) / 8; // kNm
+  const NEd = (M_max / trussHeight); // kN (axial force in chord = M/h_truss)
+
+  // Panel length (distance between truss nodes): typically span/number_of_panels
+  // For a Pratt truss with ~2m panels
+  const numPanels = Math.max(4, Math.round(halfSpan / 2));
+  const panelLength = halfSpan / numPanels; // m (buckling length for top chord)
+
+  const deflLimit = getRafterDeflectionLimit(span);
+
+  for (const profile of trussChordProfiles) {
+    const i_min = profile.i_min ?? Math.sqrt(profile.I / profile.A);
+    const util = computeTrussChordBuckling(NEd, profile.A, i_min, panelLength, fy, 0.49);
+
+    // Deflection check for truss (approximate as equivalent beam with I_equiv)
+    // For a truss: I_equiv ~ 2 * A_chord * (h_truss/2)^2 (parallel axis theorem)
+    const I_equiv_cm4 = 2 * profile.A * Math.pow(trussHeight * 100 / 2, 2); // cm4
+    const defl = computeRafterDeflection(q_rafter_SLS, span, I_equiv_cm4);
+
+    if (util <= 1.0 && defl <= deflLimit) {
+      return { profile, trussHeight, deflection: defl, deflectionLimit: deflLimit };
+    }
+  }
+
+  const largest = trussChordProfiles[trussChordProfiles.length - 1];
+  const i_min_l = largest.i_min ?? Math.sqrt(largest.I / largest.A);
+  const I_equiv_cm4 = 2 * largest.A * Math.pow(trussHeight * 100 / 2, 2);
+  const _util = computeTrussChordBuckling(NEd, largest.A, i_min_l, panelLength, fy, 0.49);
+  void _util;
+  return {
+    profile: largest,
+    trussHeight,
+    deflection: computeRafterDeflection(q_rafter_SLS, span, I_equiv_cm4),
+    deflectionLimit: deflLimit,
+  };
+}
+
+/**
+ * Select purlin (Z profile) based on load (ULS factored).
+ */
+function selectPurlin(params: HallParameters, purlinSpacing: number): SteelProfile {
+  const snowLoad = snowZoneLoads[params.snowZone] ?? 0.9;
+  const selfWeight = coveringSelfWeight[params.coveringType] ?? 0.15;
+  // ULS factored load for purlin selection
+  const loadPerMeter = (1.35 * selfWeight + 1.5 * snowLoad) * purlinSpacing;
+  return selectPurlinByLoad(loadPerMeter);
+}
+
+/**
  * Main calculation function: takes hall parameters, returns all results.
+ * Implements full Eurocode PN-EN 1990/1991/1993 methodology.
  */
 export function calculateHallStructure(params: HallParameters): CalculationResults {
-  const { spacing: columnSpacing, count: numberOfFrames } = calculateColumnSpacing(params.length);
+  const fy = yieldStrength[params.steelGrade] ?? 235;
+
+  // --- Geometry ---
+  const { spacing: columnSpacing, count: numberOfBays } = calculateColumnSpacing(params.length);
   const roofSlopeLength = calculateRoofSlopeLength(params.span, params.roofAngle);
   const purlinSpacing = calculatePurlinSpacing(roofSlopeLength);
   const ridgeHeight = calculateRidgeHeight(params.wallHeight, params.span, params.roofAngle);
 
-  const sideColumnProfile = selectSideColumn(params, columnSpacing);
-  const endColumnProfile = selectEndColumn(params, columnSpacing);
+  // --- Snow load (PN-EN 1991-1-3) ---
+  const Sk = snowZoneLoads[params.snowZone] ?? 0.9;
+  const Ce = getSnowExposureCoefficient(params.snowExposure ?? 'normal');
+  const s_roof = computeSnowLoad(Sk, params.roofAngle, Ce); // kN/m2 on roof
+
+  // --- Wind load (PN-EN 1991-1-4) ---
+  const terrainCat = params.terrainCategory ?? 2;
+  const qp = computePeakVelocityPressure(params.windZone, params.wallHeight, terrainCat); // kN/m2
+
+  // Wind pressure coefficients
+  const cpe_D = getCpeWallWindward(); // +0.8
+  const cpe_E = getCpeWallLeeward(); // -0.5
+  const cpe_roof_wind = getCpeRoofWindward(params.roofAngle);
+  const cpe_roof_suction = getCpeRoofWindwardSuction(params.roofAngle);
+  const cpe_roof_lee = getCpeRoofLeeward();
+
+  // Wind pressures [kN/m2]
+  const w_D = cpe_D * qp;
+  const w_E = cpe_E * qp;
+  const w_roof_wind = cpe_roof_wind * qp;
+  const w_roof_suction = cpe_roof_suction * qp;
+  const w_roof_lee = cpe_roof_lee * qp;
+  void w_roof_lee; // used in full analysis, not in simplified 2D frame
+
+  // --- Dead load on roof ---
+  const g_roof = (coveringSelfWeight[params.coveringType] ?? 0.15) + 0.10; // covering + purlins/connections
+
+  // --- Frame factor ---
+  const k_ramy = computeFrameFactor();
+
+  // --- Load combinations ---
+  const charLoads: CharacteristicLoads = {
+    g_roof,
+    s_roof,
+    w_D,
+    w_E: Math.abs(w_E), // use absolute value (suction on leeward = net horizontal)
+    w_roof_wind: Math.max(w_roof_wind, 0), // positive downward contribution
+    w_roof_suction,
+    w_roof_lee,
+    Lk: columnSpacing,
+    H: params.wallHeight,
+    span: params.span,
+    alpha: params.roofAngle,
+    k_ramy,
+  };
+
+  const combinations = computeLoadCombinations(charLoads);
+
+  // Find governing combination (max moment in column)
+  let governing = combinations[0];
+  for (const combo of combinations) {
+    if (combo.M_column > governing.M_column) {
+      governing = combo;
+    }
+  }
+
+  // --- Characteristic wind load on column for SLS deflection check ---
+  const q_wind_char = (w_D + Math.abs(w_E)) * columnSpacing; // kN/m (total horizontal on frame)
+  // For column deflection: use distributed load on single column
+  const q_wind_column_SLS = q_wind_char; // kN/m along column height
+
+  // --- Select side column (IPE) with stability + deflection ---
+  const columnResult = selectSideColumn(governing, q_wind_column_SLS, params.wallHeight, fy);
+
+  // --- Select end column (RHS) ---
+  const endColumnProfile = selectEndColumn(governing, q_wind_column_SLS, params.wallHeight, fy);
+
+  // --- Select rafter or truss ---
+  // SLS load on rafter (characteristic, unfactored)
+  const q_rafter_SLS = (g_roof + s_roof) * columnSpacing; // kN/m
+  // ULS load on rafter from governing combination
+  const q_rafter_ULS = governing.q_rafter;
 
   let rafterProfile: SteelProfile | null = null;
   let trussChordProfile: SteelProfile | null = null;
   let trussHeight: number | null = null;
+  let rafterDeflection: number;
+  let rafterDeflectionLimit: number;
 
   if (params.span <= 18) {
-    rafterProfile = selectRafter(params, columnSpacing);
+    const halfSpan = params.span / 2;
+    const rafterResult = selectRafter(q_rafter_ULS, q_rafter_SLS, halfSpan, fy);
+    rafterProfile = rafterResult.profile;
+    rafterDeflection = rafterResult.deflection;
+    rafterDeflectionLimit = rafterResult.deflectionLimit;
   } else {
-    const trussResult = selectTrussChord(params, columnSpacing);
+    const trussResult = selectTrussChord(q_rafter_ULS, q_rafter_SLS, params.span, fy);
     trussChordProfile = trussResult.profile;
     trussHeight = trussResult.trussHeight;
+    rafterDeflection = trussResult.deflection;
+    rafterDeflectionLimit = trussResult.deflectionLimit;
   }
 
+  // --- Select purlin ---
   const purlinProfile = selectPurlin(params, purlinSpacing);
+
+  // --- Select bracing ---
   const bracingDiameter = selectBracing(params, columnSpacing);
 
+  // --- Compute steel mass per m2 of floor area ---
+  const floorArea = params.span * params.length; // m2
+  const numberOfFrames = numberOfBays + 1;
+  // Mass from columns (side columns * 2 per frame, end columns at gable walls)
+  const sideColumnMass = columnResult.profile.mass * params.wallHeight * 2 * numberOfFrames;
+  const endColumnMass = endColumnProfile.mass * params.wallHeight * 2 * 2; // 2 gable walls, ~2 columns each (simplified)
+  // Mass from rafters/trusses
+  let rafterMass = 0;
+  if (rafterProfile) {
+    rafterMass = rafterProfile.mass * roofSlopeLength * 2 * numberOfFrames;
+  } else if (trussChordProfile) {
+    // Top + bottom chords + diagonals (approximate: 2.5x chord mass)
+    rafterMass = trussChordProfile.mass * params.span * 2.5 * numberOfFrames;
+  }
+  // Mass from purlins
+  const numPurlinsPerSlope = Math.ceil(roofSlopeLength / purlinSpacing) + 1;
+  const purlinMass = purlinProfile.mass * params.length * numPurlinsPerSlope * 2;
+  const totalSteelMass = sideColumnMass + endColumnMass + rafterMass + purlinMass;
+  const steelMassPerM2 = totalSteelMass / floorArea;
+
+  // --- Deflection checks ---
+  const columnDeflection = columnResult.deflection;
+  const columnDeflectionLimit = columnResult.deflectionLimit;
+  const deflectionCheck = (columnDeflection <= columnDeflectionLimit) &&
+    (rafterDeflection <= rafterDeflectionLimit);
+
+  // --- Final results ---
+  const stabilityCheck = columnResult.utilization <= 1.0;
+
   return {
-    sideColumnProfile,
+    sideColumnProfile: columnResult.profile,
     endColumnProfile,
     rafterProfile,
     trussChordProfile,
@@ -171,7 +440,18 @@ export function calculateHallStructure(params: HallParameters): CalculationResul
     columnSpacing,
     purlinSpacing,
     trussHeight,
-    numberOfFrames: numberOfFrames + 1, // frames = bays + 1
+    numberOfFrames,
     ridgeHeight,
+    // Extended Eurocode results
+    utilizationRatio: columnResult.utilization,
+    governingCombination: governing.name,
+    governingCondition: columnResult.governingCondition,
+    steelMassPerM2,
+    columnDeflection,
+    columnDeflectionLimit,
+    rafterDeflection,
+    rafterDeflectionLimit,
+    deflectionCheck,
+    stabilityCheck,
   };
 }

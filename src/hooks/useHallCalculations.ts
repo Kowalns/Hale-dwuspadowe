@@ -16,5 +16,7 @@ export function useHallCalculations(params: HallParameters): CalculationResults 
     params.snowZone,
     params.windZone,
     params.coveringType,
+    params.terrainCategory,
+    params.snowExposure,
   ]);
 }

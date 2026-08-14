@@ -1,5 +1,7 @@
 export type SteelGrade = 'S235' | 'S355';
 export type CoveringType = 'sheet' | 'sandwich';
+export type TerrainCategory = 1 | 2 | 3 | 4;
+export type SnowExposure = 'windy' | 'normal' | 'sheltered';
 
 export interface HallParameters {
   span: number; // 10-30m
@@ -10,6 +12,8 @@ export interface HallParameters {
   snowZone: number; // 1-5
   windZone: number; // 1-3
   coveringType: CoveringType;
+  terrainCategory?: TerrainCategory;
+  snowExposure?: SnowExposure;
 }
 
 export interface SteelProfile {
@@ -26,6 +30,8 @@ export interface SteelProfile {
   t?: number; // mm (wall thickness for tubes/RHS)
   b_f?: number; // mm (flange width for Z profiles)
   load_capacity?: number; // kN/m (for Z profiles)
+  i_y?: number; // cm (radius of gyration about strong axis)
+  i_min?: number; // cm (minimum radius of gyration for tubes/RHS)
 }
 
 export interface CalculationResults {
@@ -40,4 +46,15 @@ export interface CalculationResults {
   trussHeight: number | null; // m
   numberOfFrames: number;
   ridgeHeight: number; // m
+  // Extended Eurocode results
+  utilizationRatio: number; // governing utilization (0-1+)
+  governingCombination: string; // e.g. "KOMB 1 (snow dominant)"
+  governingCondition: string; // e.g. "stability" | "deflection" | "strength"
+  steelMassPerM2: number; // kg/m2 of floor area
+  columnDeflection: number; // mm
+  columnDeflectionLimit: number; // mm
+  rafterDeflection: number; // mm
+  rafterDeflectionLimit: number; // mm
+  deflectionCheck: boolean; // true = OK
+  stabilityCheck: boolean; // true = OK
 }
