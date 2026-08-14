@@ -47,7 +47,7 @@ export const RidgePlates = React.memo(function RidgePlates({
           castShadow
           receiveShadow
         >
-          <boxGeometry args={[plateT, plateH, plateW]} />
+          <boxGeometry args={[plateW, plateH, plateT]} />
         </mesh>
       ))}
     </group>

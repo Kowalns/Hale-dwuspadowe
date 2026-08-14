@@ -71,7 +71,7 @@ export const BasePlates = React.memo(function BasePlates({
           castShadow
           receiveShadow
         >
-          <boxGeometry args={[plateW, plateT, plateH]} />
+          <boxGeometry args={[plateH, plateT, plateW]} />
         </mesh>
       ))}
     </group>
