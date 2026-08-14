@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import type { CalculationResults, ProfileOverrides, SteelProfile } from '../types';
-import { ipeProfiles, rhsProfiles, zProfiles, trussChordProfiles } from '../data/profiles';
+import { ipeProfiles, rhsProfiles, zProfiles, trussChordProfiles, rkProfiles, rpProfiles } from '../data/profiles';
 
 interface ResultsPanelProps {
   results: CalculationResults;
@@ -15,7 +15,7 @@ function getUtilizationColor(eta: number): string {
 }
 
 /** Get available profiles for a given profile type */
-function getProfilesForType(type: 'sideColumn' | 'endColumn' | 'rafter' | 'trussChord' | 'purlin'): SteelProfile[] {
+function getProfilesForType(type: keyof ProfileOverrides): SteelProfile[] {
   switch (type) {
     case 'sideColumn':
       return ipeProfiles.filter(p => p.h >= 160);
@@ -27,6 +27,11 @@ function getProfilesForType(type: 'sideColumn' | 'endColumn' | 'rafter' | 'truss
       return trussChordProfiles;
     case 'purlin':
       return zProfiles;
+    case 'eaveBeam':
+    case 'wallGirt':
+    case 'gableGirt':
+    case 'intermediateColumn':
+      return [...rkProfiles, ...rpProfiles];
   }
 }
 

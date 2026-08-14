@@ -20,6 +20,11 @@
     "coveringType": "Covering type",
     "terrainCategory": "Terrain category",
     "snowExposure": "Snow exposure",
+    "purlinType": "Purlin type",
+    "purlinTypes": {
+      "single": "Single span",
+      "continuous": "Continuous"
+    },
     "snowZoneLabel": "Zone {{zone}}",
     "windZoneLabel": "Zone {{zone}}",
     "covering": {
@@ -76,6 +81,13 @@
     "ridgeHeight": "Ridge height",
     "numberOfFrames": "Number of frames",
     "trussHeight": "Truss height",
+    "eaveBeam": "Eave beam",
+    "wallGirt": "Wall girt",
+    "gableGirt": "Gable girt",
+    "intermediateColumn": "Intermediate column",
+    "purlinCostHint": "Purlin cost hint",
+    "purlinCostHintContinuous": "Continuous purlins cheaper",
+    "purlinCostHintSingle": "Single purlins cheaper",
     "utilization": "Utilization ratio",
     "governingCombination": "Governing combination",
     "governingCondition": "Governing condition",
@@ -108,7 +120,11 @@
     "resetToCalculated": "Reset to calculated",
     "manuallyChanged": "Manually changed",
     "overUtilized": "Over-utilized",
-    "utilizationWarning": "Utilization ratio > 1.0"
+    "utilizationWarning": "Utilization ratio > 1.0",
+    "eaveBeam": "Eave beam",
+    "wallGirt": "Wall girt",
+    "gableGirt": "Gable girt",
+    "intermediateColumn": "Intermediate column"
   },
   "rafterType": {
     "title": "Rafter type",

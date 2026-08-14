@@ -1,5 +1,5 @@
 import type { HallParameters, CalculationResults, SteelProfile, ProfileOverrides, RafterType, ConnectionPlateResults, ConnectionPlateInfo } from '../types';
-import { ipeProfiles, rhsProfiles, zProfiles, trussChordProfiles } from '../data/profiles';
+import { ipeProfiles, rhsProfiles, zProfiles, trussChordProfiles, rkProfiles, rpProfiles } from '../data/profiles';
 import { snowZoneLoads, windZoneLoads, coveringSelfWeight } from '../data/loads';
 import {
   calculateColumnSpacing,
@@ -71,6 +71,35 @@ function selectBracing(params: HallParameters, columnSpacing: number): number {
 }
 
 /**
+ * Select eave beam profile - default Rk 80x80x2
+ */
+function selectEaveBeam(): SteelProfile {
+  return rkProfiles.find(p => p.name === 'Rk 80x80x2')!;
+}
+
+/**
+ * Select wall girt profile - default Rk 80x80x2
+ */
+function selectWallGirt(): SteelProfile {
+  return rkProfiles.find(p => p.name === 'Rk 80x80x2')!;
+}
+
+/**
+ * Select gable girt profile - default Rk 60x60x2
+ */
+function selectGableGirt(): SteelProfile {
+  return rkProfiles.find(p => p.name === 'Rk 60x60x2')!;
+}
+
+/**
+ * Select intermediate column profile - Rk 80x80x2
+ * Active only when coveringType = 'sheet'
+ */
+function selectIntermediateColumn(): SteelProfile {
+  return rkProfiles.find(p => p.name === 'Rk 80x80x2')!;
+}
+
+/**
  * Compute chi_LT for a given IPE profile and unbraced length.
  * Uses Mcr-based approach per EN 1993-1-1 clause 6.3.2.3.
  *
@@ -117,13 +146,15 @@ function computeColumnChiLT(profile: SteelProfile, Lcr_m: number, fy: number): n
 /**
  * Check side column (IPE) with full Eurocode stability interaction.
  * Returns utilization ratio for a given profile under the given forces.
+ * bucklingLengthOutOfPlane: Lcr for weak-axis buckling (wallHeight/2 when wall girts present)
  */
 function checkColumnStability(
   profile: SteelProfile,
   MEd: number,
   NEd: number,
   H_m: number,
-  fy: number
+  fy: number,
+  bucklingLengthOutOfPlane?: number
 ): number {
   const i_y = profile.i_y ?? 10; // cm
   const Lcr = H_m; // buckling length = column height (pinned base, braced frame)
@@ -132,7 +163,9 @@ function checkColumnStability(
   const chi_y = computeBucklingFactor(Lcr, i_y, fy, 0.34);
 
   // Lateral-torsional buckling: compute chi_LT based on Mcr
-  const chi_LT = computeColumnChiLT(profile, Lcr, fy);
+  // Use bucklingLengthOutOfPlane for LTB unbraced length when wall girts provide lateral restraint
+  const Lcr_LT = bucklingLengthOutOfPlane ?? Lcr;
+  const chi_LT = computeColumnChiLT(profile, Lcr_LT, fy);
 
   // Interaction factor kyy
   const lambda_bar = computeRelativeSlenderness(Lcr, i_y, fy);
@@ -162,13 +195,15 @@ function checkColumnDeflection(
 /**
  * Select side column using iterative approach:
  * Start from smallest IPE, check stability interaction + deflection, pick smallest passing.
+ * hasWallGirts: when true, use wallHeight/2 for out-of-plane buckling length
  */
 function selectSideColumn(
   governingCombo: LoadCombinationForces,
   q_wind_char_kN_per_m: number,
   H_m: number,
   fy: number,
-  k_ramy: number
+  k_ramy: number,
+  hasWallGirts: boolean = true
 ): {
   profile: SteelProfile;
   utilization: number;
@@ -180,9 +215,10 @@ function selectSideColumn(
   const candidates = ipeProfiles.filter(p => p.h >= 160);
   const MEd = governingCombo.M_column;
   const NEd = governingCombo.N_column;
+  const bucklingLengthOutOfPlane = hasWallGirts ? H_m / 2 : undefined;
 
   for (const profile of candidates) {
-    const utilization = checkColumnStability(profile, MEd, NEd, H_m, fy);
+    const utilization = checkColumnStability(profile, MEd, NEd, H_m, fy, bucklingLengthOutOfPlane);
     const deflCheck = checkColumnDeflection(profile, q_wind_char_kN_per_m, H_m, k_ramy);
 
     if (utilization <= 1.0 && deflCheck.ok) {
@@ -198,7 +234,7 @@ function selectSideColumn(
 
   // If no profile passes, return largest with its utilization
   const largest = candidates[candidates.length - 1];
-  const util = checkColumnStability(largest, MEd, NEd, H_m, fy);
+  const util = checkColumnStability(largest, MEd, NEd, H_m, fy, bucklingLengthOutOfPlane);
   const deflCheck = checkColumnDeflection(largest, q_wind_char_kN_per_m, H_m, k_ramy);
   return {
     profile: largest,
@@ -329,13 +365,35 @@ function selectTrussChord(
 
 /**
  * Select purlin (Z profile) based on load (ULS factored).
+ * purlinType: 'continuous' reduces load requirement by 20%
  */
-function selectPurlin(params: HallParameters, purlinSpacing: number): SteelProfile {
+function selectPurlin(params: HallParameters, purlinSpacing: number): { profile: SteelProfile; purlinType: 'single' | 'continuous'; purlinCostHint: string | null } {
   const snowLoad = snowZoneLoads[params.snowZone] ?? 0.9;
   const selfWeight = coveringSelfWeight[params.coveringType] ?? 0.15;
+  const purlinType = params.purlinType ?? 'single';
   // ULS factored load for purlin selection
   const loadPerMeter = (1.35 * selfWeight + 1.5 * snowLoad) * purlinSpacing;
-  return selectPurlinByLoad(loadPerMeter);
+
+  // For continuous purlins, reduce load requirement by 20%
+  const effectiveLoad = purlinType === 'continuous' ? loadPerMeter * 0.8 : loadPerMeter;
+  const profile = selectPurlinByLoad(effectiveLoad);
+
+  // Generate purlin cost hint: compare single vs continuous mass
+  const singleProfile = selectPurlinByLoad(loadPerMeter);
+  const continuousProfile = selectPurlinByLoad(loadPerMeter * 0.8);
+  const singleMass = singleProfile.mass;
+  const continuousMass = continuousProfile.mass * 1.12; // 12% increase for continuous
+
+  let purlinCostHint: string | null = null;
+  if (singleMass !== continuousMass) {
+    if (continuousMass < singleMass) {
+      purlinCostHint = `continuous_cheaper`;
+    } else {
+      purlinCostHint = `single_cheaper`;
+    }
+  }
+
+  return { profile, purlinType, purlinCostHint };
 }
 
 /**
@@ -592,7 +650,10 @@ export function calculateHallStructure(params: HallParameters): CalculationResul
   }
 
   // --- Select purlin ---
-  const purlinProfile = selectPurlin(params, purlinSpacing);
+  const purlinResult = selectPurlin(params, purlinSpacing);
+  const purlinProfile = purlinResult.profile;
+  const purlinType = purlinResult.purlinType;
+  const purlinCostHint = purlinResult.purlinCostHint;
 
   // --- Select bracing ---
   const bracingDiameter = selectBracing(params, columnSpacing);
@@ -612,9 +673,30 @@ export function calculateHallStructure(params: HallParameters): CalculationResul
     // Top + bottom chords + diagonals (approximate: 2.5x chord mass)
     rafterMass = trussChordProfile.mass * params.span * 2.5 * numberOfFrames;
   }
-  // Mass from purlins
+  // Mass from purlins (increase by 12% for continuous type)
   const numPurlinsPerSlope = Math.ceil(roofSlopeLength / purlinSpacing) + 1;
-  const purlinMass = purlinProfile.mass * params.length * numPurlinsPerSlope * 2;
+  const purlinMassMultiplier = purlinType === 'continuous' ? 1.12 : 1.0;
+  const purlinMass = purlinProfile.mass * params.length * numPurlinsPerSlope * 2 * purlinMassMultiplier;
+
+  // --- New structural elements ---
+  const eaveBeamProfile = selectEaveBeam();
+  const wallGirtProfile = selectWallGirt();
+  const gableGirtProfile = selectGableGirt();
+  const intermediateColumnActive = params.coveringType === 'sheet';
+  const intermediateColumnProfile = intermediateColumnActive ? selectIntermediateColumn() : null;
+
+  // Mass from eave beams: 2 sides * hallLength
+  const eaveBeamMass = eaveBeamProfile.mass * params.length * 2;
+  // Mass from wall girts: 2 sides * hallLength (1 row)
+  const wallGirtMass = wallGirtProfile.mass * params.length * 2;
+  // Mass from gable girts: based on wall height (1 row if H<=5m, 2 rows if H>5m) * span * 2 walls
+  const gableGirtRows = params.wallHeight <= 5 ? 1 : 2;
+  const gableGirtMass = gableGirtProfile.mass * params.span * gableGirtRows * 2;
+  // Mass from intermediate columns: active only if coveringType='sheet'
+  // count = 2 sides * numberOfBays (one per bay midpoint) * wallHeight
+  const intermediateColumnMass = intermediateColumnActive && intermediateColumnProfile
+    ? intermediateColumnProfile.mass * params.wallHeight * 2 * numberOfBays
+    : 0;
 
   // --- Connection plates ---
   const connectionPlates = calculateConnectionPlates(
@@ -627,7 +709,9 @@ export function calculateHallStructure(params: HallParameters): CalculationResul
     params.span
   );
 
-  const totalSteelMass = sideColumnMass + endColumnMass + rafterMass + purlinMass + connectionPlates.totalMass;
+  const totalSteelMass = sideColumnMass + endColumnMass + rafterMass + purlinMass +
+    eaveBeamMass + wallGirtMass + gableGirtMass + intermediateColumnMass +
+    connectionPlates.totalMass;
   const steelMassPerM2 = totalSteelMass / floorArea;
 
   // --- Deflection checks ---
@@ -665,6 +749,14 @@ export function calculateHallStructure(params: HallParameters): CalculationResul
     // Connection plates
     connectionPlates,
     totalSteelMass,
+    // New structural elements
+    eaveBeamProfile,
+    wallGirtProfile,
+    gableGirtProfile,
+    intermediateColumnProfile,
+    intermediateColumnActive,
+    purlinType,
+    purlinCostHint,
   };
 }
 
@@ -676,7 +768,9 @@ function findProfileByName(name: string): SteelProfile | undefined {
     ipeProfiles.find(p => p.name === name) ??
     rhsProfiles.find(p => p.name === name) ??
     zProfiles.find(p => p.name === name) ??
-    trussChordProfiles.find(p => p.name === name)
+    trussChordProfiles.find(p => p.name === name) ??
+    rkProfiles.find(p => p.name === name) ??
+    rpProfiles.find(p => p.name === name)
   );
 }
 
@@ -833,6 +927,32 @@ export function calculateWithOverrides(
     }
   }
 
+  // Handle new structural element overrides
+  if (overrides.eaveBeam) {
+    const profile = findProfileByName(overrides.eaveBeam);
+    if (profile) {
+      results = { ...results, eaveBeamProfile: profile };
+    }
+  }
+  if (overrides.wallGirt) {
+    const profile = findProfileByName(overrides.wallGirt);
+    if (profile) {
+      results = { ...results, wallGirtProfile: profile };
+    }
+  }
+  if (overrides.gableGirt) {
+    const profile = findProfileByName(overrides.gableGirt);
+    if (profile) {
+      results = { ...results, gableGirtProfile: profile };
+    }
+  }
+  if (overrides.intermediateColumn) {
+    const profile = findProfileByName(overrides.intermediateColumn);
+    if (profile) {
+      results = { ...results, intermediateColumnProfile: profile };
+    }
+  }
+
   // Recalculate steel mass with substituted profiles
   const roofSlopeLength = calculateRoofSlopeLength(params.span, params.roofAngle);
   const { spacing: colSpacing, count: numberOfBays } = calculateColumnSpacing(params.length);
@@ -850,7 +970,18 @@ export function calculateWithOverrides(
     rafterMass = results.trussChordProfile.mass * params.span * 2.5 * numberOfFrames;
   }
   const numPurlinsPerSlope = Math.ceil(roofSlopeLength / purlinSpacingCalc) + 1;
-  const purlinMass = results.purlinProfile.mass * params.length * numPurlinsPerSlope * 2;
+  const overridePurlinType = results.purlinType;
+  const purlinMassMultiplier = overridePurlinType === 'continuous' ? 1.12 : 1.0;
+  const purlinMass = results.purlinProfile.mass * params.length * numPurlinsPerSlope * 2 * purlinMassMultiplier;
+
+  // New structural element masses
+  const eaveBeamMass = (results.eaveBeamProfile?.mass ?? 0) * params.length * 2;
+  const wallGirtMass = (results.wallGirtProfile?.mass ?? 0) * params.length * 2;
+  const gableGirtRows = params.wallHeight <= 5 ? 1 : 2;
+  const gableGirtMass = (results.gableGirtProfile?.mass ?? 0) * params.span * gableGirtRows * 2;
+  const intermediateColumnMass = results.intermediateColumnActive && results.intermediateColumnProfile
+    ? results.intermediateColumnProfile.mass * params.wallHeight * 2 * numberOfBays
+    : 0;
 
   // Recalculate connection plates with possibly overridden profiles
   const connectionPlates = calculateConnectionPlates(
@@ -863,7 +994,9 @@ export function calculateWithOverrides(
     params.span
   );
 
-  const totalSteelMass = sideColumnMass + endColumnMass + rafterMass + purlinMass + connectionPlates.totalMass;
+  const totalSteelMass = sideColumnMass + endColumnMass + rafterMass + purlinMass +
+    eaveBeamMass + wallGirtMass + gableGirtMass + intermediateColumnMass +
+    connectionPlates.totalMass;
   results.connectionPlates = connectionPlates;
   results.totalSteelMass = totalSteelMass;
   results.steelMassPerM2 = totalSteelMass / floorArea;

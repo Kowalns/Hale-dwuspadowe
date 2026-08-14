@@ -10,6 +10,10 @@ export interface ProfileOverrides {
   rafter?: string;
   trussChord?: string;
   purlin?: string;
+  eaveBeam?: string;
+  wallGirt?: string;
+  gableGirt?: string;
+  intermediateColumn?: string;
 }
 
 export interface ConnectionPlateInfo {
@@ -39,11 +43,12 @@ export interface HallParameters {
   coveringType: CoveringType;
   terrainCategory?: TerrainCategory;
   snowExposure?: SnowExposure;
+  purlinType?: 'single' | 'continuous';
 }
 
 export interface SteelProfile {
   name: string;
-  type: 'IPE' | 'RHS' | 'Z' | 'TUBE';
+  type: 'IPE' | 'RHS' | 'Z' | 'TUBE' | 'RK' | 'RP';
   W_pl: number; // cm3
   I: number; // cm4
   A: number; // cm2
@@ -92,4 +97,16 @@ export interface CalculationResults {
   rafterUtilization?: number;
   trussChordUtilization?: number;
   purlinUtilization?: number;
+  // New structural elements
+  eaveBeamProfile: SteelProfile | null;
+  wallGirtProfile: SteelProfile | null;
+  gableGirtProfile: SteelProfile | null;
+  intermediateColumnProfile: SteelProfile | null;
+  intermediateColumnActive: boolean;
+  purlinType: 'single' | 'continuous';
+  purlinCostHint: string | null;
+  eaveBeamUtilization?: number;
+  wallGirtUtilization?: number;
+  gableGirtUtilization?: number;
+  intermediateColumnUtilization?: number;
 }

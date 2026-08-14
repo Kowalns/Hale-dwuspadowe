@@ -46,15 +46,44 @@ export const rhsProfiles: SteelProfile[] = [
 
 /**
  * Z profiles (cold-formed purlins)
- * Typical values for structural Z purlins
+ * Two standard Z purlin profiles for roof purlins
  */
 export const zProfiles: SteelProfile[] = [
-  { name: 'Z140', type: 'Z', h: 140, b: 60, b_f: 60, t: 1.5, A: 4.09, I: 129, W_pl: 21.5, mass: 3.21, load_capacity: 2.5 },
-  { name: 'Z160', type: 'Z', h: 160, b: 65, b_f: 65, t: 1.5, A: 4.55, I: 185, W_pl: 27.0, mass: 3.57, load_capacity: 3.2 },
-  { name: 'Z180', type: 'Z', h: 180, b: 70, b_f: 70, t: 2.0, A: 6.28, I: 311, W_pl: 40.2, mass: 4.93, load_capacity: 4.5 },
-  { name: 'Z200', type: 'Z', h: 200, b: 75, b_f: 75, t: 2.0, A: 6.88, I: 419, W_pl: 48.8, mass: 5.40, load_capacity: 5.5 },
-  { name: 'Z250', type: 'Z', h: 250, b: 80, b_f: 80, t: 2.5, A: 10.0, I: 907, W_pl: 84.5, mass: 7.85, load_capacity: 8.0 },
-  { name: 'Z300', type: 'Z', h: 300, b: 90, b_f: 90, t: 3.0, A: 14.1, I: 1770, W_pl: 137, mass: 11.1, load_capacity: 11.0 },
+  { name: 'Z 200x68x60', type: 'Z', h: 200, b: 68, b_f: 60, t: 2.0, A: 7.44, I: 450, W_pl: 52.5, mass: 5.84, load_capacity: 5.8 },
+  { name: 'Z 150x68x60', type: 'Z', h: 150, b: 68, b_f: 60, t: 1.5, A: 4.89, I: 198, W_pl: 30.4, mass: 3.84, load_capacity: 3.5 },
+];
+
+/**
+ * Rk profiles (square closed tubes)
+ * Values from EN 10210-2
+ */
+export const rkProfiles: SteelProfile[] = [
+  { name: 'Rk 40x40x2', type: 'RK', h: 40, b: 40, t: 2, A: 2.94, I: 7.84, W_pl: 4.71, mass: 2.31, i_min: 1.63 },
+  { name: 'Rk 50x50x2', type: 'RK', h: 50, b: 50, t: 2, A: 3.74, I: 15.8, W_pl: 7.58, mass: 2.93, i_min: 2.05 },
+  { name: 'Rk 60x60x2', type: 'RK', h: 60, b: 60, t: 2, A: 4.54, I: 27.9, W_pl: 11.2, mass: 3.56, i_min: 2.48 },
+  { name: 'Rk 70x70x3', type: 'RK', h: 70, b: 70, t: 3, A: 7.74, I: 62.2, W_pl: 21.4, mass: 6.07, i_min: 2.84 },
+  { name: 'Rk 80x80x2', type: 'RK', h: 80, b: 80, t: 2, A: 6.14, I: 60.5, W_pl: 18.2, mass: 4.82, i_min: 3.14 },
+  { name: 'Rk 80x80x3', type: 'RK', h: 80, b: 80, t: 3, A: 8.94, I: 84.7, W_pl: 25.8, mass: 7.02, i_min: 3.08 },
+  { name: 'Rk 100x100x3', type: 'RK', h: 100, b: 100, t: 3, A: 11.3, I: 170, W_pl: 41.1, mass: 8.89, i_min: 3.88 },
+  { name: 'Rk 100x100x4', type: 'RK', h: 100, b: 100, t: 4, A: 14.7, I: 214, W_pl: 52.8, mass: 11.5, i_min: 3.81 },
+  { name: 'Rk 120x120x4', type: 'RK', h: 120, b: 120, t: 4, A: 17.9, I: 385, W_pl: 78.0, mass: 14.0, i_min: 4.64 },
+  { name: 'Rk 120x120x5', type: 'RK', h: 120, b: 120, t: 5, A: 22.0, I: 459, W_pl: 94.5, mass: 17.3, i_min: 4.57 },
+];
+
+/**
+ * Rp profiles (rectangular closed tubes)
+ * Values from EN 10210-2
+ */
+export const rpProfiles: SteelProfile[] = [
+  { name: 'Rp 80x40x2', type: 'RP', h: 80, b: 40, t: 2, A: 4.54, I: 30.5, W_pl: 9.45, mass: 3.56, i_min: 1.52 },
+  { name: 'Rp 80x40x3', type: 'RP', h: 80, b: 40, t: 3, A: 6.54, I: 41.2, W_pl: 13.0, mass: 5.13, i_min: 1.47 },
+  { name: 'Rp 100x50x2', type: 'RP', h: 100, b: 50, t: 2, A: 5.74, I: 61.6, W_pl: 15.2, mass: 4.50, i_min: 1.92 },
+  { name: 'Rp 100x50x3', type: 'RP', h: 100, b: 50, t: 3, A: 8.34, I: 84.6, W_pl: 21.3, mass: 6.55, i_min: 1.86 },
+  { name: 'Rp 120x60x3', type: 'RP', h: 120, b: 60, t: 3, A: 10.1, I: 149, W_pl: 30.6, mass: 7.96, i_min: 2.24 },
+  { name: 'Rp 120x80x3', type: 'RP', h: 120, b: 80, t: 3, A: 11.3, I: 181, W_pl: 36.5, mass: 8.89, i_min: 3.01 },
+  { name: 'Rp 140x80x3', type: 'RP', h: 140, b: 80, t: 3, A: 12.5, I: 263, W_pl: 45.4, mass: 9.82, i_min: 2.96 },
+  { name: 'Rp 160x80x3', type: 'RP', h: 160, b: 80, t: 3, A: 13.7, I: 367, W_pl: 55.7, mass: 10.8, i_min: 2.91 },
+  { name: 'Rp 160x80x4', type: 'RP', h: 160, b: 80, t: 4, A: 17.9, I: 464, W_pl: 71.6, mass: 14.0, i_min: 2.84 },
 ];
 
 /**

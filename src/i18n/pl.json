@@ -20,6 +20,11 @@
     "coveringType": "Rodzaj pokrycia",
     "terrainCategory": "Kategoria terenu",
     "snowExposure": "Ekspozycja sniegowa",
+    "purlinType": "Typ platwi",
+    "purlinTypes": {
+      "single": "Jednoprzeslowa",
+      "continuous": "Ciagla"
+    },
     "snowZoneLabel": "Strefa {{zone}}",
     "windZoneLabel": "Strefa {{zone}}",
     "covering": {
@@ -76,6 +81,13 @@
     "ridgeHeight": "Wysokosc kalenicy",
     "numberOfFrames": "Liczba ram",
     "trussHeight": "Wysokosc kratownicy",
+    "eaveBeam": "Ryglowka okapowa",
+    "wallGirt": "Ryglowka scienna",
+    "gableGirt": "Ryglowka szczytowa",
+    "intermediateColumn": "Slupek posredni",
+    "purlinCostHint": "Wskazowka kosztowa platwi",
+    "purlinCostHintContinuous": "Platwie ciagle tansze",
+    "purlinCostHintSingle": "Platwie pojedyncze tansze",
     "utilization": "Wykorzystanie nosnosci",
     "governingCombination": "Kombinacja decydujaca",
     "governingCondition": "Warunek decydujacy",
@@ -108,7 +120,11 @@
     "resetToCalculated": "Resetuj do obliczonego",
     "manuallyChanged": "Zmieniony recznie",
     "overUtilized": "Przekroczona nosnosc",
-    "utilizationWarning": "Wspolczynnik wykorzystania > 1.0"
+    "utilizationWarning": "Wspolczynnik wykorzystania > 1.0",
+    "eaveBeam": "Ryglowka okapowa",
+    "wallGirt": "Ryglowka scienna",
+    "gableGirt": "Ryglowka szczytowa",
+    "intermediateColumn": "Slupek posredni"
   },
   "rafterType": {
     "title": "Typ wiezara",
