@@ -15,6 +15,15 @@
     "wallHeight": "Wysokosc sciany bocznej",
     "roofAngle": "Kat nachylenia dachu",
     "steelGrade": "Gatunek stali",
+    "snowZone": "Strefa sniegowa",
+    "windZone": "Strefa wiatrowa",
+    "coveringType": "Rodzaj pokrycia",
+    "snowZoneLabel": "Strefa {{zone}}",
+    "windZoneLabel": "Strefa {{zone}}",
+    "covering": {
+      "sheet": "Blacha",
+      "sandwich": "Panel kanapkowy"
+    },
     "unit": {
       "meters": "m",
       "degrees": "\u00b0"
@@ -30,17 +39,41 @@
       "S355": "S355"
     },
     "submit": "Oblicz",
-    "reset": "Resetuj"
+    "reset": "Resetuj",
+    "wizardMode": "Kreator",
+    "expertMode": "Ekspert"
+  },
+  "wizard": {
+    "step1": "Geometria",
+    "step2": "Obciazenia",
+    "step3": "Stal",
+    "back": "Wstecz",
+    "next": "Dalej"
+  },
+  "results": {
+    "title": "Wyniki obliczen",
+    "sideColumn": "Slup boczny",
+    "endColumn": "Slup szczytowy",
+    "rafter": "Krokiew",
+    "trussChord": "Pas kratownicy",
+    "purlin": "Platew",
+    "bracing": "Stezenie",
+    "columnSpacing": "Rozstaw slupow",
+    "purlinSpacing": "Rozstaw platwi",
+    "ridgeHeight": "Wysokosc kalenicy",
+    "numberOfFrames": "Liczba ram",
+    "trussHeight": "Wysokosc kratownicy"
+  },
+  "sections": {
+    "geometry": "Geometria",
+    "materials": "Materialy",
+    "loads": "Obciazenia",
+    "results": "Wyniki"
   },
   "view": {
     "perspective": "Perspektywa",
     "front": "Przod",
     "side": "Bok",
     "top": "Gora"
-  },
-  "sections": {
-    "geometry": "Geometria",
-    "materials": "Materialy",
-    "results": "Wyniki"
   }
 }

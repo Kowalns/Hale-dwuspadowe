@@ -15,6 +15,15 @@
     "wallHeight": "Wall height",
     "roofAngle": "Roof angle",
     "steelGrade": "Steel grade",
+    "snowZone": "Snow zone",
+    "windZone": "Wind zone",
+    "coveringType": "Covering type",
+    "snowZoneLabel": "Zone {{zone}}",
+    "windZoneLabel": "Zone {{zone}}",
+    "covering": {
+      "sheet": "Steel sheet",
+      "sandwich": "Sandwich panel"
+    },
     "unit": {
       "meters": "m",
       "degrees": "\u00b0"
@@ -30,17 +39,41 @@
       "S355": "S355"
     },
     "submit": "Calculate",
-    "reset": "Reset"
+    "reset": "Reset",
+    "wizardMode": "Wizard",
+    "expertMode": "Expert"
+  },
+  "wizard": {
+    "step1": "Geometry",
+    "step2": "Loads",
+    "step3": "Steel",
+    "back": "Back",
+    "next": "Next"
+  },
+  "results": {
+    "title": "Calculation Results",
+    "sideColumn": "Side column",
+    "endColumn": "End column",
+    "rafter": "Rafter",
+    "trussChord": "Truss chord",
+    "purlin": "Purlin",
+    "bracing": "Bracing",
+    "columnSpacing": "Column spacing",
+    "purlinSpacing": "Purlin spacing",
+    "ridgeHeight": "Ridge height",
+    "numberOfFrames": "Number of frames",
+    "trussHeight": "Truss height"
+  },
+  "sections": {
+    "geometry": "Geometry",
+    "materials": "Materials",
+    "loads": "Loads",
+    "results": "Results"
   },
   "view": {
     "perspective": "Perspective",
     "front": "Front",
     "side": "Side",
     "top": "Top"
-  },
-  "sections": {
-    "geometry": "Geometry",
-    "materials": "Materials",
-    "results": "Results"
   }
 }
