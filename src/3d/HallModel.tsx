@@ -73,6 +73,9 @@ export const HallModel = React.memo(function HallModel({ params, results }: Hall
   // Rafter top offset: half the rafter/truss chord height in meters
   const rafterTopOffset = ((rafterProfile?.h ?? trussChordProfile?.h ?? 200) / 2) / 1000;
 
+  // Rafter center Y: top of rafter aligns with effectiveColumnHeight, center is offset down
+  const rafterCenterY = effectiveColumnHeight - rafterTopOffset;
+
   // Ridge height based on effective column height
   const effectiveRidgeHeight = effectiveColumnHeight + (span / 2) * Math.tan((roofAngle * Math.PI) / 180);
 
@@ -95,7 +98,6 @@ export const HallModel = React.memo(function HallModel({ params, results }: Hall
         roofAngle={roofAngle}
         columnSpacing={columnSpacing}
         numberOfFrames={numberOfFrames}
-        rafterTopOffset={rafterTopOffset}
       />
 
       {/* End columns on gable ends */}
@@ -111,7 +113,7 @@ export const HallModel = React.memo(function HallModel({ params, results }: Hall
       {rafterProfile && (
         <Rafter
           profile={rafterProfile}
-          wallHeight={effectiveColumnHeight}
+          wallHeight={rafterCenterY}
           span={span}
           roofAngle={roofAngle}
           columnSpacing={columnSpacing}
@@ -123,7 +125,7 @@ export const HallModel = React.memo(function HallModel({ params, results }: Hall
       {trussChordProfile && trussHeight != null && (
         <Truss
           chordProfile={trussChordProfile}
-          wallHeight={effectiveColumnHeight}
+          wallHeight={rafterCenterY}
           span={span}
           roofAngle={roofAngle}
           trussHeight={trussHeight}
@@ -201,7 +203,7 @@ export const HallModel = React.memo(function HallModel({ params, results }: Hall
       {trussChordProfile && trussHeight != null && (
         <TrussColumnHead
           chordProfile={trussChordProfile}
-          wallHeight={effectiveColumnHeight}
+          wallHeight={rafterCenterY}
           span={span}
           roofAngle={roofAngle}
           trussHeight={trussHeight}
