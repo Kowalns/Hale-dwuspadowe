@@ -225,6 +225,7 @@ export function ResultsPanel({ results, profileOverrides, onProfileOverridesChan
           overrideKey="endColumn"
           profileOverrides={profileOverrides}
           onProfileOverridesChange={onProfileOverridesChange}
+          utilizationRatio={results.endColumnUtilization}
         />
         {results.rafterProfile && (
           <ProfileCardWithOverride
@@ -233,6 +234,7 @@ export function ResultsPanel({ results, profileOverrides, onProfileOverridesChan
             overrideKey="rafter"
             profileOverrides={profileOverrides}
             onProfileOverridesChange={onProfileOverridesChange}
+            utilizationRatio={results.rafterUtilization}
           />
         )}
         {results.trussChordProfile && (
@@ -242,6 +244,7 @@ export function ResultsPanel({ results, profileOverrides, onProfileOverridesChan
             overrideKey="trussChord"
             profileOverrides={profileOverrides}
             onProfileOverridesChange={onProfileOverridesChange}
+            utilizationRatio={results.trussChordUtilization}
           />
         )}
         <ProfileCardWithOverride
@@ -250,6 +253,7 @@ export function ResultsPanel({ results, profileOverrides, onProfileOverridesChan
           overrideKey="purlin"
           profileOverrides={profileOverrides}
           onProfileOverridesChange={onProfileOverridesChange}
+          utilizationRatio={results.purlinUtilization}
         />
         <div className="p-2 rounded border border-dark-tertiary bg-dark-primary/50">
           <p className="text-xs text-text-secondary font-mono uppercase">{t('results.bracing')}</p>

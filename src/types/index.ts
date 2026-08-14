@@ -87,4 +87,9 @@ export interface CalculationResults {
   // Connection plates
   connectionPlates: ConnectionPlateResults;
   totalSteelMass: number; // total kg including plates
+  // Per-profile utilization ratios (set when overrides are active)
+  endColumnUtilization?: number;
+  rafterUtilization?: number;
+  trussChordUtilization?: number;
+  purlinUtilization?: number;
 }

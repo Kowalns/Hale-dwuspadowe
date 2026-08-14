@@ -19,6 +19,7 @@ export function Layout() {
         <FormPanel
           params={params}
           onParamsChange={setParams}
+          results={results}
           profileOverrides={profileOverrides}
           onProfileOverridesChange={setProfileOverrides}
           rafterType={rafterType}

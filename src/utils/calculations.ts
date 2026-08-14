@@ -343,13 +343,14 @@ function selectPurlin(params: HallParameters, purlinSpacing: number): SteelProfi
  */
 function calculateConnectionPlates(
   sideColumnProfile: SteelProfile,
+  endColumnProfile: SteelProfile,
   rafterProfile: SteelProfile | null,
   trussChordProfile: SteelProfile | null,
   numberOfFrames: number,
   endColumnCount: number,
   span: number
 ): ConnectionPlateResults {
-  // --- Base plate ---
+  // --- Base plate (side columns) ---
   const basePlateWidth = sideColumnProfile.h + 100; // mm
   const basePlateHeight = sideColumnProfile.b + 100; // mm
   let basePlateThickness: number;
@@ -363,8 +364,21 @@ function calculateConnectionPlates(
     basePlateThickness = 12;
   }
   const basePlateAnchors = sideColumnProfile.h <= 270 ? '4x M20' : '4x M24';
-  const basePlateCount = numberOfFrames * 2 + endColumnCount;
+  // Side column base plates: (numberOfFrames + 1) positions * 2 sides
+  const sideBasePlateCount = (numberOfFrames + 1) * 2;
+  const basePlateCount = sideBasePlateCount + endColumnCount;
   const basePlateMassPerPlate = (basePlateWidth * basePlateHeight * basePlateThickness) / 1e9 * 7850;
+
+  // --- Base plate (end columns) - separate dimensions for RHS profiles ---
+  const endBasePlateWidth = endColumnProfile.h + 100; // mm
+  const endBasePlateHeight = endColumnProfile.b + 100; // mm
+  let endBasePlateThickness: number;
+  if (endColumnProfile.h >= 200) {
+    endBasePlateThickness = 15;
+  } else {
+    endBasePlateThickness = 12;
+  }
+  const endBasePlateMassPerPlate = (endBasePlateWidth * endBasePlateHeight * endBasePlateThickness) / 1e9 * 7850;
 
   const basePlate: ConnectionPlateInfo = {
     width: basePlateWidth,
@@ -388,7 +402,8 @@ function calculateConnectionPlates(
     endPlateThickness = 16;
   }
   const endPlateBolts = span <= 15 ? '4x M16 kl.8.8' : '6x M20 kl.8.8';
-  const endPlateCount = 2 * numberOfFrames;
+  // End plates: (numberOfFrames + 1) positions * 2 per frame (left+right column head)
+  const endPlateCount = (numberOfFrames + 1) * 2;
   const endPlateMassPerPlate = (endPlateWidth * endPlateHeight * endPlateThickness) / 1e9 * 7850;
 
   const endPlate: ConnectionPlateInfo = {
@@ -407,7 +422,8 @@ function calculateConnectionPlates(
   const ridgePlateHeight = Math.round(ridgePlateRafterH * 0.7); // mm
   const ridgePlateThickness = 10; // mm
   const ridgePlateBolts = '4x M16';
-  const ridgePlateCount = numberOfFrames;
+  // Ridge plates: one per frame position = numberOfFrames + 1
+  const ridgePlateCount = numberOfFrames + 1;
   const ridgePlateMassPerPlate = (ridgePlateWidth * ridgePlateHeight * ridgePlateThickness) / 1e9 * 7850;
 
   const ridgePlate: ConnectionPlateInfo = {
@@ -420,8 +436,10 @@ function calculateConnectionPlates(
   };
 
   // --- Total mass ---
+  // Side column base plates + end column base plates (different sizes) + end plates + ridge plates
   const totalMass =
-    basePlate.mass * basePlate.count +
+    basePlate.mass * sideBasePlateCount +
+    endBasePlateMassPerPlate * endColumnCount +
     endPlate.mass * endPlate.count +
     ridgePlate.mass * ridgePlate.count;
 
@@ -601,6 +619,7 @@ export function calculateHallStructure(params: HallParameters): CalculationResul
   // --- Connection plates ---
   const connectionPlates = calculateConnectionPlates(
     finalColumnResult.profile,
+    endColumnProfile,
     rafterProfile,
     trussChordProfile,
     numberOfFrames,
@@ -690,7 +709,12 @@ export function calculateWithOverrides(
     // Approximate ULS load
     const q_rafter_ULS = (1.35 * g_roof + 1.5 * s_roof) * columnSpacing;
 
-    const effectiveTrussHeight = customTrussHeight ?? params.span / 10;
+    // Clamp customTrussHeight to valid range [span/15, span/8]
+    const minHeight = params.span / 15;
+    const maxHeight = params.span / 8;
+    const effectiveTrussHeight = customTrussHeight != null
+      ? Math.min(Math.max(customTrussHeight, minHeight), maxHeight)
+      : params.span / 10;
     const trussResult = selectTrussChordWithHeight(q_rafter_ULS, q_rafter_SLS, params.span, fy, effectiveTrussHeight);
     results.rafterProfile = null;
     results.trussChordProfile = trussResult.profile;
@@ -715,7 +739,7 @@ export function calculateWithOverrides(
     results.rafterDeflection = rafterResult.deflection;
     results.rafterDeflectionLimit = rafterResult.deflectionLimit;
   } else if (customTrussHeight != null && results.trussChordProfile != null) {
-    // Apply custom truss height to existing truss calculation
+    // Apply custom truss height to existing truss calculation with clamping
     const { spacing: columnSpacing } = calculateColumnSpacing(params.length);
     const snowLoad = snowZoneLoads[params.snowZone] ?? 0.9;
     const Ce = getSnowExposureCoefficient(params.snowExposure ?? 'normal');
@@ -724,19 +748,24 @@ export function calculateWithOverrides(
     const q_rafter_SLS = (g_roof + s_roof) * columnSpacing;
     const q_rafter_ULS = (1.35 * g_roof + 1.5 * s_roof) * columnSpacing;
 
-    const trussResult = selectTrussChordWithHeight(q_rafter_ULS, q_rafter_SLS, params.span, fy, customTrussHeight);
+    // Clamp customTrussHeight to valid range [span/15, span/8]
+    const minHeight = params.span / 15;
+    const maxHeight = params.span / 8;
+    const clampedTrussHeight = Math.min(Math.max(customTrussHeight, minHeight), maxHeight);
+
+    const trussResult = selectTrussChordWithHeight(q_rafter_ULS, q_rafter_SLS, params.span, fy, clampedTrussHeight);
     results.trussChordProfile = trussResult.profile;
     results.trussHeight = trussResult.trussHeight;
     results.rafterDeflection = trussResult.deflection;
     results.rafterDeflectionLimit = trussResult.deflectionLimit;
   }
 
-  // Apply profile overrides
+  // Apply profile overrides with utilization recalculation
   if (overrides.sideColumn) {
     const profile = findProfileByName(overrides.sideColumn);
     if (profile) {
       results = { ...results, sideColumnProfile: profile };
-      // Recalculate utilization for overridden profile
+      // Recalculate utilization for overridden profile using W_pl ratio (M_Ed constant, M_Rd scales with W_pl)
       results.utilizationRatio = profile.W_pl > 0
         ? (baseResults.utilizationRatio * baseResults.sideColumnProfile.W_pl) / profile.W_pl
         : 999;
@@ -746,24 +775,61 @@ export function calculateWithOverrides(
     const profile = findProfileByName(overrides.endColumn);
     if (profile) {
       results = { ...results, endColumnProfile: profile };
+      // For end columns (RHS): use W_pl ratio approach (same bending moment, different section)
+      // The algorithm selects the smallest passing profile, so base utilization is close to 1.0
+      const baseEndProfile = baseResults.endColumnProfile;
+      const endColumnUtilization = baseEndProfile.W_pl > 0 && profile.W_pl > 0
+        ? baseEndProfile.W_pl / profile.W_pl
+        : 999;
+      results.endColumnUtilization = endColumnUtilization;
     }
   }
   if (overrides.rafter && results.rafterProfile) {
     const profile = findProfileByName(overrides.rafter);
     if (profile) {
+      const baseRafterProfile = baseResults.rafterProfile;
       results = { ...results, rafterProfile: profile };
+      // Rafter: M_Ed constant, M_Rd scales with W_pl
+      if (baseRafterProfile && baseRafterProfile.W_pl > 0 && profile.W_pl > 0) {
+        results.rafterUtilization = baseRafterProfile.W_pl / profile.W_pl;
+      } else {
+        results.rafterUtilization = 999;
+      }
     }
   }
   if (overrides.trussChord && results.trussChordProfile) {
     const profile = findProfileByName(overrides.trussChord);
     if (profile) {
       results = { ...results, trussChordProfile: profile };
+      // Truss chord: buckling check with proper A and i_min
+      const { spacing: columnSpacing } = calculateColumnSpacing(params.length);
+      const snowLoad = snowZoneLoads[params.snowZone] ?? 0.9;
+      const Ce = getSnowExposureCoefficient(params.snowExposure ?? 'normal');
+      const s_roof = computeSnowLoad(snowLoad, params.roofAngle, Ce);
+      const g_roof = (coveringSelfWeight[params.coveringType] ?? 0.15) + 0.10;
+      const q_rafter_ULS = (1.35 * g_roof + 1.5 * s_roof) * columnSpacing;
+      const effectiveTrussHeight = results.trussHeight ?? params.span / 10;
+      const halfSpan = params.span / 2;
+      const M_max = (q_rafter_ULS * halfSpan * halfSpan) / 8;
+      const NEd = M_max / effectiveTrussHeight;
+      const numPanels = Math.max(4, Math.round(halfSpan / 2));
+      const panelLength = halfSpan / numPanels;
+      const i_min = profile.i_min ?? Math.sqrt(profile.I / profile.A);
+      results.trussChordUtilization = computeTrussChordBuckling(NEd, profile.A, i_min, panelLength, fy, 0.49);
     }
   }
   if (overrides.purlin) {
     const profile = findProfileByName(overrides.purlin);
     if (profile) {
       results = { ...results, purlinProfile: profile };
+      // Purlin: compare load_capacity with required load
+      const snowLoad = snowZoneLoads[params.snowZone] ?? 0.9;
+      const selfWeight = coveringSelfWeight[params.coveringType] ?? 0.15;
+      const roofSlopeLen = calculateRoofSlopeLength(params.span, params.roofAngle);
+      const purlinSpacingVal = calculatePurlinSpacing(roofSlopeLen);
+      const loadPerMeter = (1.35 * selfWeight + 1.5 * snowLoad) * purlinSpacingVal;
+      const capacity = profile.load_capacity ?? 0;
+      results.purlinUtilization = capacity > 0 ? loadPerMeter / capacity : 999;
     }
   }
 
@@ -789,6 +855,7 @@ export function calculateWithOverrides(
   // Recalculate connection plates with possibly overridden profiles
   const connectionPlates = calculateConnectionPlates(
     results.sideColumnProfile,
+    results.endColumnProfile,
     results.rafterProfile,
     results.trussChordProfile,
     numberOfFrames,
