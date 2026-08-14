@@ -30,8 +30,9 @@ function getProfilesForType(type: keyof ProfileOverrides): SteelProfile[] {
     case 'eaveBeam':
     case 'wallGirt':
     case 'gableGirt':
-    case 'intermediateColumn':
       return [...rkProfiles, ...rpProfiles];
+    case 'intermediateColumn':
+      return rkProfiles;
   }
 }
 
@@ -260,6 +261,51 @@ export function ResultsPanel({ results, profileOverrides, onProfileOverridesChan
           onProfileOverridesChange={onProfileOverridesChange}
           utilizationRatio={results.purlinUtilization}
         />
+        {results.purlinCostHint && (
+          <div className="bg-yellow-900/30 border border-yellow-600/30 rounded p-1.5 text-xs text-yellow-300 font-mono">
+            {results.purlinCostHint}
+          </div>
+        )}
+        {results.eaveBeamProfile && (
+          <ProfileCardWithOverride
+            label={t('results.eaveBeam')}
+            profile={results.eaveBeamProfile}
+            overrideKey="eaveBeam"
+            profileOverrides={profileOverrides}
+            onProfileOverridesChange={onProfileOverridesChange}
+            utilizationRatio={results.eaveBeamUtilization}
+          />
+        )}
+        {results.wallGirtProfile && (
+          <ProfileCardWithOverride
+            label={t('results.wallGirt')}
+            profile={results.wallGirtProfile}
+            overrideKey="wallGirt"
+            profileOverrides={profileOverrides}
+            onProfileOverridesChange={onProfileOverridesChange}
+            utilizationRatio={results.wallGirtUtilization}
+          />
+        )}
+        {results.gableGirtProfile && (
+          <ProfileCardWithOverride
+            label={t('results.gableGirt')}
+            profile={results.gableGirtProfile}
+            overrideKey="gableGirt"
+            profileOverrides={profileOverrides}
+            onProfileOverridesChange={onProfileOverridesChange}
+            utilizationRatio={results.gableGirtUtilization}
+          />
+        )}
+        {results.intermediateColumnActive && results.intermediateColumnProfile && (
+          <ProfileCardWithOverride
+            label={t('results.intermediateColumn')}
+            profile={results.intermediateColumnProfile}
+            overrideKey="intermediateColumn"
+            profileOverrides={profileOverrides}
+            onProfileOverridesChange={onProfileOverridesChange}
+            utilizationRatio={results.intermediateColumnUtilization}
+          />
+        )}
         <div className="p-2 rounded border border-dark-tertiary bg-dark-primary/50">
           <p className="text-xs text-text-secondary font-mono uppercase">{t('results.bracing')}</p>
           <p className="text-sm text-accent-orange font-mono font-bold mt-0.5">

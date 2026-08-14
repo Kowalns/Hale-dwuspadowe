@@ -246,6 +246,27 @@ export function FormPanel({ params, onParamsChange, results, profileOverrides, o
           ))}
         </div>
       </div>
+      {/* Purlin type */}
+      <div className="space-y-1">
+        <label className="text-xs text-text-secondary font-mono">{t('form.purlinType')}</label>
+        <div className="flex gap-3">
+          {(['single', 'continuous'] as const).map((type) => (
+            <label key={type} className="flex items-center gap-1.5 cursor-pointer">
+              <input
+                type="radio"
+                name="purlinType"
+                value={type}
+                checked={(params.purlinType ?? 'single') === type}
+                onChange={() => updateParam('purlinType', type)}
+                className="accent-accent-orange"
+              />
+              <span className="text-xs font-mono text-text-secondary">
+                {t(`form.purlinTypes.${type}`)}
+              </span>
+            </label>
+          ))}
+        </div>
+      </div>
     </div>
   );
 
