@@ -28,7 +28,6 @@ export const CrossBracing = React.memo(function CrossBracing({
   bracingDiameter,
 }: CrossBracingProps) {
   const radius = (bracingDiameter / 1000) / 2;
-  const roofAngleRad = (roofAngle * Math.PI) / 180;
 
   const braces = useMemo(() => {
     const result: Array<{ start: THREE.Vector3; end: THREE.Vector3 }> = [];
@@ -67,9 +66,6 @@ export const CrossBracing = React.memo(function CrossBracing({
 
     // Roof bracing - both slopes, first and last bay
     const halfSpan = span / 2;
-    const midRoofY = (wallHeight + ridgeHeight) / 2;
-    const midRoofZ_left = halfSpan / 2; // midpoint of left slope
-    const midRoofZ_right = span - halfSpan / 2; // midpoint of right slope
 
     for (const [bayX0, bayX1] of bays) {
       // Left roof slope - bracing along the slope

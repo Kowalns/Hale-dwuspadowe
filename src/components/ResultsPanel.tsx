@@ -5,6 +5,12 @@ interface ResultsPanelProps {
   results: CalculationResults;
 }
 
+function getUtilizationColor(eta: number): string {
+  if (eta < 0.85) return 'text-green-400';
+  if (eta <= 0.95) return 'text-yellow-400';
+  return 'text-red-400';
+}
+
 function ProfileCard({ label, name, mass, wPl }: { label: string; name: string; mass: number; wPl: number }) {
   return (
     <div className="p-2 rounded border border-dark-tertiary bg-dark-primary/50">
@@ -21,11 +27,60 @@ function ProfileCard({ label, name, mass, wPl }: { label: string; name: string; 
 export function ResultsPanel({ results }: ResultsPanelProps) {
   const { t } = useTranslation();
 
+  const utilizationColor = getUtilizationColor(results.utilizationRatio);
+
   return (
     <div className="space-y-2">
       <h3 className="text-sm font-mono font-bold text-accent-yellow uppercase tracking-wider">
         {t('results.title')}
       </h3>
+
+      {/* Utilization and governing info */}
+      <div className="p-2 rounded border border-dark-tertiary bg-dark-primary/50 space-y-1">
+        <p className="text-xs text-text-secondary font-mono">
+          {t('results.utilization')}:{' '}
+          <span className={`font-bold ${utilizationColor}`}>
+            {results.sideColumnProfile.name}, &eta; = {results.utilizationRatio.toFixed(2)}
+          </span>
+        </p>
+        <p className="text-xs text-text-secondary font-mono">
+          {t('results.governingCombination')}:{' '}
+          <span className="text-text-primary">{results.governingCombination}</span>
+        </p>
+        <p className="text-xs text-text-secondary font-mono">
+          {t('results.governingCondition')}:{' '}
+          <span className="text-text-primary">{t(`results.conditions.${results.governingCondition}`)}</span>
+        </p>
+        <p className="text-xs text-text-secondary font-mono">
+          {t('results.steelMass')}:{' '}
+          <span className="text-text-primary">{results.steelMassPerM2.toFixed(1)} kg/m&sup2;</span>
+        </p>
+      </div>
+
+      {/* Deflection check */}
+      <div className="p-2 rounded border border-dark-tertiary bg-dark-primary/50 space-y-1">
+        <p className="text-xs text-text-secondary font-mono font-bold uppercase">
+          {t('results.deflection')}
+        </p>
+        <p className="text-xs text-text-secondary font-mono">
+          {t('results.columnDeflection')}:{' '}
+          <span className={results.columnDeflection <= results.columnDeflectionLimit ? 'text-green-400' : 'text-red-400'}>
+            {results.columnDeflection.toFixed(1)} / {results.columnDeflectionLimit.toFixed(1)} mm
+          </span>
+        </p>
+        <p className="text-xs text-text-secondary font-mono">
+          {t('results.rafterDeflection')}:{' '}
+          <span className={results.rafterDeflection <= results.rafterDeflectionLimit ? 'text-green-400' : 'text-red-400'}>
+            {results.rafterDeflection.toFixed(1)} / {results.rafterDeflectionLimit.toFixed(1)} mm
+          </span>
+        </p>
+        <p className="text-xs text-text-secondary font-mono">
+          {t('results.deflectionStatus')}:{' '}
+          <span className={results.deflectionCheck ? 'text-green-400' : 'text-red-400'}>
+            {results.deflectionCheck ? 'OK' : t('results.exceeded')}
+          </span>
+        </p>
+      </div>
 
       {/* Geometry summary */}
       <div className="p-2 rounded border border-dark-tertiary bg-dark-primary/50 space-y-1">

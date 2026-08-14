@@ -60,8 +60,6 @@ export const Truss = React.memo(function Truss({
           trussHeight={trussHeight}
           topChordGeometry={topChordGeometry}
           bottomChordGeometry={bottomChordGeometry}
-          webMemberSize={size * 0.5}
-          webMemberThickness={thickness * 0.5}
         />
       ))}
     </group>

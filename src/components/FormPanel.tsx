@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { HallParameters, CoveringType, SteelGrade, CalculationResults } from '../types';
+import type { HallParameters, CoveringType, SteelGrade, TerrainCategory, SnowExposure } from '../types';
+import { useHallCalculations } from '../hooks/useHallCalculations';
 import { ResultsPanel } from './ResultsPanel';
 
 const DEFAULT_PARAMS: HallParameters = {
@@ -12,6 +13,8 @@ const DEFAULT_PARAMS: HallParameters = {
   snowZone: 2,
   windZone: 1,
   coveringType: 'sandwich',
+  terrainCategory: 2,
+  snowExposure: 'normal',
 };
 
 interface SliderInputProps {
@@ -157,6 +160,36 @@ export function FormPanel({ params, onParamsChange }: FormPanelProps) {
           {[1, 2, 3].map((zone) => (
             <option key={zone} value={zone}>
               {t('form.windZoneLabel', { zone })}
+            </option>
+          ))}
+        </select>
+      </div>
+      {/* Terrain category */}
+      <div className="space-y-1">
+        <label className="text-xs text-text-secondary font-mono">{t('form.terrainCategory')}</label>
+        <select
+          value={params.terrainCategory ?? 2}
+          onChange={(e) => updateParam('terrainCategory', Number(e.target.value) as TerrainCategory)}
+          className="w-full px-2 py-1.5 text-xs font-mono text-text-primary bg-dark-primary border border-dark-tertiary rounded focus:outline-none focus:ring-1 focus:ring-accent-orange"
+        >
+          {([1, 2, 3, 4] as TerrainCategory[]).map((cat) => (
+            <option key={cat} value={cat}>
+              {t(`form.terrainCategories.${cat}`)}
+            </option>
+          ))}
+        </select>
+      </div>
+      {/* Snow exposure */}
+      <div className="space-y-1">
+        <label className="text-xs text-text-secondary font-mono">{t('form.snowExposure')}</label>
+        <select
+          value={params.snowExposure ?? 'normal'}
+          onChange={(e) => updateParam('snowExposure', e.target.value as SnowExposure)}
+          className="w-full px-2 py-1.5 text-xs font-mono text-text-primary bg-dark-primary border border-dark-tertiary rounded focus:outline-none focus:ring-1 focus:ring-accent-orange"
+        >
+          {(['windy', 'normal', 'sheltered'] as SnowExposure[]).map((exp) => (
+            <option key={exp} value={exp}>
+              {t(`form.snowExposures.${exp}`)}
             </option>
           ))}
         </select>

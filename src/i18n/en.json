@@ -15,32 +15,92 @@
     "wallHeight": "Wall height",
     "roofAngle": "Roof angle",
     "steelGrade": "Steel grade",
+    "snowZone": "Snow zone",
+    "windZone": "Wind zone",
+    "coveringType": "Covering type",
+    "terrainCategory": "Terrain category",
+    "snowExposure": "Snow exposure",
+    "snowZoneLabel": "Zone {{zone}}",
+    "windZoneLabel": "Zone {{zone}}",
+    "covering": {
+      "sheet": "Sheet metal",
+      "sandwich": "Sandwich panel"
+    },
+    "terrainCategories": {
+      "1": "I - Sea, lakes, flat terrain",
+      "2": "II - Farmland, few obstacles",
+      "3": "III - Suburbs, forests, industrial areas",
+      "4": "IV - City centers, dense buildings"
+    },
+    "snowExposures": {
+      "windy": "Windy (Ce=0.8)",
+      "normal": "Normal (Ce=1.0)",
+      "sheltered": "Sheltered (Ce=1.2)"
+    },
     "unit": {
       "meters": "m",
-      "degrees": "°"
+      "degrees": "\u00b0"
     },
     "range": {
       "span": "10-30 m",
       "length": "20-100 m",
       "wallHeight": "4-10 m",
-      "roofAngle": "5°-25°"
+      "roofAngle": "5\u00b0-25\u00b0"
     },
     "steelGrades": {
       "S235": "S235",
       "S355": "S355"
     },
     "submit": "Calculate",
-    "reset": "Reset"
+    "reset": "Reset",
+    "wizardMode": "Wizard",
+    "expertMode": "Expert"
+  },
+  "wizard": {
+    "step1": "Geometry",
+    "step2": "Loads",
+    "step3": "Steel",
+    "back": "Back",
+    "next": "Next"
+  },
+  "results": {
+    "title": "Calculation Results",
+    "sideColumn": "Side column",
+    "endColumn": "End column",
+    "rafter": "Rafter",
+    "trussChord": "Truss chord",
+    "purlin": "Purlin",
+    "bracing": "Bracing",
+    "columnSpacing": "Column spacing",
+    "purlinSpacing": "Purlin spacing",
+    "ridgeHeight": "Ridge height",
+    "numberOfFrames": "Number of frames",
+    "trussHeight": "Truss height",
+    "utilization": "Utilization ratio",
+    "governingCombination": "Governing combination",
+    "governingCondition": "Governing condition",
+    "steelMass": "Steel mass per m2",
+    "deflection": "Deflections",
+    "columnDeflection": "Column",
+    "rafterDeflection": "Rafter/truss",
+    "deflectionStatus": "Deflection check",
+    "exceeded": "Exceeded",
+    "conditions": {
+      "stability": "Stability",
+      "deflection": "Deflection",
+      "strength": "Bending"
+    }
+  },
+  "sections": {
+    "geometry": "Geometry",
+    "materials": "Materials",
+    "loads": "Loads",
+    "results": "Results"
   },
   "view": {
     "perspective": "Perspective",
     "front": "Front",
     "side": "Side",
     "top": "Top"
-  },
-  "sections": {
-    "geometry": "Geometry",
-    "materials": "Materials",
-    "results": "Results"
   }
 }

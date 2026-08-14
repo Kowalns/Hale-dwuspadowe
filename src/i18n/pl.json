@@ -18,11 +18,24 @@
     "snowZone": "Strefa sniegowa",
     "windZone": "Strefa wiatrowa",
     "coveringType": "Rodzaj pokrycia",
+    "terrainCategory": "Kategoria terenu",
+    "snowExposure": "Ekspozycja sniegowa",
     "snowZoneLabel": "Strefa {{zone}}",
     "windZoneLabel": "Strefa {{zone}}",
     "covering": {
       "sheet": "Blacha",
       "sandwich": "Panel kanapkowy"
+    },
+    "terrainCategories": {
+      "1": "I - Morze, jeziora, tereny plaskie",
+      "2": "II - Tereny rolnicze, nieliczne przeszkody",
+      "3": "III - Przedmiescia, lasy, tereny przemyslowe",
+      "4": "IV - Centra miast, zabudowa zwarta"
+    },
+    "snowExposures": {
+      "windy": "Wietrzna (Ce=0.8)",
+      "normal": "Normalna (Ce=1.0)",
+      "sheltered": "Zabudowana (Ce=1.2)"
     },
     "unit": {
       "meters": "m",
@@ -62,7 +75,21 @@
     "purlinSpacing": "Rozstaw platwi",
     "ridgeHeight": "Wysokosc kalenicy",
     "numberOfFrames": "Liczba ram",
-    "trussHeight": "Wysokosc kratownicy"
+    "trussHeight": "Wysokosc kratownicy",
+    "utilization": "Wykorzystanie nosnosci",
+    "governingCombination": "Kombinacja decydujaca",
+    "governingCondition": "Warunek decydujacy",
+    "steelMass": "Masa stali na m2 zabudowy",
+    "deflection": "Ugiecia",
+    "columnDeflection": "Slup",
+    "rafterDeflection": "Rygiel/kratownica",
+    "deflectionStatus": "Sprawdzenie ugiec",
+    "exceeded": "Przekroczone",
+    "conditions": {
+      "stability": "Statecznosc",
+      "deflection": "Ugiecie",
+      "strength": "Zginanie"
+    }
   },
   "sections": {
     "geometry": "Geometria",
