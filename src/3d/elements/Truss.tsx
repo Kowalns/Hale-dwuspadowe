@@ -12,6 +12,7 @@ interface TrussProps {
   columnSpacing: number;
   numberOfFrames: number;
   columnFlangeOffset: number;
+  headLength: number;
 }
 
 /**
@@ -30,6 +31,7 @@ export const Truss = React.memo(function Truss({
   columnSpacing,
   numberOfFrames,
   columnFlangeOffset,
+  headLength,
 }: TrussProps) {
   const framePositions = useMemo(() => {
     const positions: number[] = [];
@@ -53,6 +55,7 @@ export const Truss = React.memo(function Truss({
           trussHeight={trussHeight}
           chordSize={chordSize}
           columnFlangeOffset={columnFlangeOffset}
+          headLength={headLength}
         />
       ))}
     </group>
@@ -67,6 +70,7 @@ interface TrussFrameProps {
   trussHeight: number;
   chordSize: number;
   columnFlangeOffset: number;
+  headLength: number;
 }
 
 function TrussFrame({
@@ -77,9 +81,12 @@ function TrussFrame({
   trussHeight,
   chordSize,
   columnFlangeOffset,
+  headLength,
 }: TrussFrameProps) {
   const roofAngleRad = (roofAngle * Math.PI) / 180;
-  const effectiveHalfSpan = (span - 2 * columnFlangeOffset) / 2;
+  // Main truss starts after the starters (column heads)
+  const trussStartOffset = columnFlangeOffset + headLength;
+  const effectiveHalfSpan = span / 2 - trussStartOffset;
 
   // Web member size: 30x30mm square tube
   const webSize = 0.03;
@@ -92,8 +99,8 @@ function TrussFrame({
     const numPanelsPerSlope = Math.max(3, Math.round(slopeLength / panelTargetSize));
 
     // Generate nodes along each slope
-    // Left slope: Z goes from columnFlangeOffset (eave) to span/2 (ridge)
-    // Right slope: Z goes from span - columnFlangeOffset (eave) to span/2 (ridge)
+    // Left slope: Z goes from trussStartOffset (after starters) to span/2 (ridge)
+    // Right slope: Z goes from span - trussStartOffset (after starters) to span/2 (ridge)
     const topNodesLeft: THREE.Vector3[] = [];
     const bottomNodesLeft: THREE.Vector3[] = [];
     const topNodesRight: THREE.Vector3[] = [];
@@ -103,14 +110,14 @@ function TrussFrame({
       const t = i / numPanelsPerSlope;
 
       // Left slope
-      const zLeft = columnFlangeOffset + t * effectiveHalfSpan;
+      const zLeft = trussStartOffset + t * effectiveHalfSpan;
       const yTopLeft = wallHeight + (zLeft - columnFlangeOffset) * Math.tan(roofAngleRad);
       const yBottomLeft = yTopLeft - trussHeight;
       topNodesLeft.push(new THREE.Vector3(x, yTopLeft, zLeft));
       bottomNodesLeft.push(new THREE.Vector3(x, yBottomLeft, zLeft));
 
       // Right slope
-      const zRight = (span - columnFlangeOffset) - t * effectiveHalfSpan;
+      const zRight = (span - trussStartOffset) - t * effectiveHalfSpan;
       const yTopRight = wallHeight + ((span - columnFlangeOffset) - zRight) * Math.tan(roofAngleRad);
       const yBottomRight = yTopRight - trussHeight;
       topNodesRight.push(new THREE.Vector3(x, yTopRight, zRight));
@@ -175,7 +182,7 @@ function TrussFrame({
       chordSegments: segments,
       webMembers: webs,
     };
-  }, [x, wallHeight, span, effectiveHalfSpan, columnFlangeOffset, roofAngleRad, trussHeight]);
+  }, [x, wallHeight, span, effectiveHalfSpan, trussStartOffset, columnFlangeOffset, roofAngleRad, trussHeight]);
 
   return (
     <group>

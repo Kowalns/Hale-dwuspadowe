@@ -18,8 +18,8 @@ interface TrussColumnHeadProps {
 /**
  * Renders truss column heads (short truss stubs) at the top of each side column
  * when the rafter type is truss. Each head consists of:
- * - A short upper chord segment (~500mm) extending toward the hall center
- * - A short lower chord segment (~500mm) parallel, offset down by trussHeight
+ * - A short upper chord segment (~1000mm) extending toward the hall center
+ * - A short lower chord segment (~1000mm) parallel, offset down by trussHeight
  * - One diagonal web member connecting them
  * - End plates (vertical, in XY plane) at the far ends of both chords
  *
@@ -46,7 +46,7 @@ export const TrussColumnHead = React.memo(function TrussColumnHead({
 
   const chordSize = chordProfile.h / 1000;
   const webSize = 0.03; // 30x30mm diagonal
-  const headLength = 0.5; // 500mm stub length (horizontal projection along Z)
+  const headLength = 1.0; // 1000mm stub length (horizontal projection along Z)
 
   const roofAngleRad = (roofAngle * Math.PI) / 180;
 
