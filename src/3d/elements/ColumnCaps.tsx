@@ -23,7 +23,7 @@ export const ColumnCaps = React.memo(function ColumnCaps({
   sideColumnProfile,
   wallHeight,
   span,
-  roofAngle: _roofAngle,
+  roofAngle,
   columnSpacing,
   numberOfFrames,
 }: ColumnCapsProps) {
@@ -31,6 +31,7 @@ export const ColumnCaps = React.memo(function ColumnCaps({
   const profileB = sideColumnProfile.b / 1000; // width along X
   const profileH = sideColumnProfile.h / 1000; // depth along Z
   const plateThickness = 0.01; // 10mm
+  const roofAngleRad = (roofAngle * Math.PI) / 180;
 
   const framePositions = useMemo(() => {
     const positions: number[] = [];
@@ -48,6 +49,7 @@ export const ColumnCaps = React.memo(function ColumnCaps({
           <mesh
             material={plateMaterial}
             position={[x, wallHeight - plateThickness / 2, 0]}
+            rotation={[-roofAngleRad, 0, 0]}
             castShadow
             receiveShadow
           >
@@ -57,6 +59,7 @@ export const ColumnCaps = React.memo(function ColumnCaps({
           <mesh
             material={plateMaterial}
             position={[x, wallHeight - plateThickness / 2, span]}
+            rotation={[roofAngleRad, 0, 0]}
             castShadow
             receiveShadow
           >
