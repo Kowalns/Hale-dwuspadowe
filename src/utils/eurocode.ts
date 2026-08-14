@@ -13,12 +13,16 @@ import type { TerrainCategory, SnowExposure } from '../types';
 /** Elastic modulus of steel [MPa] */
 export const E_STEEL = 210000;
 
+/** Shear modulus of steel [MPa] */
+export const G_STEEL = 81000;
+
 /** Partial safety factors */
 export const GAMMA_G_UNFAV = 1.35; // permanent actions, unfavorable
 export const GAMMA_G_FAV = 1.00; // permanent actions, favorable
 export const GAMMA_Q = 1.50; // variable actions
 export const XI_FACTOR = 0.85; // reduction factor for permanent actions (6.10b)
-export const GAMMA_M1 = 1.0; // for stability checks per PN-EN 1993-1-1
+export const GAMMA_M0 = 1.0; // for cross-section resistance
+export const GAMMA_M1 = 1.1; // for stability checks per Polish NA to PN-EN 1993-1-1
 
 /** Combination factors psi_0 */
 export const PSI_0_SNOW = 0.5;
@@ -241,13 +245,68 @@ export interface CharacteristicLoads {
 }
 
 /**
- * Compute frame stiffness reduction factor.
- * For a two-hinged portal frame, moment at column head is reduced
- * compared to a pure cantilever.
- * k_ramy depends on ratio of rafter/column stiffness. Default approximation: 0.6
+ * Compute frame stiffness reduction factor for a two-hinged portal frame.
+ * Based on the stiffness ratio between rafter and column:
+ * k = (3 * I_r / L_r) / (3 * I_r / L_r + I_c / H)
+ *
+ * In a 2-hinged portal frame, the column head moment from horizontal
+ * loading is a fraction of the free cantilever moment. The stiffer the
+ * rafter relative to the column, the more the column head is restrained
+ * rotationally, and the higher the fraction of moment that develops at
+ * the column head (approaching the propped cantilever case).
+ *
+ * @param I_rafter_cm4 - moment of inertia of rafter [cm4]
+ * @param L_rafter_m - rafter length (half-span) [m]
+ * @param I_column_cm4 - moment of inertia of column [cm4]
+ * @param H_column_m - column height [m]
+ * @returns k_ramy - frame factor (typically 0.4 to 0.9)
  */
-export function computeFrameFactor(): number {
-  return 0.6;
+export function computeFrameFactor(
+  I_rafter_cm4: number = 8356, // default: IPE 300 (typical rafter)
+  L_rafter_m: number = 7.5,
+  I_column_cm4: number = 5790, // default: IPE 270 (typical column)
+  H_column_m: number = 6.0
+): number {
+  // Stiffness of rafter: 3*EI_r / L_r (for pinned far end at ridge)
+  const K_r = 3 * I_rafter_cm4 / L_rafter_m;
+  // Stiffness of column: EI_c / H
+  const K_c = I_column_cm4 / H_column_m;
+  // Frame factor per stiffness distribution
+  // k = K_r / (K_r + K_c)
+  const k = K_r / (K_r + K_c);
+  // Clamp to reasonable range
+  return Math.max(0.3, Math.min(0.9, k));
+}
+
+/**
+ * Compute gravity-induced eave thrust for a 2-hinged portal frame.
+ * Vertical loads on the rafter create horizontal thrust at the eave connection.
+ * For a simply-supported rafter: H_thrust = q * L^2 / (8 * H_column)
+ * where L = half-span (rafter length in plan), q = distributed vertical load on rafter.
+ *
+ * The moment at column head from this thrust:
+ * M_gravity = H_thrust * H_column * k_ramy_gravity
+ * (reduced by frame action - the thrust distributes between both columns)
+ *
+ * @param q_vertical_kN_per_m - total vertical load on rafter [kN/m] (dead + snow, factored)
+ * @param halfSpan_m - half-span (rafter projected length) [m]
+ * @param H_column_m - column height [m]
+ * @param k_ramy - frame factor
+ * @returns moment at column head from gravity thrust [kNm]
+ */
+export function computeGravityThrustMoment(
+  q_vertical_kN_per_m: number,
+  halfSpan_m: number,
+  H_column_m: number,
+  k_ramy: number
+): number {
+  // Horizontal thrust at eave: H = q * L^2 / (8 * H)
+  // This comes from the midspan moment of the rafter being resisted by the frame
+  const H_thrust = q_vertical_kN_per_m * halfSpan_m * halfSpan_m / (8 * H_column_m);
+  // Moment at column head from this thrust
+  // For pinned-base column: M = H * H (cantilever), reduced by frame action
+  const M_gravity = H_thrust * H_column_m * k_ramy;
+  return M_gravity;
 }
 
 /**
@@ -288,7 +347,13 @@ export function computeLoadCombinations(loads: CharacteristicLoads): LoadCombina
   const gammaG_red = GAMMA_G_UNFAV * XI_FACTOR; // 1.1475
   const komb1_q_rafter = gammaG_red * q_dead_rafter + GAMMA_Q * q_snow_rafter +
     GAMMA_Q * PSI_0_WIND * Math.max(q_wind_roof_pressure, 0);
-  const komb1_M = gammaG_red * 0 + GAMMA_Q * PSI_0_WIND * M_wind_column;
+
+  // Gravity-induced eave thrust moment (from dead + snow on rafter)
+  // Factored vertical load for thrust calculation in KOMB1:
+  const q_vertical_komb1 = gammaG_red * q_dead_rafter + GAMMA_Q * q_snow_rafter;
+  const M_gravity_komb1 = computeGravityThrustMoment(q_vertical_komb1, halfSpan, H, k_ramy);
+
+  const komb1_M = M_gravity_komb1 + GAMMA_Q * PSI_0_WIND * M_wind_column;
   const komb1_N = komb1_q_rafter * halfSpan + gammaG_red * columnSelfWeight;
   const komb1_V = GAMMA_Q * PSI_0_WIND * q_wind_total * H / 2;
 
@@ -296,7 +361,12 @@ export function computeLoadCombinations(loads: CharacteristicLoads): LoadCombina
   // ULS factors: 1.35*0.85*G + 1.5*W + 1.5*0.5*S
   const komb2_q_rafter = gammaG_red * q_dead_rafter + GAMMA_Q * PSI_0_SNOW * q_snow_rafter +
     GAMMA_Q * Math.max(q_wind_roof_pressure, 0);
-  const komb2_M = GAMMA_Q * M_wind_column;
+
+  // Gravity thrust moment in KOMB2:
+  const q_vertical_komb2 = gammaG_red * q_dead_rafter + GAMMA_Q * PSI_0_SNOW * q_snow_rafter;
+  const M_gravity_komb2 = computeGravityThrustMoment(q_vertical_komb2, halfSpan, H, k_ramy);
+
+  const komb2_M = M_gravity_komb2 + GAMMA_Q * M_wind_column;
   const komb2_N = komb2_q_rafter * halfSpan + gammaG_red * columnSelfWeight;
   const komb2_V = GAMMA_Q * q_wind_total * H / 2;
 
@@ -365,15 +435,115 @@ export function computeBucklingFactor(
 }
 
 /**
- * Compute lateral-torsional buckling factor chi_LT.
- * Simplified: returns 0.9 as safe approximation for columns
- * where the compression flange is not continuously restrained.
- * If compression flange is restrained (e.g., by purlins/cladding): chi_LT = 1.0
+ * Compute elastic critical moment Mcr for lateral-torsional buckling.
+ * Uses the NCCI simplified method for doubly symmetric I-sections:
  *
- * @param isRestrainedFlange - true if compression flange is laterally restrained
+ * Mcr = C1 * (pi^2 * E * Iz) / L^2 * sqrt(Iw/Iz + L^2 * G * It / (pi^2 * E * Iz))
+ *
+ * @param L_m - unbraced length for LTB [m]
+ * @param Iz_cm4 - second moment of area about weak axis [cm4]
+ * @param It_cm4 - torsion constant (Saint-Venant) [cm4]
+ * @param Iw_cm6_x1000 - warping constant [x10^3 cm6] (stored value)
+ * @param C1 - moment distribution factor (1.0 for uniform moment, ~1.77 for triangular)
+ * @returns Mcr in [kNm]
  */
-export function computeLTBFactor(isRestrainedFlange: boolean = false): number {
-  return isRestrainedFlange ? 1.0 : 0.9;
+export function computeMcr(
+  L_m: number,
+  Iz_cm4: number,
+  It_cm4: number,
+  Iw_cm6_x1000: number,
+  C1: number = 1.77
+): number {
+  // Convert units to mm-based system
+  const L_mm = L_m * 1000;
+  const Iz_mm4 = Iz_cm4 * 1e4; // cm4 -> mm4
+  const It_mm4 = It_cm4 * 1e4; // cm4 -> mm4
+  const Iw_mm6 = Iw_cm6_x1000 * 1e3 * 1e6; // x10^3 cm6 -> mm6 (multiply by 1000 to get cm6, then by 10^6)
+
+  const pi2 = Math.PI * Math.PI;
+  const E = E_STEEL; // N/mm2
+  const G = G_STEEL; // N/mm2
+
+  // Mcr = C1 * pi^2*E*Iz / L^2 * sqrt(Iw/Iz + L^2*G*It / (pi^2*E*Iz))
+  const term1 = C1 * pi2 * E * Iz_mm4 / (L_mm * L_mm);
+  const term_under_sqrt = Iw_mm6 / Iz_mm4 + (L_mm * L_mm * G * It_mm4) / (pi2 * E * Iz_mm4);
+  const Mcr_Nmm = term1 * Math.sqrt(term_under_sqrt);
+
+  // Convert to kNm: N*mm -> kN*m = / 10^6
+  return Mcr_Nmm / 1e6;
+}
+
+/**
+ * Compute weak-axis moment of inertia Iz for an IPE section.
+ * Iz = 2 * (tf * b^3 / 12) (flanges dominate)
+ *
+ * @param b_mm - flange width [mm]
+ * @param tf_mm - flange thickness [mm]
+ * @param h_mm - total height [mm]
+ * @param tw_mm - web thickness [mm]
+ * @returns Iz [cm4]
+ */
+export function computeIz(b_mm: number, tf_mm: number, h_mm: number, tw_mm: number): number {
+  // Two flanges: 2 * (tf * b^3) / 12
+  const Iz_flanges = 2 * tf_mm * Math.pow(b_mm, 3) / 12;
+  // Web contribution (small): (h - 2*tf) * tw^3 / 12
+  const hw = h_mm - 2 * tf_mm;
+  const Iz_web = hw * Math.pow(tw_mm, 3) / 12;
+  // Total in mm4, convert to cm4
+  return (Iz_flanges + Iz_web) / 1e4;
+}
+
+/**
+ * Compute lateral-torsional buckling factor chi_LT per EN 1993-1-1 clause 6.3.2.3
+ * (General case for rolled or equivalent welded sections).
+ *
+ * Uses buckling curve b (alpha_LT = 0.34) for rolled IPE sections with h/b > 2
+ * and curve a (alpha_LT = 0.21) for h/b <= 2.
+ *
+ * For closed sections (RHS/SHS), returns 1.0 (not susceptible to LTB).
+ *
+ * @param Wpl_cm3 - plastic section modulus about strong axis [cm3]
+ * @param fy - yield strength [MPa]
+ * @param Mcr_kNm - elastic critical moment [kNm]
+ * @param h_mm - section height [mm] (for determining buckling curve)
+ * @param b_mm - flange width [mm] (for determining buckling curve)
+ * @returns chi_LT (LTB reduction factor, 0 to 1)
+ */
+export function computeLTBFactor(
+  Wpl_cm3: number,
+  fy: number,
+  Mcr_kNm: number,
+  h_mm: number = 300,
+  b_mm: number = 150
+): number {
+  // If Mcr is very small or zero (shouldn't happen but guard)
+  if (Mcr_kNm <= 0) return 0.1;
+
+  // Relative slenderness for LTB
+  // lambda_LT = sqrt(Wpl * fy / Mcr)
+  const Mpl = Wpl_cm3 * 1000 * fy / 1e6; // kNm (plastic moment resistance)
+  const lambda_LT = Math.sqrt(Mpl / Mcr_kNm);
+
+  // For lambda_LT <= 0.4 (clause 6.3.2.3): chi_LT = 1.0 (no LTB)
+  if (lambda_LT <= 0.4) return 1.0;
+
+  // Determine imperfection factor based on h/b ratio (Table 6.5)
+  // h/b > 2: curve b -> alpha_LT = 0.34
+  // h/b <= 2: curve a -> alpha_LT = 0.21
+  const alpha_LT = (h_mm / b_mm > 2) ? 0.34 : 0.21;
+
+  // For rolled sections, use clause 6.3.2.3 with beta = 0.75 and lambda_LT,0 = 0.4
+  const beta = 0.75;
+  const lambda_LT_0 = 0.4;
+
+  const Phi_LT = 0.5 * (1 + alpha_LT * (lambda_LT - lambda_LT_0) + beta * lambda_LT * lambda_LT);
+  let chi_LT = 1.0 / (Phi_LT + Math.sqrt(Phi_LT * Phi_LT - beta * lambda_LT * lambda_LT));
+
+  // chi_LT cannot exceed 1.0 and cannot exceed 1/lambda_LT^2
+  chi_LT = Math.min(chi_LT, 1.0);
+  chi_LT = Math.min(chi_LT, 1.0 / (lambda_LT * lambda_LT));
+
+  return chi_LT;
 }
 
 /**
@@ -389,8 +559,8 @@ export function computeLTBFactor(isRestrainedFlange: boolean = false): number {
  * @param fy - yield strength [MPa]
  * @param chi_y - flexural buckling factor
  * @param chi_LT - lateral-torsional buckling factor
- * @param kyy - interaction factor (default 1.0)
- * @param gammaM1 - partial safety factor for stability (default 1.0)
+ * @param kyy - interaction factor
+ * @param gammaM1 - partial safety factor for stability
  * @returns utilization ratio (<=1.0 means OK)
  */
 export function computeInteractionCheck(
@@ -419,7 +589,8 @@ export function computeInteractionCheck(
  * Compute interaction factor kyy (simplified method B, PN-EN 1993-1-1 Annex B)
  * kyy = Cmy * (1 + min(0.8, (lambda_bar_y - 0.2) * NEd/(chi_y * NRk/gammaM1)))
  *
- * For simplification: kyy = Cmy * (1 + 0.6 * lambda_bar_y * NEd/NRd) capped at Cmy*(1+0.8*NEd/NRd)
+ * Per Annex B, kyy can be less than 1.0 when axial load is low relative to buckling
+ * resistance. No artificial floor at 1.0 is applied.
  *
  * @param lambda_bar_y - relative slenderness
  * @param NEd - design axial force [kN]
@@ -439,7 +610,10 @@ export function computeKyy(
   const NRd = chi_y * A_cm2 * 100 * fy / GAMMA_M1 / 1000; // kN
   const factor = Math.min(0.8, (lambda_bar_y - 0.2) * NEd / NRd);
   const kyy = Cmy * (1 + Math.max(0, factor));
-  return Math.max(kyy, 1.0); // minimum 1.0 for safety
+  // Per Eurocode Annex B: kyy is allowed to be < 1.0 (no floor)
+  // Upper bound: Cmy * (1 + 0.8 * NEd / NRd)
+  const kyy_max = Cmy * (1 + 0.8 * NEd / NRd);
+  return Math.min(kyy, kyy_max);
 }
 
 /**
@@ -495,12 +669,10 @@ export function computeTrussChordBuckling(
  * @returns deflection [mm]
  */
 export function computeColumnDeflection(q_kN_per_m: number, H_m: number, I_cm4: number): number {
-  // Convert: q [kN/m] -> [N/mm] = q/1000*1000 = q [N/mm]... wait
-  // q [kN/m] = q * 1000 [N/m] = q [N/mm]
+  // q [kN/m] = 1 N/mm
   // H [m] = H * 1000 [mm]
   // I [cm4] = I * 10000 [mm4]
   // E [MPa] = [N/mm2]
-  // delta = q*H^4 / (8*E*I) with consistent units [N/mm, mm, N/mm2, mm4]
   const q_N_per_mm = q_kN_per_m; // 1 kN/m = 1 N/mm
   const H_mm = H_m * 1000;
   const I_mm4 = I_cm4 * 10000;

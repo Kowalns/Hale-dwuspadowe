@@ -32,6 +32,8 @@ export interface SteelProfile {
   load_capacity?: number; // kN/m (for Z profiles)
   i_y?: number; // cm (radius of gyration about strong axis)
   i_min?: number; // cm (minimum radius of gyration for tubes/RHS)
+  It?: number; // cm4 (torsion constant - Saint Venant)
+  Iw?: number; // cm6 (warping constant) x 10^3 for storage
 }
 
 export interface CalculationResults {

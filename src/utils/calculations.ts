@@ -20,6 +20,8 @@ import {
   computeFrameFactor,
   computeBucklingFactor,
   computeLTBFactor,
+  computeMcr,
+  computeIz,
   computeInteractionCheck,
   computeRelativeSlenderness,
   computeKyy,
@@ -28,6 +30,7 @@ import {
   computeRafterDeflection,
   getColumnDeflectionLimit,
   getRafterDeflectionLimit,
+  GAMMA_M1,
   type CharacteristicLoads,
   type LoadCombinationForces,
 } from './eurocode';
@@ -37,6 +40,12 @@ const yieldStrength: Record<string, number> = {
   S235: 235,
   S355: 355,
 };
+
+/**
+ * Default rafter inertia assumption for initial frame factor calculation.
+ * Uses IPE 300 (I = 8356 cm4) as a reasonable starting assumption for rafters.
+ */
+const DEFAULT_RAFTER_I = 8356; // cm4 (IPE 300)
 
 /**
  * Select Z purlin by load capacity.
@@ -62,6 +71,50 @@ function selectBracing(params: HallParameters, columnSpacing: number): number {
 }
 
 /**
+ * Compute chi_LT for a given IPE profile and unbraced length.
+ * Uses Mcr-based approach per EN 1993-1-1 clause 6.3.2.3.
+ *
+ * For columns in portal frames, C1 depends on moment distribution:
+ * - Triangular moment (pinned base, moment at head): C1 ~ 1.77
+ * - Uniform moment: C1 = 1.0
+ * For portal frame columns with pinned base and moment at head, C1 = 1.77
+ */
+function computeColumnChiLT(profile: SteelProfile, Lcr_m: number, fy: number): number {
+  const h = profile.h; // mm
+  const b = profile.b; // mm
+  const tf = profile.tf ?? 10; // mm
+  const tw = profile.tw ?? 7; // mm
+
+  // Get It and Iw from profile, or use approximations
+  let It_cm4 = profile.It;
+  let Iw_x1000_cm6 = profile.Iw;
+
+  if (It_cm4 === undefined) {
+    // Approximation: It ~ sum(b*t^3/3) for thin-walled open sections
+    const hw = h - 2 * tf;
+    It_cm4 = (2 * b * Math.pow(tf, 3) / 3 + hw * Math.pow(tw, 3) / 3) / 1e4; // mm4 -> cm4
+  }
+
+  if (Iw_x1000_cm6 === undefined) {
+    // Approximation: Iw ~ Iz * (h - tf)^2 / 4
+    const Iz_cm4 = computeIz(b, tf, h, tw);
+    const Iw_cm6 = Iz_cm4 * Math.pow((h - tf) / 10, 2) / 4; // cm4 * cm2 = cm6
+    Iw_x1000_cm6 = Iw_cm6 / 1000; // store as x10^3
+  }
+
+  // Compute Iz (weak axis)
+  const Iz_cm4 = computeIz(b, tf, h, tw);
+
+  // C1 = 1.77 for triangular moment distribution (portal frame column: pinned base, moment at head)
+  const C1 = 1.77;
+
+  const Mcr = computeMcr(Lcr_m, Iz_cm4, It_cm4, Iw_x1000_cm6, C1);
+  const chi_LT = computeLTBFactor(profile.W_pl, fy, Mcr, h, b);
+
+  return chi_LT;
+}
+
+/**
  * Check side column (IPE) with full Eurocode stability interaction.
  * Returns utilization ratio for a given profile under the given forces.
  */
@@ -73,20 +126,20 @@ function checkColumnStability(
   fy: number
 ): number {
   const i_y = profile.i_y ?? 10; // cm
-  const Lcr = H_m; // buckling length = column height (pinned base, fixed head approx)
+  const Lcr = H_m; // buckling length = column height (pinned base, braced frame)
 
   // Compute buckling factor (curve b for IPE about strong axis, alpha=0.34)
   const chi_y = computeBucklingFactor(Lcr, i_y, fy, 0.34);
 
-  // Lateral-torsional buckling: column inner flange not restrained by cladding
-  const chi_LT = computeLTBFactor(false);
+  // Lateral-torsional buckling: compute chi_LT based on Mcr
+  const chi_LT = computeColumnChiLT(profile, Lcr, fy);
 
   // Interaction factor kyy
   const lambda_bar = computeRelativeSlenderness(Lcr, i_y, fy);
   const kyy = computeKyy(lambda_bar, NEd, chi_y, profile.A, fy);
 
-  // Interaction check
-  return computeInteractionCheck(NEd, MEd, profile.A, profile.W_pl, fy, chi_y, chi_LT, kyy);
+  // Interaction check with gamma_M1 = 1.1
+  return computeInteractionCheck(NEd, MEd, profile.A, profile.W_pl, fy, chi_y, chi_LT, kyy, GAMMA_M1);
 }
 
 /**
@@ -98,9 +151,9 @@ function checkColumnStability(
 function checkColumnDeflection(
   profile: SteelProfile,
   q_wind_char_kN_per_m: number,
-  H_m: number
+  H_m: number,
+  k_ramy: number
 ): { deflection: number; limit: number; ok: boolean } {
-  const k_ramy = computeFrameFactor(); // frame reduces deflection vs pure cantilever
   const deflection = computeColumnDeflection(q_wind_char_kN_per_m * k_ramy, H_m, profile.I);
   const limit = getColumnDeflectionLimit(H_m);
   return { deflection, limit, ok: deflection <= limit };
@@ -114,7 +167,8 @@ function selectSideColumn(
   governingCombo: LoadCombinationForces,
   q_wind_char_kN_per_m: number,
   H_m: number,
-  fy: number
+  fy: number,
+  k_ramy: number
 ): {
   profile: SteelProfile;
   utilization: number;
@@ -129,7 +183,7 @@ function selectSideColumn(
 
   for (const profile of candidates) {
     const utilization = checkColumnStability(profile, MEd, NEd, H_m, fy);
-    const deflCheck = checkColumnDeflection(profile, q_wind_char_kN_per_m, H_m);
+    const deflCheck = checkColumnDeflection(profile, q_wind_char_kN_per_m, H_m, k_ramy);
 
     if (utilization <= 1.0 && deflCheck.ok) {
       return {
@@ -140,15 +194,12 @@ function selectSideColumn(
         governingCondition: utilization > (deflCheck.deflection / deflCheck.limit) ? 'stability' : 'deflection',
       };
     }
-
-    // If stability passes but deflection fails, continue to next profile
-    // If neither passes, continue
   }
 
   // If no profile passes, return largest with its utilization
   const largest = candidates[candidates.length - 1];
   const util = checkColumnStability(largest, MEd, NEd, H_m, fy);
-  const deflCheck = checkColumnDeflection(largest, q_wind_char_kN_per_m, H_m);
+  const deflCheck = checkColumnDeflection(largest, q_wind_char_kN_per_m, H_m, k_ramy);
   return {
     profile: largest,
     utilization: util,
@@ -165,7 +216,8 @@ function selectEndColumn(
   governingCombo: LoadCombinationForces,
   q_wind_char_kN_per_m: number,
   H_m: number,
-  fy: number
+  fy: number,
+  k_ramy: number
 ): SteelProfile {
   // End columns have half the tributary width, so half the loads
   const MEd = governingCombo.M_column * 0.5;
@@ -178,7 +230,7 @@ function selectEndColumn(
     const chi_y = computeBucklingFactor(H_m, i_y, fy, 0.49); // curve c for RHS
     const chi_LT = 1.0; // Closed sections not susceptible to LTB
     const util = computeInteractionCheck(NEd, MEd, profile.A, profile.W_pl, fy, chi_y, chi_LT);
-    const deflCheck = checkColumnDeflection(profile, q_wind_char_kN_per_m * 0.5, H_m);
+    const deflCheck = checkColumnDeflection(profile, q_wind_char_kN_per_m * 0.5, H_m, k_ramy);
 
     if (util <= 1.0 && deflCheck.ok) {
       return profile;
@@ -266,10 +318,7 @@ function selectTrussChord(
   }
 
   const largest = trussChordProfiles[trussChordProfiles.length - 1];
-  const i_min_l = largest.i_min ?? Math.sqrt(largest.I / largest.A);
   const I_equiv_cm4 = 2 * largest.A * Math.pow(trussHeight * 100 / 2, 2);
-  const _util = computeTrussChordBuckling(NEd, largest.A, i_min_l, panelLength, fy, 0.49);
-  void _util;
   return {
     profile: largest,
     trussHeight,
@@ -329,8 +378,16 @@ export function calculateHallStructure(params: HallParameters): CalculationResul
   // --- Dead load on roof ---
   const g_roof = (coveringSelfWeight[params.coveringType] ?? 0.15) + 0.10; // covering + purlins/connections
 
-  // --- Frame factor ---
-  const k_ramy = computeFrameFactor();
+  // --- Frame factor (k_ramy) ---
+  // Compute frame factor based on stiffness ratio: I_rafter / I_column
+  // Use default rafter I (IPE 300) for initial estimate; will be refined iteratively
+  const halfSpan = params.span / 2;
+  const k_ramy = computeFrameFactor(
+    DEFAULT_RAFTER_I,   // I_rafter (IPE 300 as default assumption)
+    halfSpan,           // L_rafter (half-span)
+    DEFAULT_RAFTER_I,   // I_column (start with same assumption, will be overridden by selection)
+    params.wallHeight   // H_column
+  );
 
   // --- Load combinations ---
   const charLoads: CharacteristicLoads = {
@@ -364,16 +421,48 @@ export function calculateHallStructure(params: HallParameters): CalculationResul
   const q_wind_column_SLS = q_wind_char; // kN/m along column height
 
   // --- Select side column (IPE) with stability + deflection ---
-  const columnResult = selectSideColumn(governing, q_wind_column_SLS, params.wallHeight, fy);
+  const columnResult = selectSideColumn(governing, q_wind_column_SLS, params.wallHeight, fy, k_ramy);
+
+  // --- Refine frame factor with actual selected column ---
+  // Recompute k_ramy with the actual column I, then re-check if a different column is needed
+  const k_ramy_refined = computeFrameFactor(
+    DEFAULT_RAFTER_I,
+    halfSpan,
+    columnResult.profile.I,
+    params.wallHeight
+  );
+
+  // If k_ramy changed significantly, recompute combinations and re-select
+  let finalColumnResult = columnResult;
+  let finalGoverning = governing;
+  let finalKramy = k_ramy;
+
+  if (Math.abs(k_ramy_refined - k_ramy) > 0.05) {
+    finalKramy = k_ramy_refined;
+    const charLoadsRefined: CharacteristicLoads = { ...charLoads, k_ramy: k_ramy_refined };
+    const combinationsRefined = computeLoadCombinations(charLoadsRefined);
+
+    let governingRefined = combinationsRefined[0];
+    for (const combo of combinationsRefined) {
+      if (combo.M_column > governingRefined.M_column) {
+        governingRefined = combo;
+      }
+    }
+    finalGoverning = governingRefined;
+
+    finalColumnResult = selectSideColumn(finalGoverning, q_wind_column_SLS, params.wallHeight, fy, k_ramy_refined);
+  } else {
+    finalKramy = k_ramy;
+  }
 
   // --- Select end column (RHS) ---
-  const endColumnProfile = selectEndColumn(governing, q_wind_column_SLS, params.wallHeight, fy);
+  const endColumnProfile = selectEndColumn(finalGoverning, q_wind_column_SLS, params.wallHeight, fy, finalKramy);
 
   // --- Select rafter or truss ---
   // SLS load on rafter (characteristic, unfactored)
   const q_rafter_SLS = (g_roof + s_roof) * columnSpacing; // kN/m
   // ULS load on rafter from governing combination
-  const q_rafter_ULS = governing.q_rafter;
+  const q_rafter_ULS = finalGoverning.q_rafter;
 
   let rafterProfile: SteelProfile | null = null;
   let trussChordProfile: SteelProfile | null = null;
@@ -382,7 +471,6 @@ export function calculateHallStructure(params: HallParameters): CalculationResul
   let rafterDeflectionLimit: number;
 
   if (params.span <= 18) {
-    const halfSpan = params.span / 2;
     const rafterResult = selectRafter(q_rafter_ULS, q_rafter_SLS, halfSpan, fy);
     rafterProfile = rafterResult.profile;
     rafterDeflection = rafterResult.deflection;
@@ -405,7 +493,7 @@ export function calculateHallStructure(params: HallParameters): CalculationResul
   const floorArea = params.span * params.length; // m2
   const numberOfFrames = numberOfBays + 1;
   // Mass from columns (side columns * 2 per frame, end columns at gable walls)
-  const sideColumnMass = columnResult.profile.mass * params.wallHeight * 2 * numberOfFrames;
+  const sideColumnMass = finalColumnResult.profile.mass * params.wallHeight * 2 * numberOfFrames;
   const endColumnMass = endColumnProfile.mass * params.wallHeight * 2 * 2; // 2 gable walls, ~2 columns each (simplified)
   // Mass from rafters/trusses
   let rafterMass = 0;
@@ -422,16 +510,16 @@ export function calculateHallStructure(params: HallParameters): CalculationResul
   const steelMassPerM2 = totalSteelMass / floorArea;
 
   // --- Deflection checks ---
-  const columnDeflection = columnResult.deflection;
-  const columnDeflectionLimit = columnResult.deflectionLimit;
+  const columnDeflection = finalColumnResult.deflection;
+  const columnDeflectionLimit = finalColumnResult.deflectionLimit;
   const deflectionCheck = (columnDeflection <= columnDeflectionLimit) &&
     (rafterDeflection <= rafterDeflectionLimit);
 
   // --- Final results ---
-  const stabilityCheck = columnResult.utilization <= 1.0;
+  const stabilityCheck = finalColumnResult.utilization <= 1.0;
 
   return {
-    sideColumnProfile: columnResult.profile,
+    sideColumnProfile: finalColumnResult.profile,
     endColumnProfile,
     rafterProfile,
     trussChordProfile,
@@ -443,9 +531,9 @@ export function calculateHallStructure(params: HallParameters): CalculationResul
     numberOfFrames,
     ridgeHeight,
     // Extended Eurocode results
-    utilizationRatio: columnResult.utilization,
-    governingCombination: governing.name,
-    governingCondition: columnResult.governingCondition,
+    utilizationRatio: finalColumnResult.utilization,
+    governingCombination: finalGoverning.name,
+    governingCondition: finalColumnResult.governingCondition,
     steelMassPerM2,
     columnDeflection,
     columnDeflectionLimit,
