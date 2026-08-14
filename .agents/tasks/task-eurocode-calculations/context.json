@@ -1,0 +1,28 @@
+{
+  "project_type": "React 18 SPA with Three.js 3D visualization - Steel Hall Configurator",
+  "language": "TypeScript",
+  "build_system": "Vite 6 + pnpm (Node v22, pnpm via corepack at /opt/toolchains/.nvm/versions/node/v22.23.2/bin)",
+  "test_framework": "No test framework currently configured",
+  "build_command": "export PATH=/opt/toolchains/.nvm/versions/node/v22.23.2/bin:$PATH && cd /projects/sandbox/Hale-dwuspadowe && npx tsc -b && npx vite build",
+  "test_command": "No tests - verify via tsc type-checking only",
+  "verification_instructions": "1. Run npx tsc -b to confirm no TypeScript errors. 2. Run npx vite build to confirm the app builds.",
+  "snapshot_or_generated_files": null,
+  "setup_instructions": "export PATH=/opt/toolchains/.nvm/versions/node/v22.23.2/bin:$PATH && cd /projects/sandbox/Hale-dwuspadowe && pnpm install",
+  "environment_constraints": "OPEN_INTERNET network. Node 22 at /opt/toolchains/.nvm/versions/node/v22.23.2/bin. pnpm via corepack. No test runner (vitest/jest) installed. tsconfig strict mode with noUnusedLocals and noUnusedParameters.",
+  "contribution_requirements": "Code committed to main branch. pnpm build must pass without errors. i18n translations in both pl.json and en.json.",
+  "key_patterns": "Calculation logic in src/utils/calculations.ts, types in src/types/index.ts, profile data in src/data/profiles.ts, load data in src/data/loads.ts, form UI in src/components/FormPanel.tsx, results UI in src/components/ResultsPanel.tsx, memoized hook in src/hooks/useHallCalculations.ts. The FormPanel has a bug - uses useHallCalculations without importing it. Several 3D files have unused variables. Tailwind CSS 4 with @theme directive.",
+  "relevant_files": [
+    "src/types/index.ts",
+    "src/utils/calculations.ts",
+    "src/utils/geometry.ts",
+    "src/data/profiles.ts",
+    "src/data/loads.ts",
+    "src/hooks/useHallCalculations.ts",
+    "src/components/FormPanel.tsx",
+    "src/components/ResultsPanel.tsx",
+    "src/components/Layout.tsx",
+    "src/i18n/pl.json",
+    "src/i18n/en.json"
+  ],
+  "directory_structure": "Root: package.json, vite.config.ts, tsconfig.json, index.html. src/: App.tsx, main.tsx, index.css, vite-env.d.ts. src/types/: TypeScript interfaces. src/utils/: calculation logic + geometry helpers. src/data/: profiles catalog + loads data. src/hooks/: useHallCalculations memoized hook. src/components/: FormPanel, ResultsPanel, Layout, Header, LanguageSwitcher, ViewPresets. src/3d/: Three.js scene, HallModel, materials. src/3d/elements/: SideColumns, EndColumns, Purlins, Rafter, Truss, CrossBracing, PurlinBracing. src/3d/profiles/: IBeamGeometry, RHSGeometry, SquareTubeGeometry, ZProfileGeometry, RoundBarGeometry. src/i18n/: config.ts, pl.json, en.json."
+}

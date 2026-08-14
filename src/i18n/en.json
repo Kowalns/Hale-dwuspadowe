@@ -1,0 +1,46 @@
+{
+  "app": {
+    "title": "Steel Hall Configurator",
+    "subtitle": "Gable roof halls"
+  },
+  "language": {
+    "pl": "PL",
+    "en": "EN",
+    "switch": "Switch language"
+  },
+  "form": {
+    "title": "Hall Parameters",
+    "span": "Span (width)",
+    "length": "Length",
+    "wallHeight": "Wall height",
+    "roofAngle": "Roof angle",
+    "steelGrade": "Steel grade",
+    "unit": {
+      "meters": "m",
+      "degrees": "°"
+    },
+    "range": {
+      "span": "10-30 m",
+      "length": "20-100 m",
+      "wallHeight": "4-10 m",
+      "roofAngle": "5°-25°"
+    },
+    "steelGrades": {
+      "S235": "S235",
+      "S355": "S355"
+    },
+    "submit": "Calculate",
+    "reset": "Reset"
+  },
+  "view": {
+    "perspective": "Perspective",
+    "front": "Front",
+    "side": "Side",
+    "top": "Top"
+  },
+  "sections": {
+    "geometry": "Geometry",
+    "materials": "Materials",
+    "results": "Results"
+  }
+}

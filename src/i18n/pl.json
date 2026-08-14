@@ -1,0 +1,79 @@
+{
+  "app": {
+    "title": "Konfigurator Hal Stalowych",
+    "subtitle": "Hale dwuspadowe"
+  },
+  "language": {
+    "pl": "PL",
+    "en": "EN",
+    "switch": "Zmien jezyk"
+  },
+  "form": {
+    "title": "Parametry hali",
+    "span": "Rozpietosc (szerokosc)",
+    "length": "Dlugosc",
+    "wallHeight": "Wysokosc sciany bocznej",
+    "roofAngle": "Kat nachylenia dachu",
+    "steelGrade": "Gatunek stali",
+    "snowZone": "Strefa sniegowa",
+    "windZone": "Strefa wiatrowa",
+    "coveringType": "Rodzaj pokrycia",
+    "snowZoneLabel": "Strefa {{zone}}",
+    "windZoneLabel": "Strefa {{zone}}",
+    "covering": {
+      "sheet": "Blacha",
+      "sandwich": "Panel kanapkowy"
+    },
+    "unit": {
+      "meters": "m",
+      "degrees": "\u00b0"
+    },
+    "range": {
+      "span": "10-30 m",
+      "length": "20-100 m",
+      "wallHeight": "4-10 m",
+      "roofAngle": "5\u00b0-25\u00b0"
+    },
+    "steelGrades": {
+      "S235": "S235",
+      "S355": "S355"
+    },
+    "submit": "Oblicz",
+    "reset": "Resetuj",
+    "wizardMode": "Kreator",
+    "expertMode": "Ekspert"
+  },
+  "wizard": {
+    "step1": "Geometria",
+    "step2": "Obciazenia",
+    "step3": "Stal",
+    "back": "Wstecz",
+    "next": "Dalej"
+  },
+  "results": {
+    "title": "Wyniki obliczen",
+    "sideColumn": "Slup boczny",
+    "endColumn": "Slup szczytowy",
+    "rafter": "Krokiew",
+    "trussChord": "Pas kratownicy",
+    "purlin": "Platew",
+    "bracing": "Stezenie",
+    "columnSpacing": "Rozstaw slupow",
+    "purlinSpacing": "Rozstaw platwi",
+    "ridgeHeight": "Wysokosc kalenicy",
+    "numberOfFrames": "Liczba ram",
+    "trussHeight": "Wysokosc kratownicy"
+  },
+  "sections": {
+    "geometry": "Geometria",
+    "materials": "Materialy",
+    "loads": "Obciazenia",
+    "results": "Wyniki"
+  },
+  "view": {
+    "perspective": "Perspektywa",
+    "front": "Przod",
+    "side": "Bok",
+    "top": "Gora"
+  }
+}
