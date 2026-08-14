@@ -25,6 +25,12 @@
       "single": "Single span",
       "continuous": "Continuous"
     },
+    "purlinMounting": "Purlin mounting",
+    "purlinMountings": {
+      "on-top": "On top of rafter",
+      "flush": "Flush with rafter"
+    },
+    "purlinMountingForced": "Forced mode for continuous purlins",
     "snowZoneLabel": "Zone {{zone}}",
     "windZoneLabel": "Zone {{zone}}",
     "covering": {

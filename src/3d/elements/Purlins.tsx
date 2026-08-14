@@ -5,7 +5,7 @@ import type { SteelProfile } from '../../types';
 
 interface PurlinsProps {
   profile: SteelProfile;
-  wallHeight: number;
+  purlinBaseY: number;
   span: number;
   roofAngle: number;
   purlinSpacing: number;
@@ -28,7 +28,7 @@ interface PurlinsProps {
  */
 export const Purlins = React.memo(function Purlins({
   profile,
-  wallHeight,
+  purlinBaseY,
   span,
   roofAngle,
   purlinSpacing,
@@ -43,9 +43,6 @@ export const Purlins = React.memo(function Purlins({
   const roofAngleRad = (roofAngle * Math.PI) / 180;
   const halfSpan = span / 2;
   const slopeLength = halfSpan / Math.cos(roofAngleRad);
-
-  // Vertical offset for purlins (18mm above rafter/truss chord)
-  const verticalOffset = 0.018;
 
   // Calculate purlin positions along the slope
   const purlinPositions = useMemo(() => {
@@ -85,7 +82,7 @@ export const Purlins = React.memo(function Purlins({
       // Left slope (Z=0 towards center)
       if (horizontalDist < halfSpan) {
         positions.push({
-          y: wallHeight + verticalDist + verticalOffset,
+          y: purlinBaseY + verticalDist,
           z: horizontalDist,
           side: 'left',
         });
@@ -94,14 +91,14 @@ export const Purlins = React.memo(function Purlins({
       // Right slope (Z=span towards center)
       if (horizontalDist < halfSpan) {
         positions.push({
-          y: wallHeight + verticalDist + verticalOffset,
+          y: purlinBaseY + verticalDist,
           z: span - horizontalDist,
           side: 'right',
         });
       }
     }
     return positions;
-  }, [slopeLength, purlinSpacing, roofAngleRad, halfSpan, wallHeight, span]);
+  }, [slopeLength, purlinSpacing, roofAngleRad, halfSpan, purlinBaseY, span]);
 
   return (
     <group name="purlins">

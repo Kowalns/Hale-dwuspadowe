@@ -34,3 +34,25 @@ export function calculateRoofSlopeLength(span: number, roofAngleDeg: number): nu
   const roofAngleRad = (roofAngleDeg * Math.PI) / 180;
   return (span / 2) / Math.cos(roofAngleRad);
 }
+
+/**
+ * Calculate the effective top-of-rafter Y position based on wallHeight and purlin mounting mode.
+ *
+ * wallHeight is defined as the distance from column base to the plane of the upper purlin flanges.
+ *
+ * In 'on-top' mode: purlins sit above the rafter with a 10mm gap,
+ *   so rafter top = wallHeight - 10mm - purlinHeight.
+ *
+ * In 'flush' mode: the upper purlin flange is flush with the rafter top,
+ *   so rafter top = wallHeight.
+ */
+export function getEffectiveRafterTop(
+  wallHeight: number,
+  purlinMounting: 'on-top' | 'flush',
+  purlinHeightM: number,
+): number {
+  if (purlinMounting === 'on-top') {
+    return wallHeight - 0.01 - purlinHeightM;
+  }
+  return wallHeight;
+}

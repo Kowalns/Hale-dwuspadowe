@@ -15,6 +15,7 @@ import { GableGirts } from './elements/GableGirts';
 import { IntermediateColumns } from './elements/IntermediateColumns';
 import { TrussColumnHead } from './elements/TrussColumnHead';
 import { ColumnCaps } from './elements/ColumnCaps';
+import { getEffectiveRafterTop } from '../utils/geometry';
 import type { HallParameters, CalculationResults } from '../types';
 
 interface HallModelProps {
@@ -30,6 +31,7 @@ interface HallModelProps {
  */
 export const HallModel = React.memo(function HallModel({ params, results }: HallModelProps) {
   const { span, length: hallLength, wallHeight, roofAngle } = params;
+  const purlinMounting = params.purlinMounting ?? 'on-top';
   const {
     sideColumnProfile,
     endColumnProfile,
@@ -41,7 +43,6 @@ export const HallModel = React.memo(function HallModel({ params, results }: Hall
     purlinSpacing,
     trussHeight,
     numberOfFrames,
-    ridgeHeight,
     connectionPlates,
     eaveBeamProfile,
     wallGirtProfile,
@@ -49,6 +50,14 @@ export const HallModel = React.memo(function HallModel({ params, results }: Hall
     intermediateColumnProfile,
     intermediateColumnActive,
   } = results;
+
+  // Compute effective rafter top (column height) based on purlin mounting mode
+  const purlinHeightM = purlinProfile.h / 1000;
+  const effectiveColumnHeight = getEffectiveRafterTop(wallHeight, purlinMounting, purlinHeightM);
+
+  // Purlin base Y: center of purlin at eave level
+  // wallHeight is defined as distance to top of purlins, so center = wallHeight - h/2
+  const purlinBaseY = wallHeight - purlinHeightM / 2;
 
   // Offset the model so it's roughly centered for better camera viewing
   const offsetX = -hallLength / 2;
@@ -64,12 +73,15 @@ export const HallModel = React.memo(function HallModel({ params, results }: Hall
   // Rafter top offset: half the rafter/truss chord height in meters
   const rafterTopOffset = ((rafterProfile?.h ?? trussChordProfile?.h ?? 200) / 2) / 1000;
 
+  // Ridge height based on effective column height
+  const effectiveRidgeHeight = effectiveColumnHeight + (span / 2) * Math.tan((roofAngle * Math.PI) / 180);
+
   return (
     <group position={[offsetX, 0, offsetZ]}>
       {/* Side columns along both long walls */}
       <SideColumns
         profile={sideColumnProfile}
-        wallHeight={wallHeight}
+        wallHeight={effectiveColumnHeight}
         span={span}
         columnSpacing={columnSpacing}
         numberOfFrames={numberOfFrames}
@@ -78,7 +90,7 @@ export const HallModel = React.memo(function HallModel({ params, results }: Hall
       {/* Cap plates at the top of side columns */}
       <ColumnCaps
         sideColumnProfile={sideColumnProfile}
-        wallHeight={wallHeight}
+        wallHeight={effectiveColumnHeight}
         span={span}
         roofAngle={roofAngle}
         columnSpacing={columnSpacing}
@@ -89,17 +101,17 @@ export const HallModel = React.memo(function HallModel({ params, results }: Hall
       {/* End columns on gable ends */}
       <EndColumns
         profile={endColumnProfile}
-        wallHeight={wallHeight}
+        wallHeight={effectiveColumnHeight}
         span={span}
         length={hallLength}
-        ridgeHeight={ridgeHeight}
+        ridgeHeight={effectiveRidgeHeight}
       />
 
       {/* Rafters or Trusses depending on span */}
       {rafterProfile && (
         <Rafter
           profile={rafterProfile}
-          wallHeight={wallHeight}
+          wallHeight={effectiveColumnHeight}
           span={span}
           roofAngle={roofAngle}
           columnSpacing={columnSpacing}
@@ -111,7 +123,7 @@ export const HallModel = React.memo(function HallModel({ params, results }: Hall
       {trussChordProfile && trussHeight != null && (
         <Truss
           chordProfile={trussChordProfile}
-          wallHeight={wallHeight}
+          wallHeight={effectiveColumnHeight}
           span={span}
           roofAngle={roofAngle}
           trussHeight={trussHeight}
@@ -125,7 +137,7 @@ export const HallModel = React.memo(function HallModel({ params, results }: Hall
       {/* Purlins on both roof slopes */}
       <Purlins
         profile={purlinProfile}
-        wallHeight={wallHeight}
+        purlinBaseY={purlinBaseY}
         span={span}
         roofAngle={roofAngle}
         purlinSpacing={purlinSpacing}
@@ -136,7 +148,8 @@ export const HallModel = React.memo(function HallModel({ params, results }: Hall
 
       {/* Purlin bracing ties */}
       <PurlinBracing
-        wallHeight={wallHeight}
+        wallHeight={effectiveColumnHeight}
+        purlinBaseY={purlinBaseY}
         span={span}
         roofAngle={roofAngle}
         purlinSpacing={purlinSpacing}
@@ -146,10 +159,10 @@ export const HallModel = React.memo(function HallModel({ params, results }: Hall
 
       {/* Cross bracing on walls and roof */}
       <CrossBracing
-        wallHeight={wallHeight}
+        wallHeight={effectiveColumnHeight}
         span={span}
         roofAngle={roofAngle}
-        ridgeHeight={ridgeHeight}
+        ridgeHeight={effectiveRidgeHeight}
         columnSpacing={columnSpacing}
         numberOfFrames={numberOfFrames}
         hallLength={hallLength}
@@ -160,16 +173,16 @@ export const HallModel = React.memo(function HallModel({ params, results }: Hall
       <BasePlates
         sideColumnProfile={sideColumnProfile}
         endColumnProfile={endColumnProfile}
-        wallHeight={wallHeight}
+        wallHeight={effectiveColumnHeight}
         span={span}
         length={hallLength}
         columnSpacing={columnSpacing}
         numberOfFrames={numberOfFrames}
-        ridgeHeight={ridgeHeight}
+        ridgeHeight={effectiveRidgeHeight}
         connectionPlates={connectionPlates}
       />
       <EndPlates
-        wallHeight={wallHeight}
+        wallHeight={effectiveColumnHeight}
         span={span}
         columnSpacing={columnSpacing}
         numberOfFrames={numberOfFrames}
@@ -180,7 +193,7 @@ export const HallModel = React.memo(function HallModel({ params, results }: Hall
         span={span}
         columnSpacing={columnSpacing}
         numberOfFrames={numberOfFrames}
-        ridgeHeight={ridgeHeight}
+        ridgeHeight={effectiveRidgeHeight}
         connectionPlates={connectionPlates}
       />
 
@@ -188,7 +201,7 @@ export const HallModel = React.memo(function HallModel({ params, results }: Hall
       {trussChordProfile && trussHeight != null && (
         <TrussColumnHead
           chordProfile={trussChordProfile}
-          wallHeight={wallHeight}
+          wallHeight={effectiveColumnHeight}
           span={span}
           roofAngle={roofAngle}
           trussHeight={trussHeight}
@@ -203,7 +216,7 @@ export const HallModel = React.memo(function HallModel({ params, results }: Hall
       {eaveBeamProfile && (
         <EaveBeams
           profile={eaveBeamProfile}
-          wallHeight={wallHeight}
+          wallHeight={effectiveColumnHeight}
           span={span}
           hallLength={hallLength}
         />
@@ -213,7 +226,7 @@ export const HallModel = React.memo(function HallModel({ params, results }: Hall
       {wallGirtProfile && (
         <WallGirts
           profile={wallGirtProfile}
-          wallHeight={wallHeight}
+          wallHeight={effectiveColumnHeight}
           span={span}
           hallLength={hallLength}
         />
@@ -223,7 +236,7 @@ export const HallModel = React.memo(function HallModel({ params, results }: Hall
       {gableGirtProfile && (
         <GableGirts
           profile={gableGirtProfile}
-          wallHeight={wallHeight}
+          wallHeight={effectiveColumnHeight}
           span={span}
           hallLength={hallLength}
         />
@@ -233,7 +246,7 @@ export const HallModel = React.memo(function HallModel({ params, results }: Hall
       {intermediateColumnProfile && (
         <IntermediateColumns
           profile={intermediateColumnProfile}
-          wallHeight={wallHeight}
+          wallHeight={effectiveColumnHeight}
           span={span}
           columnSpacing={columnSpacing}
           numberOfFrames={numberOfFrames}

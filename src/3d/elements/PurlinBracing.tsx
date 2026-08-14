@@ -4,6 +4,7 @@ import { bracingMaterial } from '../materials';
 
 interface PurlinBracingProps {
   wallHeight: number;
+  purlinBaseY: number;
   span: number;
   roofAngle: number;
   purlinSpacing: number;
@@ -19,6 +20,7 @@ interface PurlinBracingProps {
  */
 export const PurlinBracing = React.memo(function PurlinBracing({
   wallHeight,
+  purlinBaseY,
   span,
   roofAngle,
   purlinSpacing,
@@ -28,9 +30,6 @@ export const PurlinBracing = React.memo(function PurlinBracing({
   const roofAngleRad = (roofAngle * Math.PI) / 180;
   const halfSpan = span / 2;
   const slopeLength = halfSpan / Math.cos(roofAngleRad);
-
-  // Vertical offset for purlins (matching Purlins.tsx)
-  const verticalOffset = 0.018;
 
   // Compute all purlin positions along the slope (same logic as Purlins.tsx)
   const bracingElements = useMemo(() => {
@@ -71,11 +70,11 @@ export const PurlinBracing = React.memo(function PurlinBracing({
 
       if (horizontalDist < halfSpan) {
         leftPurlinPositions.push({
-          y: wallHeight + verticalDist + verticalOffset,
+          y: purlinBaseY + verticalDist,
           z: horizontalDist,
         });
         rightPurlinPositions.push({
-          y: wallHeight + verticalDist + verticalOffset,
+          y: purlinBaseY + verticalDist,
           z: span - horizontalDist,
         });
       }
@@ -129,7 +128,7 @@ export const PurlinBracing = React.memo(function PurlinBracing({
     }
 
     return result;
-  }, [slopeLength, purlinSpacing, roofAngleRad, halfSpan, wallHeight, span, numberOfFrames, columnSpacing]);
+  }, [slopeLength, purlinSpacing, roofAngleRad, halfSpan, wallHeight, purlinBaseY, span, numberOfFrames, columnSpacing]);
 
   // Bracing rod radius: 40x20mm profile approximated as cylinder with 20mm diameter
   const bracingRadius = 0.01;

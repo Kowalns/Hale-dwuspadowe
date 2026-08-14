@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { HallParameters, CalculationResults, CoveringType, SteelGrade, TerrainCategory, SnowExposure, ProfileOverrides, RafterType } from '../types';
+import type { HallParameters, CalculationResults, CoveringType, SteelGrade, TerrainCategory, SnowExposure, ProfileOverrides, RafterType, PurlinMounting } from '../types';
 import { ResultsPanel } from './ResultsPanel';
 
 const DEFAULT_PARAMS: HallParameters = {
@@ -80,7 +80,12 @@ export function FormPanel({ params, onParamsChange, results, profileOverrides, o
   const [wizardStep, setWizardStep] = useState(0);
 
   const updateParam = <K extends keyof HallParameters>(key: K, value: HallParameters[K]) => {
-    onParamsChange({ ...params, [key]: value });
+    const updated = { ...params, [key]: value };
+    // Force purlinMounting to 'on-top' when continuous purlins are selected
+    if (key === 'purlinType' && value === 'continuous') {
+      updated.purlinMounting = 'on-top';
+    }
+    onParamsChange(updated);
   };
 
   const steps = [
@@ -266,6 +271,37 @@ export function FormPanel({ params, onParamsChange, results, profileOverrides, o
             </label>
           ))}
         </div>
+      </div>
+      {/* Purlin mounting */}
+      <div className="space-y-1">
+        <label className="text-xs text-text-secondary font-sans">{t('form.purlinMounting')}</label>
+        <div className="flex gap-3">
+          {(['on-top', 'flush'] as const).map((mode) => {
+            const isContinuous = (params.purlinType ?? 'single') === 'continuous';
+            const isDisabled = mode === 'flush' && isContinuous;
+            return (
+              <label key={mode} className={`flex items-center gap-1.5 ${isDisabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}>
+                <input
+                  type="radio"
+                  name="purlinMounting"
+                  value={mode}
+                  checked={(params.purlinMounting ?? 'on-top') === mode}
+                  disabled={isDisabled}
+                  onChange={() => updateParam('purlinMounting', mode as PurlinMounting)}
+                  className="accent-accent-blue"
+                />
+                <span className="text-xs font-sans text-text-secondary">
+                  {t(`form.purlinMountings.${mode}`)}
+                </span>
+              </label>
+            );
+          })}
+        </div>
+        {(params.purlinType ?? 'single') === 'continuous' && (
+          <p className="text-[10px] text-text-secondary font-sans mt-0.5">
+            {t('form.purlinMountingForced')}
+          </p>
+        )}
       </div>
     </div>
   );

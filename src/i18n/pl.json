@@ -25,6 +25,12 @@
       "single": "Jednoprzeslowa",
       "continuous": "Ciagla"
     },
+    "purlinMounting": "Montaz platwi",
+    "purlinMountings": {
+      "on-top": "Na wiazarze (ponad)",
+      "flush": "Licowane z wiazarem"
+    },
+    "purlinMountingForced": "Wymuszony tryb dla platwi uciaglonych",
     "snowZoneLabel": "Strefa {{zone}}",
     "windZoneLabel": "Strefa {{zone}}",
     "covering": {

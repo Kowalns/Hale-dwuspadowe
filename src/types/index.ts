@@ -3,6 +3,7 @@ export type CoveringType = 'sheet' | 'sandwich';
 export type TerrainCategory = 1 | 2 | 3 | 4;
 export type SnowExposure = 'windy' | 'normal' | 'sheltered';
 export type RafterType = 'auto' | 'force_truss' | 'force_rafter';
+export type PurlinMounting = 'on-top' | 'flush';
 
 export interface ProfileOverrides {
   sideColumn?: string;
@@ -44,6 +45,7 @@ export interface HallParameters {
   terrainCategory?: TerrainCategory;
   snowExposure?: SnowExposure;
   purlinType?: 'single' | 'continuous';
+  purlinMounting?: PurlinMounting; // default: 'on-top'
 }
 
 export interface SteelProfile {
