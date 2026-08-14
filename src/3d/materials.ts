@@ -39,3 +39,17 @@ export const plateMaterial = new THREE.MeshStandardMaterial({
   metalness: 0.85,
   roughness: 0.3,
 });
+
+// Girts and eave beams - teal-gray
+export const girtMaterial = new THREE.MeshStandardMaterial({
+  color: 0x5f8a8b,
+  metalness: 0.75,
+  roughness: 0.4,
+});
+
+// Intermediate columns - lighter gray
+export const intermediateColumnMaterial = new THREE.MeshStandardMaterial({
+  color: 0x8b9daf,
+  metalness: 0.75,
+  roughness: 0.4,
+});

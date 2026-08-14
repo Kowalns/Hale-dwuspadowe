@@ -9,6 +9,10 @@ import { CrossBracing } from './elements/CrossBracing';
 import { BasePlates } from './elements/BasePlates';
 import { EndPlates } from './elements/EndPlates';
 import { RidgePlates } from './elements/RidgePlates';
+import { EaveBeams } from './elements/EaveBeams';
+import { WallGirts } from './elements/WallGirts';
+import { GableGirts } from './elements/GableGirts';
+import { IntermediateColumns } from './elements/IntermediateColumns';
 import type { HallParameters, CalculationResults } from '../types';
 
 interface HallModelProps {
@@ -37,6 +41,11 @@ export const HallModel = React.memo(function HallModel({ params, results }: Hall
     numberOfFrames,
     ridgeHeight,
     connectionPlates,
+    eaveBeamProfile,
+    wallGirtProfile,
+    gableGirtProfile,
+    intermediateColumnProfile,
+    intermediateColumnActive,
   } = results;
 
   // Offset the model so it's roughly centered for better camera viewing
@@ -147,6 +156,49 @@ export const HallModel = React.memo(function HallModel({ params, results }: Hall
         ridgeHeight={ridgeHeight}
         connectionPlates={connectionPlates}
       />
+
+      {/* Eave beams */}
+      {eaveBeamProfile && (
+        <EaveBeams
+          profile={eaveBeamProfile}
+          wallHeight={wallHeight}
+          span={span}
+          hallLength={hallLength}
+        />
+      )}
+
+      {/* Wall girts on side walls */}
+      {wallGirtProfile && (
+        <WallGirts
+          profile={wallGirtProfile}
+          wallHeight={wallHeight}
+          span={span}
+          hallLength={hallLength}
+        />
+      )}
+
+      {/* Gable girts on end walls */}
+      {gableGirtProfile && (
+        <GableGirts
+          profile={gableGirtProfile}
+          wallHeight={wallHeight}
+          span={span}
+          hallLength={hallLength}
+          ridgeHeight={ridgeHeight}
+        />
+      )}
+
+      {/* Intermediate columns on side walls */}
+      {intermediateColumnProfile && (
+        <IntermediateColumns
+          profile={intermediateColumnProfile}
+          wallHeight={wallHeight}
+          span={span}
+          columnSpacing={columnSpacing}
+          numberOfFrames={numberOfFrames}
+          active={intermediateColumnActive}
+        />
+      )}
     </group>
   );
 });

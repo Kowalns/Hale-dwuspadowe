@@ -44,20 +44,48 @@ export const Purlins = React.memo(function Purlins({
   const halfSpan = span / 2;
   const slopeLength = halfSpan / Math.cos(roofAngleRad);
 
+  // Vertical offset for purlins (18mm above rafter/truss chord)
+  const verticalOffset = 0.018;
+
   // Calculate purlin positions along the slope
   const purlinPositions = useMemo(() => {
     const positions: Array<{ y: number; z: number; side: 'left' | 'right' }> = [];
+
+    // Ridge offset: place two purlins near the ridge instead of one at the ridge
+    const ridgeOffset = Math.min(purlinSpacing / 2, 0.2);
+    const ridgeDistAlongSlope = slopeLength; // ridge is at end of slope
+    const minDistFromRidge = purlinSpacing / 4;
+
+    // Collect purlin positions along the slope (from eave toward ridge)
+    const slopePositions: number[] = [];
     const numPurlins = Math.floor(slopeLength / purlinSpacing);
 
     for (let i = 1; i <= numPurlins; i++) {
       const distAlongSlope = i * purlinSpacing;
+      // Skip if too close to ridge (within purlinSpacing/4 of the ridge)
+      if (ridgeDistAlongSlope - distAlongSlope < minDistFromRidge) {
+        continue;
+      }
+      if (distAlongSlope < slopeLength) {
+        slopePositions.push(distAlongSlope);
+      }
+    }
+
+    // Add near-ridge purlins offset from the ridge center
+    const nearRidgeDist = slopeLength - ridgeOffset;
+    if (nearRidgeDist > 0 && (slopePositions.length === 0 || nearRidgeDist - slopePositions[slopePositions.length - 1] > minDistFromRidge)) {
+      slopePositions.push(nearRidgeDist);
+    }
+
+    // Generate 3D positions for each slope
+    for (const distAlongSlope of slopePositions) {
       const horizontalDist = distAlongSlope * Math.cos(roofAngleRad);
       const verticalDist = distAlongSlope * Math.sin(roofAngleRad);
 
       // Left slope (Z=0 towards center)
       if (horizontalDist < halfSpan) {
         positions.push({
-          y: wallHeight + verticalDist,
+          y: wallHeight + verticalDist + verticalOffset,
           z: horizontalDist,
           side: 'left',
         });
@@ -66,7 +94,7 @@ export const Purlins = React.memo(function Purlins({
       // Right slope (Z=span towards center)
       if (horizontalDist < halfSpan) {
         positions.push({
-          y: wallHeight + verticalDist,
+          y: wallHeight + verticalDist + verticalOffset,
           z: span - horizontalDist,
           side: 'right',
         });

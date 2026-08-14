@@ -42,24 +42,43 @@ export const CrossBracing = React.memo(function CrossBracing({
       [lastBayStart, lastBayEnd],
     ];
 
-    // Wall bracing - both side walls
+    // Wall bracing - both side walls, split at wallHeight/2 (girt level)
+    const girtLevel = wallHeight / 2;
     for (const [bayX0, bayX1] of bays) {
-      // Z=0 side wall
+      // Z=0 side wall - bottom half (0 to girtLevel)
       result.push({
         start: new THREE.Vector3(bayX0, 0, 0),
-        end: new THREE.Vector3(bayX1, wallHeight, 0),
+        end: new THREE.Vector3(bayX1, girtLevel, 0),
       });
       result.push({
         start: new THREE.Vector3(bayX1, 0, 0),
+        end: new THREE.Vector3(bayX0, girtLevel, 0),
+      });
+      // Z=0 side wall - top half (girtLevel to wallHeight)
+      result.push({
+        start: new THREE.Vector3(bayX0, girtLevel, 0),
+        end: new THREE.Vector3(bayX1, wallHeight, 0),
+      });
+      result.push({
+        start: new THREE.Vector3(bayX1, girtLevel, 0),
         end: new THREE.Vector3(bayX0, wallHeight, 0),
       });
-      // Z=span side wall
+      // Z=span side wall - bottom half (0 to girtLevel)
       result.push({
         start: new THREE.Vector3(bayX0, 0, span),
-        end: new THREE.Vector3(bayX1, wallHeight, span),
+        end: new THREE.Vector3(bayX1, girtLevel, span),
       });
       result.push({
         start: new THREE.Vector3(bayX1, 0, span),
+        end: new THREE.Vector3(bayX0, girtLevel, span),
+      });
+      // Z=span side wall - top half (girtLevel to wallHeight)
+      result.push({
+        start: new THREE.Vector3(bayX0, girtLevel, span),
+        end: new THREE.Vector3(bayX1, wallHeight, span),
+      });
+      result.push({
+        start: new THREE.Vector3(bayX1, girtLevel, span),
         end: new THREE.Vector3(bayX0, wallHeight, span),
       });
     }
