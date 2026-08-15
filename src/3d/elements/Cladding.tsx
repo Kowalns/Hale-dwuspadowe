@@ -157,7 +157,7 @@ function createGableTriangleGeometry(
   const shape = new THREE.Shape();
   shape.moveTo(-width / 2, 0);
   shape.lineTo(width / 2, 0);
-  shape.lineTo(0, height - 0.10);
+  shape.lineTo(0, height);
   shape.closePath();
 
   if (isTrapezoid) {
@@ -234,6 +234,10 @@ export const Cladding = React.memo(function Cladding({
   const endWallThicknessOffset = isEndWallTrapezoid
     ? getTrapezoidalParams((cladding.endWallType as string) === 'T35' ? 'T35' : 'T18').height
     : (cladding.sandwichThickness ?? 100) / 1000 / 2;
+
+  // Gable triangle: height must match roof angle with the full end wall width
+  const endWallWidth = span + 2 * (columnOuterFlangeOffset + 2 * sideWallThicknessOffset);
+  const gableTriangleActualHeight = endWallWidth / 2 * Math.tan(roofAngleRad) - 0.10;
 
   // Wall geometries
   // panelOrientation determines the direction of ribs:
@@ -597,13 +601,13 @@ export const Cladding = React.memo(function Cladding({
         let panelCenterX = (bayStart + bayEnd) / 2;
 
         if (bayIndex === 0) {
-          const leftEdge = -(endColumnOuterOffset + endWallThicknessOffset) + 0.010;
+          const leftEdge = endColumnOuterOffset + 0.010;
           const rightEdge = columnSpacing - 0.010;
           panelWidth = rightEdge - leftEdge;
           panelCenterX = (leftEdge + rightEdge) / 2;
         } else if (bayIndex === numberOfBays - 1) {
           const leftEdge = (numberOfBays - 1) * columnSpacing + 0.010;
-          const rightEdge = hallLength + endColumnOuterOffset + endWallThicknessOffset - 0.010;
+          const rightEdge = hallLength - endColumnOuterOffset - 0.010;
           panelWidth = rightEdge - leftEdge;
           panelCenterX = (leftEdge + rightEdge) / 2;
         }
@@ -696,13 +700,13 @@ export const Cladding = React.memo(function Cladding({
         let panelCenterX = (bayStart + bayEnd) / 2;
 
         if (bayIndex === 0) {
-          const leftEdge = -(endColumnOuterOffset + endWallThicknessOffset) + 0.010;
+          const leftEdge = endColumnOuterOffset + 0.010;
           const rightEdge = columnSpacing - 0.010;
           panelWidth = rightEdge - leftEdge;
           panelCenterX = (leftEdge + rightEdge) / 2;
         } else if (bayIndex === numberOfBays - 1) {
           const leftEdge = (numberOfBays - 1) * columnSpacing + 0.010;
-          const rightEdge = hallLength + endColumnOuterOffset + endWallThicknessOffset - 0.010;
+          const rightEdge = hallLength - endColumnOuterOffset - 0.010;
           panelWidth = rightEdge - leftEdge;
           panelCenterX = (leftEdge + rightEdge) / 2;
         }
@@ -888,7 +892,7 @@ export const Cladding = React.memo(function Cladding({
         const frontTriangleWidth = span + 2 * (columnOuterFlangeOffset + 2 * sideWallThicknessOffset);
         const frontTriangleGeo = createGableTriangleGeometry(
           frontTriangleWidth,
-          gableTriangleHeight,
+          gableTriangleActualHeight,
           isEndWallTrapezoid,
           'T18',
           wallWaveAxis,
@@ -1018,7 +1022,7 @@ export const Cladding = React.memo(function Cladding({
         const backTriangleWidth = span + 2 * (columnOuterFlangeOffset + 2 * sideWallThicknessOffset);
         const backTriangleGeo = createGableTriangleGeometry(
           backTriangleWidth,
-          gableTriangleHeight,
+          gableTriangleActualHeight,
           isEndWallTrapezoid,
           'T18',
           wallWaveAxis,
@@ -1086,13 +1090,13 @@ export const Cladding = React.memo(function Cladding({
         let panelCenterX = (bayStart + bayEnd) / 2;
 
         if (bayIndex === 0) {
-          const leftEdge = -(endColumnOuterOffset + endWallThicknessOffset) + 0.010;
+          const leftEdge = endColumnOuterOffset + 0.010;
           const rightEdge = columnSpacing - 0.010;
           panelWidth = rightEdge - leftEdge;
           panelCenterX = (leftEdge + rightEdge) / 2;
         } else if (bayIndex === numberOfBays - 1) {
           const leftEdge = (numberOfBays - 1) * columnSpacing + 0.010;
-          const rightEdge = hallLength + endColumnOuterOffset + endWallThicknessOffset - 0.010;
+          const rightEdge = hallLength - endColumnOuterOffset - 0.010;
           panelWidth = rightEdge - leftEdge;
           panelCenterX = (leftEdge + rightEdge) / 2;
         }
