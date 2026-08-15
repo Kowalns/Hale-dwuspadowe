@@ -1,55 +1,50 @@
 import * as THREE from 'three';
 
-/**
- * Steel materials with slightly different shades for different element types.
- * All use MeshStandardMaterial with metallic appearance.
- */
-
-// Columns - medium steel gray
 export const columnMaterial = new THREE.MeshStandardMaterial({
-  color: 0x6b7280,
-  metalness: 0.8,
-  roughness: 0.4,
-});
-
-// Rafters and Trusses - slightly lighter gray
-export const rafterMaterial = new THREE.MeshStandardMaterial({
-  color: 0x9ca3af,
-  metalness: 0.8,
+  color: '#707070',
   roughness: 0.35,
+  metalness: 0.85,
+  envMapIntensity: 1.0,
 });
 
-// Purlins - blue-gray
-export const purlinMaterial = new THREE.MeshStandardMaterial({
-  color: 0x7b8fa3,
-  metalness: 0.75,
-  roughness: 0.45,
+export const rafterMaterial = new THREE.MeshStandardMaterial({
+  color: '#686868',
+  roughness: 0.35,
+  metalness: 0.85,
+  envMapIntensity: 1.0,
 });
 
-// Bracing - dark gray
 export const bracingMaterial = new THREE.MeshStandardMaterial({
-  color: 0x4b5563,
-  metalness: 0.85,
-  roughness: 0.3,
+  color: '#5a5a5a',
+  roughness: 0.4,
+  metalness: 0.8,
+  envMapIntensity: 0.8,
 });
 
-// Connection plates - darker gray
-export const plateMaterial = new THREE.MeshStandardMaterial({
-  color: 0x374151,
-  metalness: 0.85,
+export const purlinMaterial = new THREE.MeshStandardMaterial({
+  color: '#8a8a8a',
   roughness: 0.3,
+  metalness: 0.9,
+  envMapIntensity: 1.2,
 });
 
-// Girts and eave beams - teal-gray
 export const girtMaterial = new THREE.MeshStandardMaterial({
-  color: 0x5f8a8b,
-  metalness: 0.75,
-  roughness: 0.4,
+  color: '#7a7a7a',
+  roughness: 0.35,
+  metalness: 0.85,
+  envMapIntensity: 1.0,
 });
 
-// Intermediate columns - lighter gray
+export const plateMaterial = new THREE.MeshStandardMaterial({
+  color: '#606060',
+  roughness: 0.25,
+  metalness: 0.9,
+  envMapIntensity: 1.2,
+});
+
 export const intermediateColumnMaterial = new THREE.MeshStandardMaterial({
-  color: 0x8b9daf,
-  metalness: 0.75,
-  roughness: 0.4,
+  color: '#7a7a7a',
+  roughness: 0.35,
+  metalness: 0.85,
+  envMapIntensity: 1.0,
 });
