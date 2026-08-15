@@ -26,22 +26,26 @@ function getOpeningTransform(
       };
     case 'side_right':
       // Z=span face, looking from +Z
-      // positionX is stored in local wall coords (already mirrored by worldToLocal
-      // since the mesh has rotation=[0, PI, 0])
+      // positionX is stored in mirrored local coords (worldToLocal on PI-rotated mesh flips X),
+      // so we un-mirror with hallLength - positionX to recover world X
       return {
-        position: [opening.positionX, opening.positionY, span + wallOffset],
+        position: [hallLength - opening.positionX, opening.positionY, span + wallOffset],
         rotation: [0, Math.PI, 0],
       };
     case 'end_front':
       // X=0 face, looking from -X
+      // positionX is stored in rotated local coords (PI/2 rotation mirrors Z),
+      // so we un-mirror with span - positionX to recover world Z
       return {
-        position: [-wallOffset, opening.positionY, opening.positionX],
+        position: [-wallOffset, opening.positionY, span - opening.positionX],
         rotation: [0, Math.PI / 2, 0],
       };
     case 'end_back':
       // X=hallLength face, looking from +X
+      // positionX is stored in rotated local coords (-PI/2 rotation),
+      // which maps directly to world Z without mirroring
       return {
-        position: [hallLength + wallOffset, opening.positionY, span - opening.positionX],
+        position: [hallLength + wallOffset, opening.positionY, opening.positionX],
         rotation: [0, -Math.PI / 2, 0],
       };
   }

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import type { SkylightParameters } from '../../types';
 
@@ -63,6 +63,16 @@ export const Skylight = React.memo(function Skylight({
     geo.scale(1, scaleY, 1);
     return geo;
   }, [radius, skylightLength, archHeight]);
+
+  // Dispose material on unmount
+  useEffect(() => {
+    return () => { material.dispose(); };
+  }, [material]);
+
+  // Dispose geometry when dimensions change or on unmount
+  useEffect(() => {
+    return () => { geometry.dispose(); };
+  }, [geometry]);
 
   // Position: centered on the ridge
   // Ridge is at Y=ridgeHeight, Z=span/2, centered along X (at hallLength/2)
