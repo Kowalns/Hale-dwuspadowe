@@ -109,6 +109,73 @@ function getTrapezoidalParams(type: 'T18' | 'T35') {
 
 
 /**
+ * Creates a BufferGeometry with a dense vertex grid INSIDE a trapezoid shape,
+ * with optional trapezoidal profile displacement along Z.
+ * This avoids the earcut triangulation issue where ShapeGeometry with 4 vertices
+ * only produces 2 triangles, causing deformed edges when displacement is applied.
+ */
+function createTrapezoidMeshGeometry(
+  panelWidth: number,
+  hLeft: number,
+  hRight: number,
+  profileType: 'T18' | 'T35' | null,
+  waveAxis: 'x' | 'y',
+): THREE.BufferGeometry {
+  const segX = 2;
+  const maxH = Math.max(hLeft, hRight);
+  if (maxH < 0.01) return new THREE.PlaneGeometry(panelWidth, 0.01);
+
+  const segY = Math.max(10, Math.ceil(maxH * 20));
+
+  const vertices: number[] = [];
+  const indices: number[] = [];
+  const normals: number[] = [];
+
+  const cols = segX + 1;
+  const rows = segY + 1;
+
+  for (let iy = 0; iy < rows; iy++) {
+    const ty = iy / segY;
+    for (let ix = 0; ix < cols; ix++) {
+      const tx = ix / segX;
+
+      const x = -panelWidth / 2 + tx * panelWidth;
+      const maxYatX = hLeft + tx * (hRight - hLeft);
+      const y = ty * maxYatX;
+
+      let z = 0;
+      if (profileType) {
+        const { height: amp, plateau, valley, period } = getTrapezoidalParams(profileType);
+        const coord = waveAxis === 'x' ? x : y;
+        const extent = waveAxis === 'x' ? panelWidth : maxH;
+        z = -trapezoidHeight(coord + extent / 2, period, plateau, valley, amp);
+      }
+
+      vertices.push(x, y, z);
+      normals.push(0, 0, 1);
+    }
+  }
+
+  for (let iy = 0; iy < segY; iy++) {
+    for (let ix = 0; ix < segX; ix++) {
+      const a = iy * cols + ix;
+      const b = iy * cols + ix + 1;
+      const c = (iy + 1) * cols + ix;
+      const d = (iy + 1) * cols + ix + 1;
+      indices.push(a, b, c);
+      indices.push(b, d, c);
+    }
+  }
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+  geo.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+  geo.setIndex(indices);
+  geo.computeVertexNormals();
+  return geo;
+}
+
+/**
  * Creates a PlaneGeometry with trapezoidal vertex displacement.
  * Waves run along the waveAxis ('x' for walls = vertical ribs, 'y' for roof along slope).
  * Displacement is applied along the Z normal of the plane.
@@ -877,33 +944,11 @@ export const Cladding = React.memo(function Cladding({
 
           if (avgH < 0.01) continue; // skip negligible panels
 
-          const trapShape = new THREE.Shape();
-          trapShape.moveTo(-panelWidth / 2, 0);
-          trapShape.lineTo(panelWidth / 2, 0);
-          trapShape.lineTo(panelWidth / 2, hRight);
-          trapShape.lineTo(-panelWidth / 2, hLeft);
-          trapShape.closePath();
-
           let gableGeo: THREE.BufferGeometry;
           if (isSideWallTrapezoid) {
-            const { height: amp, plateau, valley, period } = getTrapezoidalParams('T18');
-            const maxH = Math.max(hLeft, hRight);
-            const extent = maxH;
-            const waveCount = Math.ceil(extent / period);
-            const segments = Math.min(waveCount * 10, 300);
-            gableGeo = new THREE.ShapeGeometry(trapShape, segments);
-            const pos = gableGeo.attributes.position;
-            for (let v = 0; v < pos.count; v++) {
-              const coord = pos.getY(v);
-              const displacement = trapezoidHeight(coord + extent / 2, period, plateau, valley, amp);
-              pos.setZ(v, -displacement);
-            }
-            pos.needsUpdate = true;
-            gableGeo.computeVertexNormals();
+            gableGeo = createTrapezoidMeshGeometry(panelWidth, hLeft, hRight, 'T18', 'y');
           } else {
-            gableGeo = new THREE.ExtrudeGeometry(trapShape, { depth: sandwichThicknessM, bevelEnabled: false });
-            gableGeo.translate(0, 0, -sandwichThicknessM / 2);
-            gableGeo.computeVertexNormals();
+            gableGeo = createTrapezoidMeshGeometry(panelWidth, hLeft, hRight, null, 'y');
           }
 
           elements.push(
@@ -1060,33 +1105,11 @@ export const Cladding = React.memo(function Cladding({
 
           if (avgH < 0.01) continue; // skip negligible panels
 
-          const trapShape = new THREE.Shape();
-          trapShape.moveTo(-panelWidth / 2, 0);
-          trapShape.lineTo(panelWidth / 2, 0);
-          trapShape.lineTo(panelWidth / 2, hRight);
-          trapShape.lineTo(-panelWidth / 2, hLeft);
-          trapShape.closePath();
-
           let gableGeo: THREE.BufferGeometry;
           if (isSideWallTrapezoid) {
-            const { height: amp, plateau, valley, period } = getTrapezoidalParams('T18');
-            const maxH = Math.max(hLeft, hRight);
-            const extent = maxH;
-            const waveCount = Math.ceil(extent / period);
-            const segments = Math.min(waveCount * 10, 300);
-            gableGeo = new THREE.ShapeGeometry(trapShape, segments);
-            const pos = gableGeo.attributes.position;
-            for (let v = 0; v < pos.count; v++) {
-              const coord = pos.getY(v);
-              const displacement = trapezoidHeight(coord + extent / 2, period, plateau, valley, amp);
-              pos.setZ(v, -displacement);
-            }
-            pos.needsUpdate = true;
-            gableGeo.computeVertexNormals();
+            gableGeo = createTrapezoidMeshGeometry(panelWidth, hLeft, hRight, 'T18', 'y');
           } else {
-            gableGeo = new THREE.ExtrudeGeometry(trapShape, { depth: sandwichThicknessM, bevelEnabled: false });
-            gableGeo.translate(0, 0, -sandwichThicknessM / 2);
-            gableGeo.computeVertexNormals();
+            gableGeo = createTrapezoidMeshGeometry(panelWidth, hLeft, hRight, null, 'y');
           }
 
           elements.push(
