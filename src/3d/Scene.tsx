@@ -1,7 +1,32 @@
 import { Canvas } from '@react-three/fiber'
-import { OrbitControls, Grid } from '@react-three/drei'
+import { OrbitControls, Grid, Sky } from '@react-three/drei'
 import { HallModel } from './HallModel'
 import type { HallParameters, CalculationResults, CladdingParameters, Opening, OpeningType, SkylightParameters } from '../types'
+
+const TREE_POSITIONS: [number, number, number][] = [
+  [25, 0, 25],
+  [-20, 0, 30],
+  [30, 0, -15],
+  [-25, 0, -20],
+  [35, 0, 10],
+]
+
+function Tree({ position }: { position: [number, number, number] }) {
+  return (
+    <group position={position}>
+      {/* Trunk */}
+      <mesh position={[0, 1.5, 0]} castShadow>
+        <cylinderGeometry args={[0.15, 0.2, 3, 8]} />
+        <meshStandardMaterial color="#5c3d1e" />
+      </mesh>
+      {/* Canopy */}
+      <mesh position={[0, 4, 0]} castShadow>
+        <sphereGeometry args={[1.5, 12, 12]} />
+        <meshStandardMaterial color="#2d6b30" />
+      </mesh>
+    </group>
+  )
+}
 
 interface SceneProps {
   params: HallParameters;
@@ -21,6 +46,9 @@ interface SceneProps {
 function SceneContent({ params, results, cladding, showCladding, openings, placementMode, onPlaceOpening, selectedOpeningType, openingWidth, openingHeight, sillHeight, skylight }: SceneProps) {
   return (
     <>
+      {/* Sky */}
+      <Sky sunPosition={[100, 50, 100]} />
+
       {/* Lighting */}
       <ambientLight intensity={0.7} />
       <directionalLight
@@ -37,6 +65,12 @@ function SceneContent({ params, results, cladding, showCladding, openings, place
       />
       <directionalLight position={[-5, 10, -5]} intensity={0.3} />
 
+      {/* Ground plane */}
+      <mesh position={[0, -0.01, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <planeGeometry args={[200, 200]} />
+        <meshStandardMaterial color="#4a7c3f" />
+      </mesh>
+
       {/* Grid helper */}
       <Grid
         position={[0, 0, 0]}
@@ -50,6 +84,11 @@ function SceneContent({ params, results, cladding, showCladding, openings, place
         fadeDistance={50}
         infiniteGrid
       />
+
+      {/* Trees */}
+      {TREE_POSITIONS.map((pos, i) => (
+        <Tree key={i} position={pos} />
+      ))}
 
       {/* 3D Hall Model */}
       <HallModel
@@ -89,7 +128,6 @@ export function Scene({ params, results, cladding, showCladding, openings, place
       gl={{ antialias: true }}
       className="w-full h-full"
     >
-      <color attach="background" args={['#f0f4f8']} />
       <SceneContent
         params={params}
         results={results}
