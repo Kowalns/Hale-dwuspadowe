@@ -9,6 +9,7 @@ interface CladdingProps {
   params: HallParameters;
   cladding: CladdingParameters;
   showCladding: boolean;
+  columnOuterFlangeOffset: number;
   placementMode?: boolean;
   openings?: Opening[];
   onPlaceOpening?: (opening: Opening) => void;
@@ -19,16 +20,46 @@ interface CladdingProps {
 }
 
 /**
- * Creates a transparent material for a given RAL color code.
+ * Creates a fully opaque material for a given RAL color code.
  */
 function makeCladdingMaterial(ralCode: string): THREE.MeshStandardMaterial {
   return new THREE.MeshStandardMaterial({
     color: getRALHex(ralCode),
-    transparent: true,
-    opacity: 0.85,
+    opacity: 1.0,
     side: THREE.DoubleSide,
-    depthWrite: false,
+    depthWrite: true,
   });
+}
+
+/**
+ * Creates a PlaneGeometry with sinusoidal vertex displacement for trapezoidal profiles.
+ * Waves run along the localWaveAxis ('x' for walls = vertical ribs, 'y' for roof = ribs along slope).
+ * Displacement is applied along the Z normal of the plane.
+ */
+function createTrapezoidalGeometry(
+  width: number,
+  height: number,
+  amplitude: number,
+  period: number,
+  waveAxis: 'x' | 'y',
+): THREE.PlaneGeometry {
+  const segmentsW = 200;
+  const segmentsH = 100;
+  const geo = new THREE.PlaneGeometry(width, height, segmentsW, segmentsH);
+  const pos = geo.attributes.position;
+
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i);
+    const y = pos.getY(i);
+    // Determine the coordinate along which the wave varies
+    const coord = waveAxis === 'x' ? x : y;
+    const displacement = amplitude * Math.sin((2 * Math.PI * coord) / period);
+    pos.setZ(i, displacement);
+  }
+
+  pos.needsUpdate = true;
+  geo.computeVertexNormals();
+  return geo;
 }
 
 /**
@@ -78,10 +109,9 @@ function ColorStripePatches({
           <planeGeometry args={[wallWidth, patch.patchHeight]} />
           <meshStandardMaterial
             color={getRALHex(patch.color)}
-            transparent
-            opacity={0.9}
+            opacity={1.0}
             side={THREE.DoubleSide}
-            depthWrite={false}
+            depthWrite={true}
           />
         </mesh>
       ))}
@@ -92,12 +122,14 @@ function ColorStripePatches({
 /**
  * Cladding component rendering walls and roof panels with RAL colors.
  * Walls are PlaneGeometry, roof is two tilted planes matching roof slope.
+ * Trapezoidal profiles get sinusoidal vertex displacement.
  * Color stripes are offset patches on top of the main wall surface.
  */
 export const Cladding = React.memo(function Cladding({
   params,
   cladding,
   showCladding,
+  columnOuterFlangeOffset,
   placementMode,
   openings,
   onPlaceOpening,
@@ -112,6 +144,53 @@ export const Cladding = React.memo(function Cladding({
   const ridgeHeight = wallHeight + (span / 2) * Math.tan(roofAngleRad);
   const gableTriangleHeight = ridgeHeight - wallHeight;
   const roofSlopeLength = (span / 2) / Math.cos(roofAngleRad);
+
+  // Determine trapezoidal parameters for walls
+  const isWallTrapezoid = cladding.sideWallType === 'trapezoid';
+  // For side walls, use T18 profile (18mm amplitude, 100mm period) as default trapezoidal
+  const wallAmplitude = isWallTrapezoid ? 0.018 : 0;
+  const wallPeriod = isWallTrapezoid ? 0.100 : 1;
+
+  // Determine trapezoidal parameters for roof
+  const isRoofTrapezoid = cladding.roofType === 'T18' || cladding.roofType === 'T35';
+  const roofAmplitude = cladding.roofType === 'T35' ? 0.035 : cladding.roofType === 'T18' ? 0.018 : 0;
+  const roofPeriod = cladding.roofType === 'T35' ? 0.150 : cladding.roofType === 'T18' ? 0.100 : 1;
+
+  // Wall geometries with optional sinusoidal displacement
+  const sideWallGeometry = useMemo(() => {
+    if (isWallTrapezoid) {
+      return createTrapezoidalGeometry(hallLength, wallHeight, wallAmplitude, wallPeriod, 'x');
+    }
+    return new THREE.PlaneGeometry(hallLength, wallHeight);
+  }, [hallLength, wallHeight, isWallTrapezoid, wallAmplitude, wallPeriod]);
+
+  const endWallGeometry = useMemo(() => {
+    if (cladding.endWallType === 'trapezoid') {
+      return createTrapezoidalGeometry(span, wallHeight, wallAmplitude, wallPeriod, 'x');
+    }
+    return new THREE.PlaneGeometry(span, wallHeight);
+  }, [span, wallHeight, cladding.endWallType, wallAmplitude, wallPeriod]);
+
+  // Roof geometry with optional sinusoidal displacement along slope
+  const roofGeometry = useMemo(() => {
+    if (isRoofTrapezoid) {
+      // hallLength is width (along building), roofSlopeLength is height (along slope)
+      // Waves run along slope = vary along Y axis of the plane (roofSlopeLength dimension)
+      return createTrapezoidalGeometry(hallLength, roofSlopeLength, roofAmplitude, roofPeriod, 'y');
+    }
+    return new THREE.PlaneGeometry(hallLength, roofSlopeLength);
+  }, [hallLength, roofSlopeLength, isRoofTrapezoid, roofAmplitude, roofPeriod]);
+
+  // Dispose geometries
+  useEffect(() => {
+    return () => { sideWallGeometry.dispose(); };
+  }, [sideWallGeometry]);
+  useEffect(() => {
+    return () => { endWallGeometry.dispose(); };
+  }, [endWallGeometry]);
+  useEffect(() => {
+    return () => { roofGeometry.dispose(); };
+  }, [roofGeometry]);
 
   // Materials
   const sideWallMat = useMemo(() => makeCladdingMaterial(cladding.sideWallColor), [cladding.sideWallColor]);
@@ -151,16 +230,11 @@ export const Cladding = React.memo(function Cladding({
     const h = openingHeight ?? 1;
 
     // Get the local point on the plane geometry
-    // PlaneGeometry has center at origin, so localPoint.x ranges from -wallWidth/2 to wallWidth/2
-    // and localPoint.y ranges from -wallHeight/2 to wallHeight/2
     const localPoint = event.point.clone();
     const mesh = event.object as THREE.Mesh;
     mesh.worldToLocal(localPoint);
 
     // Convert from plane-local to wall-local coordinates
-    // Plane center is at (0,0) of the plane, so:
-    // positionX (along wall) = localPoint.x + wallWidth/2
-    // positionY (from ground) = localPoint.y + wallHeight/2
     let posX = localPoint.x + wallWidth / 2;
     let posY = localPoint.y + wallHeight / 2;
 
@@ -212,24 +286,22 @@ export const Cladding = React.memo(function Cladding({
 
   return (
     <group name="cladding">
-      {/* Side wall Z=0 (front) */}
+      {/* Side wall Z=-offset (left, Z=0 side) */}
       <mesh
-        position={[hallLength / 2, wallHeight / 2, 0]}
+        position={[hallLength / 2, wallHeight / 2, -columnOuterFlangeOffset]}
+        geometry={sideWallGeometry}
         material={sideWallMat}
         onPointerDown={placementMode ? (e) => handleWallClick('side_left', hallLength, e) : undefined}
-      >
-        <planeGeometry args={[hallLength, wallHeight]} />
-      </mesh>
+      />
 
-      {/* Side wall Z=span (back) */}
+      {/* Side wall Z=span+offset (right, Z=span side) */}
       <mesh
-        position={[hallLength / 2, wallHeight / 2, span]}
+        position={[hallLength / 2, wallHeight / 2, span + columnOuterFlangeOffset]}
         rotation={[0, Math.PI, 0]}
+        geometry={sideWallGeometry}
         material={sideWallMat}
         onPointerDown={placementMode ? (e) => handleWallClick('side_right', hallLength, e) : undefined}
-      >
-        <planeGeometry args={[hallLength, wallHeight]} />
-      </mesh>
+      />
 
       {/* Side wall color stripes - front */}
       {cladding.panelOrientation === 'horizontal' && sideStripes.length > 0 && (
@@ -238,7 +310,7 @@ export const Cladding = React.memo(function Cladding({
           wallWidth={hallLength}
           wallHeight={wallHeight}
           panelWidth={cladding.panelWidth}
-          position={[hallLength / 2, wallHeight / 2, 0]}
+          position={[hallLength / 2, wallHeight / 2, -columnOuterFlangeOffset]}
           rotation={[0, 0, 0]}
         />
       )}
@@ -250,81 +322,77 @@ export const Cladding = React.memo(function Cladding({
           wallWidth={hallLength}
           wallHeight={wallHeight}
           panelWidth={cladding.panelWidth}
-          position={[hallLength / 2, wallHeight / 2, span]}
+          position={[hallLength / 2, wallHeight / 2, span + columnOuterFlangeOffset]}
           rotation={[0, Math.PI, 0]}
         />
       )}
 
-      {/* End wall X=0 (left gable) - rectangular part */}
+      {/* End wall X=-offset (front gable) - rectangular part */}
       <mesh
-        position={[0, wallHeight / 2, span / 2]}
+        position={[-columnOuterFlangeOffset, wallHeight / 2, span / 2]}
         rotation={[0, Math.PI / 2, 0]}
+        geometry={endWallGeometry}
         material={endWallMat}
         onPointerDown={placementMode ? (e) => handleWallClick('end_front', span, e) : undefined}
-      >
-        <planeGeometry args={[span, wallHeight]} />
-      </mesh>
+      />
 
-      {/* End wall X=0 - gable triangle */}
+      {/* End wall X=-offset - gable triangle */}
       <mesh
-        position={[0, wallHeight + gableTriangleHeight / 2, span / 2]}
+        position={[-columnOuterFlangeOffset, wallHeight + gableTriangleHeight / 2, span / 2]}
         rotation={[0, Math.PI / 2, 0]}
       >
         <GableTriangleGeometry width={span} height={gableTriangleHeight} />
         <meshStandardMaterial
           color={getRALHex(cladding.endWallColor)}
-          transparent
-          opacity={0.85}
+          opacity={1.0}
           side={THREE.DoubleSide}
-          depthWrite={false}
+          depthWrite={true}
         />
       </mesh>
 
-      {/* End wall X=hallLength (right gable) - rectangular part */}
+      {/* End wall X=hallLength+offset (back gable) - rectangular part */}
       <mesh
-        position={[hallLength, wallHeight / 2, span / 2]}
+        position={[hallLength + columnOuterFlangeOffset, wallHeight / 2, span / 2]}
         rotation={[0, -Math.PI / 2, 0]}
+        geometry={endWallGeometry}
         material={endWallMat}
         onPointerDown={placementMode ? (e) => handleWallClick('end_back', span, e) : undefined}
-      >
-        <planeGeometry args={[span, wallHeight]} />
-      </mesh>
+      />
 
-      {/* End wall X=hallLength - gable triangle */}
+      {/* End wall X=hallLength+offset - gable triangle */}
       <mesh
-        position={[hallLength, wallHeight + gableTriangleHeight / 2, span / 2]}
+        position={[hallLength + columnOuterFlangeOffset, wallHeight + gableTriangleHeight / 2, span / 2]}
         rotation={[0, -Math.PI / 2, 0]}
       >
         <GableTriangleGeometry width={span} height={gableTriangleHeight} />
         <meshStandardMaterial
           color={getRALHex(cladding.endWallColor)}
-          transparent
-          opacity={0.85}
+          opacity={1.0}
           side={THREE.DoubleSide}
-          depthWrite={false}
+          depthWrite={true}
         />
       </mesh>
 
-      {/* End wall color stripes - X=0 */}
+      {/* End wall color stripes - X=-offset */}
       {cladding.panelOrientation === 'horizontal' && endStripes.length > 0 && (
         <ColorStripePatches
           stripes={endStripes}
           wallWidth={span}
           wallHeight={wallHeight}
           panelWidth={cladding.panelWidth}
-          position={[0, wallHeight / 2, span / 2]}
+          position={[-columnOuterFlangeOffset, wallHeight / 2, span / 2]}
           rotation={[0, Math.PI / 2, 0]}
         />
       )}
 
-      {/* End wall color stripes - X=hallLength */}
+      {/* End wall color stripes - X=hallLength+offset */}
       {cladding.panelOrientation === 'horizontal' && endStripes.length > 0 && (
         <ColorStripePatches
           stripes={endStripes}
           wallWidth={span}
           wallHeight={wallHeight}
           panelWidth={cladding.panelWidth}
-          position={[hallLength, wallHeight / 2, span / 2]}
+          position={[hallLength + columnOuterFlangeOffset, wallHeight / 2, span / 2]}
           rotation={[0, -Math.PI / 2, 0]}
         />
       )}
@@ -337,10 +405,9 @@ export const Cladding = React.memo(function Cladding({
           span / 4,
         ]}
         rotation={[Math.PI / 2 - roofAngleRad, 0, 0]}
+        geometry={roofGeometry}
         material={roofMat}
-      >
-        <planeGeometry args={[hallLength, roofSlopeLength]} />
-      </mesh>
+      />
 
       {/* Roof - right slope (Z=span side going up to ridge) */}
       <mesh
@@ -350,10 +417,9 @@ export const Cladding = React.memo(function Cladding({
           (3 * span) / 4,
         ]}
         rotation={[-(Math.PI / 2 - roofAngleRad), 0, 0]}
+        geometry={roofGeometry}
         material={roofMat}
-      >
-        <planeGeometry args={[hallLength, roofSlopeLength]} />
-      </mesh>
+      />
     </group>
   );
 });

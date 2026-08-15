@@ -156,6 +156,7 @@
   "cladding": {
     "title": "Cladding",
     "showCladding": "Show cladding",
+    "showConstruction": "Show construction",
     "sideWallType": "Side wall type",
     "endWallType": "End wall type",
     "roofType": "Roof covering type",

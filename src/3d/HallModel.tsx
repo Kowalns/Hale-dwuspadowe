@@ -92,6 +92,9 @@ export const HallModel = React.memo(function HallModel({ params, results, claddi
   // Ridge height based on effective column height
   const effectiveRidgeHeight = effectiveColumnHeight + (span / 2) * Math.tan((roofAngle * Math.PI) / 180);
 
+  // Column outer flange offset for cladding positioning
+  const columnOuterFlangeOffset = sideColumnProfile.h / 2 / 1000;
+
   return (
     <group position={[offsetX, 0, offsetZ]}>
       {/* Side columns along both long walls */}
@@ -269,7 +272,7 @@ export const HallModel = React.memo(function HallModel({ params, results, claddi
           span={span}
           columnSpacing={columnSpacing}
           numberOfFrames={numberOfFrames}
-          active={intermediateColumnActive}
+          active={intermediateColumnActive || cladding?.sideWallType === 'trapezoid'}
         />
       )}
 
@@ -279,6 +282,7 @@ export const HallModel = React.memo(function HallModel({ params, results, claddi
           params={params}
           cladding={cladding}
           showCladding={showCladding ?? true}
+          columnOuterFlangeOffset={columnOuterFlangeOffset}
           placementMode={placementMode}
           openings={openings}
           onPlaceOpening={onPlaceOpening}

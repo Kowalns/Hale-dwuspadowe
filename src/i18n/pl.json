@@ -156,6 +156,7 @@
   "cladding": {
     "title": "Obudowa",
     "showCladding": "Pokaz obudowe",
+    "showConstruction": "Pokaz konstrukcje",
     "sideWallType": "Typ sciany bocznej",
     "endWallType": "Typ sciany szczytowej",
     "roofType": "Typ pokrycia dachu",
