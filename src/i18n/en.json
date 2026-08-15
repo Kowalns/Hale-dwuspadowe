@@ -173,7 +173,7 @@
     "layerTo": "To layer",
     "wallTypes": {
       "trapezoid": "Trapezoidal sheet",
-      "sandwich": "Sandwich panel 100mm"
+      "sandwich": "Sandwich panel"
     },
     "roofTypes": {
       "T18": "Trapezoidal sheet T18",

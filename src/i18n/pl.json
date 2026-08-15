@@ -135,8 +135,8 @@
   "rafterType": {
     "title": "Typ wiezara",
     "auto": "Automatyczny",
-    "forceTruss": "Wymusz kratownice",
-    "forceRafter": "Wymusz rygiel IPE",
+    "forceTruss": "Wymuś kratownicę",
+    "forceRafter": "Wymuś rygiel IPE",
     "trussHeight": "Wysokosc kratownicy",
     "trussHeightRange": "Zakres: {{min}} - {{max}} m",
     "spanWarning": "Rozpietosc > 18m, zalecana kratownica"
@@ -173,7 +173,7 @@
     "layerTo": "Do warstwy",
     "wallTypes": {
       "trapezoid": "Blacha trapezowa",
-      "sandwich": "Panel sandwich 100mm"
+      "sandwich": "Płyta warstwowa"
     },
     "roofTypes": {
       "T18": "Blacha trapezowa T18",

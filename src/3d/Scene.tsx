@@ -57,7 +57,7 @@ function SceneContent(props: SceneProps) {
         dampingFactor={0.08}
         minDistance={2}
         maxDistance={200}
-        maxPolarAngle={Math.PI / 2.05}
+        maxPolarAngle={Math.PI}
         zoomToCursor
       />
 

@@ -113,6 +113,49 @@ export function CladdingPanel({
         </select>
       </div>
 
+      {/* Side wall color */}
+      <RALColorSelect
+        label={t('cladding.sideWallColor')}
+        value={cladding.sideWallColor}
+        onChange={(v) => update('sideWallColor', v)}
+      />
+
+      {/* Sandwich thickness & panel width for side wall */}
+      {cladding.sideWallType === 'sandwich' && (
+        <>
+          <div className="space-y-1">
+            <label className="text-xs text-text-secondary font-sans">{t('cladding.sandwichThickness')}</label>
+            <select
+              value={cladding.sandwichThickness ?? 100}
+              onChange={(e) => update('sandwichThickness', Number(e.target.value))}
+              className="w-full px-2 py-1.5 text-xs font-sans text-text-primary bg-white border border-border rounded focus:outline-none focus:ring-1 focus:ring-accent-blue"
+            >
+              {[60, 80, 100, 120, 150].map((v) => (
+                <option key={v} value={v}>{v} mm</option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-text-secondary font-sans">{t('cladding.panelWidth')}</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min={500}
+                max={1500}
+                step={50}
+                value={cladding.panelWidth}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  if (v >= 500 && v <= 1500) update('panelWidth', v);
+                }}
+                className="w-24 px-2 py-1 text-xs font-sans text-text-primary bg-white border border-border rounded focus:outline-none focus:ring-1 focus:ring-accent-blue"
+              />
+              <span className="text-xs text-text-secondary font-sans">mm</span>
+            </div>
+          </div>
+        </>
+      )}
+
       {/* End wall type */}
       <div className="space-y-1">
         <label className="text-xs text-text-secondary font-sans">{t('cladding.endWallType')}</label>
@@ -125,6 +168,49 @@ export function CladdingPanel({
           <option value="sandwich">{t('cladding.wallTypes.sandwich')}</option>
         </select>
       </div>
+
+      {/* End wall color */}
+      <RALColorSelect
+        label={t('cladding.endWallColor')}
+        value={cladding.endWallColor}
+        onChange={(v) => update('endWallColor', v)}
+      />
+
+      {/* Sandwich thickness & panel width for end wall */}
+      {cladding.endWallType === 'sandwich' && cladding.sideWallType !== 'sandwich' && (
+        <>
+          <div className="space-y-1">
+            <label className="text-xs text-text-secondary font-sans">{t('cladding.sandwichThickness')}</label>
+            <select
+              value={cladding.sandwichThickness ?? 100}
+              onChange={(e) => update('sandwichThickness', Number(e.target.value))}
+              className="w-full px-2 py-1.5 text-xs font-sans text-text-primary bg-white border border-border rounded focus:outline-none focus:ring-1 focus:ring-accent-blue"
+            >
+              {[60, 80, 100, 120, 150].map((v) => (
+                <option key={v} value={v}>{v} mm</option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-text-secondary font-sans">{t('cladding.panelWidth')}</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min={500}
+                max={1500}
+                step={50}
+                value={cladding.panelWidth}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  if (v >= 500 && v <= 1500) update('panelWidth', v);
+                }}
+                className="w-24 px-2 py-1 text-xs font-sans text-text-primary bg-white border border-border rounded focus:outline-none focus:ring-1 focus:ring-accent-blue"
+              />
+              <span className="text-xs text-text-secondary font-sans">mm</span>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Roof type */}
       <div className="space-y-1">
@@ -139,6 +225,20 @@ export function CladdingPanel({
           <option value="sandwich_roof">{t('cladding.roofTypes.sandwich_roof')}</option>
         </select>
       </div>
+
+      {/* Roof color */}
+      <RALColorSelect
+        label={t('cladding.roofColor')}
+        value={cladding.roofColor}
+        onChange={(v) => update('roofColor', v)}
+      />
+
+      {/* Flashing color */}
+      <RALColorSelect
+        label={t('cladding.flashingColor')}
+        value={cladding.flashingColor}
+        onChange={(v) => update('flashingColor', v)}
+      />
 
       {/* Eave overhang */}
       <div className="space-y-1">
@@ -159,28 +259,6 @@ export function CladdingPanel({
           <span className="text-sm text-text-secondary font-sans">mm</span>
         </div>
       </div>
-
-      {/* Colors */}
-      <RALColorSelect
-        label={t('cladding.sideWallColor')}
-        value={cladding.sideWallColor}
-        onChange={(v) => update('sideWallColor', v)}
-      />
-      <RALColorSelect
-        label={t('cladding.endWallColor')}
-        value={cladding.endWallColor}
-        onChange={(v) => update('endWallColor', v)}
-      />
-      <RALColorSelect
-        label={t('cladding.roofColor')}
-        value={cladding.roofColor}
-        onChange={(v) => update('roofColor', v)}
-      />
-      <RALColorSelect
-        label={t('cladding.flashingColor')}
-        value={cladding.flashingColor}
-        onChange={(v) => update('flashingColor', v)}
-      />
 
       {/* Panel orientation */}
       <div className="space-y-1">
@@ -204,39 +282,25 @@ export function CladdingPanel({
         </div>
       </div>
 
-      {/* Panel width */}
-      <div className="space-y-1">
-        <label className="text-xs text-text-secondary font-sans">{t('cladding.panelWidth')}</label>
-        <div className="flex items-center gap-2">
-          <input
-            type="number"
-            min={500}
-            max={1500}
-            step={50}
-            value={cladding.panelWidth}
-            onChange={(e) => {
-              const v = Number(e.target.value);
-              if (v >= 500 && v <= 1500) update('panelWidth', v);
-            }}
-            className="w-24 px-2 py-1 text-xs font-sans text-text-primary bg-white border border-border rounded focus:outline-none focus:ring-1 focus:ring-accent-blue"
-          />
-          <span className="text-xs text-text-secondary font-sans">mm</span>
-        </div>
-      </div>
-
-      {/* Sandwich thickness */}
-      {(cladding.sideWallType === 'sandwich' || cladding.endWallType === 'sandwich') && (
+      {/* Panel width - shown when not sandwich (sandwich shows it inline) */}
+      {cladding.sideWallType !== 'sandwich' && cladding.endWallType !== 'sandwich' && (
         <div className="space-y-1">
-          <label className="text-xs text-text-secondary font-sans">{t('cladding.sandwichThickness')}</label>
-          <select
-            value={cladding.sandwichThickness ?? 100}
-            onChange={(e) => update('sandwichThickness', Number(e.target.value))}
-            className="w-full px-2 py-1.5 text-xs font-sans text-text-primary bg-white border border-border rounded focus:outline-none focus:ring-1 focus:ring-accent-blue"
-          >
-            {[60, 80, 100, 120, 150].map((v) => (
-              <option key={v} value={v}>{v} mm</option>
-            ))}
-          </select>
+          <label className="text-xs text-text-secondary font-sans">{t('cladding.panelWidth')}</label>
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min={500}
+              max={1500}
+              step={50}
+              value={cladding.panelWidth}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 500 && v <= 1500) update('panelWidth', v);
+              }}
+              className="w-24 px-2 py-1 text-xs font-sans text-text-primary bg-white border border-border rounded focus:outline-none focus:ring-1 focus:ring-accent-blue"
+            />
+            <span className="text-xs text-text-secondary font-sans">mm</span>
+          </div>
         </div>
       )}
 
