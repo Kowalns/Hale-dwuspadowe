@@ -1,6 +1,8 @@
 import { useMemo, Suspense } from 'react'
 import { Canvas, useLoader } from '@react-three/fiber'
 import { OrbitControls, Environment } from '@react-three/drei'
+import { EffectComposer, N8AO, Bloom, Vignette, ToneMapping } from '@react-three/postprocessing'
+import { ToneMappingMode } from 'postprocessing'
 import * as THREE from 'three'
 import { HallModel } from './HallModel'
 import type { HallParameters, CalculationResults, CladdingParameters, Opening, OpeningType, SkylightParameters } from '../types'
@@ -37,11 +39,13 @@ function SceneContent(props: SceneProps) {
 
   return (
     <>
-      <Environment preset="sunset" background backgroundBlurriness={0.02} environmentIntensity={1.0} />
+      {/* 4K HDRI Environment */}
+      <Environment files="/textures/meadow.hdr" background backgroundBlurriness={0.005} environmentIntensity={1.3} />
 
+      {/* Key light (sun) */}
       <directionalLight
         position={[50, 80, 30]}
-        intensity={3.0}
+        intensity={2.5}
         castShadow
         shadow-mapSize-width={4096}
         shadow-mapSize-height={4096}
@@ -54,9 +58,12 @@ function SceneContent(props: SceneProps) {
         shadow-normalBias={0.02}
         color="#fff5e0"
       />
-      <directionalLight position={[-30, 20, -20]} intensity={0.3} color="#a0c0ff" />
-      <ambientLight intensity={0.1} />
+      {/* Fill light */}
+      <directionalLight position={[-30, 20, -20]} intensity={0.4} color="#a0c4ff" />
+      {/* Ambient minimum */}
+      <ambientLight intensity={0.05} />
 
+      {/* Ground */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]} receiveShadow>
         <planeGeometry args={[500, 500]} />
         <meshStandardMaterial
@@ -69,8 +76,10 @@ function SceneContent(props: SceneProps) {
         />
       </mesh>
 
+      {/* Hall Model */}
       <HallModel params={params} results={results} {...rest} />
 
+      {/* Controls */}
       <OrbitControls
         makeDefault
         enableDamping
@@ -78,8 +87,16 @@ function SceneContent(props: SceneProps) {
         minDistance={2}
         maxDistance={200}
         maxPolarAngle={Math.PI / 2.05}
-        zoomToCursor={true}
+        zoomToCursor
       />
+
+      {/* Postprocessing */}
+      <EffectComposer multisampling={4}>
+        <N8AO aoRadius={0.5} intensity={3} distanceFalloff={1} />
+        <Bloom intensity={0.1} luminanceThreshold={0.85} luminanceSmoothing={0.9} mipmapBlur />
+        <Vignette offset={0.3} darkness={0.5} />
+        <ToneMapping mode={ToneMappingMode.AGX} />
+      </EffectComposer>
     </>
   )
 }
@@ -90,10 +107,10 @@ export function Scene(props: SceneProps) {
       shadows
       camera={{ position: [30, 10, 30], fov: 40 }}
       gl={{
-        antialias: true,
-        toneMapping: THREE.ACESFilmicToneMapping,
-        toneMappingExposure: 0.9,
         powerPreference: 'high-performance',
+        antialias: false,
+        stencil: false,
+        depth: true,
       }}
       dpr={[1, 2]}
       className="w-full h-full"
