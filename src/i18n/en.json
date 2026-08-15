@@ -152,5 +152,40 @@
     "front": "Front",
     "side": "Side",
     "top": "Top"
+  },
+  "cladding": {
+    "title": "Cladding",
+    "showCladding": "Show cladding",
+    "sideWallType": "Side wall type",
+    "endWallType": "End wall type",
+    "roofType": "Roof covering type",
+    "sideWallColor": "Side wall color",
+    "endWallColor": "End wall color",
+    "roofColor": "Roof color",
+    "flashingColor": "Flashing color",
+    "panelOrientation": "Panel orientation",
+    "panelWidth": "Panel width",
+    "colorStripes": "Color stripes",
+    "addStripe": "Add stripe",
+    "stripe": "Stripe",
+    "layerFrom": "From layer",
+    "layerTo": "To layer",
+    "wallTypes": {
+      "trapezoid": "Trapezoidal sheet",
+      "sandwich": "Sandwich panel 100mm"
+    },
+    "roofTypes": {
+      "T18": "Trapezoidal sheet T18",
+      "T35": "Trapezoidal sheet T35",
+      "sandwich_roof": "Roof sandwich panel"
+    },
+    "orientations": {
+      "horizontal": "Horizontal",
+      "vertical": "Vertical"
+    },
+    "stripeWall": {
+      "side": "Side wall",
+      "end": "End wall"
+    }
   }
 }

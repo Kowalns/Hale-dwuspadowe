@@ -1,14 +1,16 @@
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Grid } from '@react-three/drei'
 import { HallModel } from './HallModel'
-import type { HallParameters, CalculationResults } from '../types'
+import type { HallParameters, CalculationResults, CladdingParameters } from '../types'
 
 interface SceneProps {
   params: HallParameters;
   results: CalculationResults;
+  cladding?: CladdingParameters;
+  showCladding?: boolean;
 }
 
-function SceneContent({ params, results }: SceneProps) {
+function SceneContent({ params, results, cladding, showCladding }: SceneProps) {
   return (
     <>
       {/* Lighting */}
@@ -42,7 +44,7 @@ function SceneContent({ params, results }: SceneProps) {
       />
 
       {/* 3D Hall Model */}
-      <HallModel params={params} results={results} />
+      <HallModel params={params} results={results} cladding={cladding} showCladding={showCladding} />
 
       {/* Camera controls */}
       <OrbitControls
@@ -58,7 +60,7 @@ function SceneContent({ params, results }: SceneProps) {
   )
 }
 
-export function Scene({ params, results }: SceneProps) {
+export function Scene({ params, results, cladding, showCladding }: SceneProps) {
   return (
     <Canvas
       shadows
@@ -67,7 +69,7 @@ export function Scene({ params, results }: SceneProps) {
       className="w-full h-full"
     >
       <color attach="background" args={['#f0f4f8']} />
-      <SceneContent params={params} results={results} />
+      <SceneContent params={params} results={results} cladding={cladding} showCladding={showCladding} />
     </Canvas>
   )
 }

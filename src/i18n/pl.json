@@ -152,5 +152,40 @@
     "front": "Przod",
     "side": "Bok",
     "top": "Gora"
+  },
+  "cladding": {
+    "title": "Obudowa",
+    "showCladding": "Pokaz obudowe",
+    "sideWallType": "Typ sciany bocznej",
+    "endWallType": "Typ sciany szczytowej",
+    "roofType": "Typ pokrycia dachu",
+    "sideWallColor": "Kolor sciany bocznej",
+    "endWallColor": "Kolor sciany szczytowej",
+    "roofColor": "Kolor dachu",
+    "flashingColor": "Kolor obrobek",
+    "panelOrientation": "Ulozenie plyt",
+    "panelWidth": "Szerokosc plyty",
+    "colorStripes": "Pasy kolorystyczne",
+    "addStripe": "Dodaj pas",
+    "stripe": "Pas",
+    "layerFrom": "Od warstwy",
+    "layerTo": "Do warstwy",
+    "wallTypes": {
+      "trapezoid": "Blacha trapezowa",
+      "sandwich": "Panel sandwich 100mm"
+    },
+    "roofTypes": {
+      "T18": "Blacha trapezowa T18",
+      "T35": "Blacha trapezowa T35",
+      "sandwich_roof": "Plyta warstwowa dachowa"
+    },
+    "orientations": {
+      "horizontal": "Poziomo",
+      "vertical": "Pionowo"
+    },
+    "stripeWall": {
+      "side": "Sciana boczna",
+      "end": "Sciana szczytowa"
+    }
   }
 }

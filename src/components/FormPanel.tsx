@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { HallParameters, CalculationResults, CoveringType, SteelGrade, TerrainCategory, SnowExposure, ProfileOverrides, RafterType, PurlinMounting } from '../types';
+import type { HallParameters, CalculationResults, CoveringType, SteelGrade, TerrainCategory, SnowExposure, ProfileOverrides, RafterType, PurlinMounting, CladdingParameters } from '../types';
 import { ResultsPanel } from './ResultsPanel';
+import { CladdingPanel } from './CladdingPanel';
 
 const DEFAULT_PARAMS: HallParameters = {
   span: 18,
@@ -72,9 +73,13 @@ interface FormPanelProps {
   onRafterTypeChange?: (type: RafterType) => void;
   customTrussHeight?: number | null;
   onCustomTrussHeightChange?: (height: number | null) => void;
+  cladding?: CladdingParameters;
+  onCladdingChange?: (cladding: CladdingParameters) => void;
+  showCladding?: boolean;
+  onShowCladdingChange?: (show: boolean) => void;
 }
 
-export function FormPanel({ params, onParamsChange, results, profileOverrides, onProfileOverridesChange, rafterType, onRafterTypeChange, customTrussHeight, onCustomTrussHeightChange }: FormPanelProps) {
+export function FormPanel({ params, onParamsChange, results, profileOverrides, onProfileOverridesChange, rafterType, onRafterTypeChange, customTrussHeight, onCustomTrussHeightChange, cladding, onCladdingChange, showCladding, onShowCladdingChange }: FormPanelProps) {
   const { t } = useTranslation();
   const [wizardMode, setWizardMode] = useState(true);
   const [wizardStep, setWizardStep] = useState(0);
@@ -449,6 +454,17 @@ export function FormPanel({ params, onParamsChange, results, profileOverrides, o
             {/* Rafter type section - always visible in wizard mode */}
             <div className="my-3 border-t border-border" />
             {RafterTypeSection}
+            {cladding && onCladdingChange && (
+              <>
+                <div className="my-3 border-t border-border" />
+                <CladdingPanel
+                  cladding={cladding}
+                  onCladdingChange={onCladdingChange}
+                  showCladding={showCladding ?? true}
+                  onShowCladdingChange={onShowCladdingChange ?? (() => {})}
+                />
+              </>
+            )}
           </>
         ) : (
           <>
@@ -459,6 +475,17 @@ export function FormPanel({ params, onParamsChange, results, profileOverrides, o
             {MaterialsSection}
             <div className="my-3 border-t border-border" />
             {RafterTypeSection}
+            {cladding && onCladdingChange && (
+              <>
+                <div className="my-3 border-t border-border" />
+                <CladdingPanel
+                  cladding={cladding}
+                  onCladdingChange={onCladdingChange}
+                  showCladding={showCladding ?? true}
+                  onShowCladdingChange={onShowCladdingChange ?? (() => {})}
+                />
+              </>
+            )}
           </>
         )}
 

@@ -15,12 +15,15 @@ import { GableGirts } from './elements/GableGirts';
 import { IntermediateColumns } from './elements/IntermediateColumns';
 import { TrussColumnHead } from './elements/TrussColumnHead';
 import { ColumnCaps } from './elements/ColumnCaps';
+import { Cladding } from './elements/Cladding';
 import { getEffectiveRafterTop } from '../utils/geometry';
-import type { HallParameters, CalculationResults } from '../types';
+import type { HallParameters, CalculationResults, CladdingParameters } from '../types';
 
 interface HallModelProps {
   params: HallParameters;
   results: CalculationResults;
+  cladding?: CladdingParameters;
+  showCladding?: boolean;
 }
 
 /**
@@ -29,7 +32,7 @@ interface HallModelProps {
  * Origin is at bottom-left corner of building (X=0, Y=0, Z=0).
  * X = along building length, Y = up, Z = across building width (span)
  */
-export const HallModel = React.memo(function HallModel({ params, results }: HallModelProps) {
+export const HallModel = React.memo(function HallModel({ params, results, cladding, showCladding }: HallModelProps) {
   const { span, length: hallLength, wallHeight, roofAngle } = params;
   const purlinMounting = params.purlinMounting ?? 'on-top';
   const {
@@ -257,6 +260,15 @@ export const HallModel = React.memo(function HallModel({ params, results }: Hall
           columnSpacing={columnSpacing}
           numberOfFrames={numberOfFrames}
           active={intermediateColumnActive}
+        />
+      )}
+
+      {/* Cladding panels (walls + roof) */}
+      {cladding && (
+        <Cladding
+          params={params}
+          cladding={cladding}
+          showCladding={showCladding ?? true}
         />
       )}
     </group>

@@ -1,3 +1,27 @@
+export type CladdingWallType = 'trapezoid' | 'sandwich';
+export type CladdingRoofType = 'T18' | 'T35' | 'sandwich_roof';
+export type PanelOrientation = 'horizontal' | 'vertical';
+
+export interface ColorStripe {
+  wallType: 'side' | 'end';
+  layerStart: number;
+  layerEnd: number;
+  color: string; // RAL code
+}
+
+export interface CladdingParameters {
+  sideWallType: CladdingWallType;
+  endWallType: CladdingWallType;
+  roofType: CladdingRoofType;
+  sideWallColor: string; // RAL code
+  endWallColor: string; // RAL code
+  roofColor: string; // RAL code
+  flashingColor: string; // RAL code
+  panelOrientation: PanelOrientation;
+  panelWidth: number; // mm, default 1000
+  colorStripes: ColorStripe[];
+}
+
 export type SteelGrade = 'S235' | 'S355';
 export type CoveringType = 'sheet' | 'sandwich';
 export type TerrainCategory = 1 | 2 | 3 | 4;
