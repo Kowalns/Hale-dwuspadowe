@@ -1,13 +1,14 @@
 import React, { useMemo } from 'react';
 import { useRHSGeometry } from '../profiles/RHSGeometry';
 import { girtMaterial } from '../materials';
-import type { SteelProfile } from '../../types';
+import type { SteelProfile, Opening } from '../../types';
 
 interface GableGirtsProps {
   profile: SteelProfile;
   wallHeight: number;
   span: number;
   hallLength: number;
+  openings?: Opening[];
 }
 
 /**
@@ -15,12 +16,17 @@ interface GableGirtsProps {
  * Girts run along Z axis between adjacent end column positions.
  * Number of rows: 1 if wallHeight<=5 (at H/2), 2 if wallHeight>5 (at H/3 and 2H/3).
  * Uses same targetSpacing=3m logic as EndColumns to determine column Z positions.
+ *
+ * When end-wall gate openings are present, girt segments whose Y height falls within
+ * the gate opening zone (floor to gate height) AND whose Z range overlaps the gate
+ * width are suppressed to avoid rendering through the opening.
  */
 export const GableGirts = React.memo(function GableGirts({
   profile,
   wallHeight,
   span,
   hallLength,
+  openings,
 }: GableGirtsProps) {
   const width = profile.b / 1000;
   const height = profile.h / 1000;
@@ -47,7 +53,18 @@ export const GableGirts = React.memo(function GableGirts({
     return positions;
   }, [span]);
 
-  // Calculate girt segments between adjacent column positions
+  // Filter gate openings on end walls
+  const endWallGates = useMemo(() => {
+    if (!openings) return [];
+    return openings.filter(
+      (o) =>
+        (o.wall === 'end_front' || o.wall === 'end_back') &&
+        (o.type === 'sectional_gate' || o.type === 'sliding_gate')
+    );
+  }, [openings]);
+
+  // Calculate girt segments between adjacent column positions, suppressing those
+  // that pass through gate openings
   const segments = useMemo(() => {
     const result: Array<{
       x: number;
@@ -57,23 +74,57 @@ export const GableGirts = React.memo(function GableGirts({
     }> = [];
 
     for (const girtY of girtHeights) {
-      for (let gableX of [0, hallLength]) {
+      for (const gableX of [0, hallLength]) {
+        // Determine which wall this gable corresponds to
+        const wallName = gableX === 0 ? 'end_front' : 'end_back';
+
         for (let i = 0; i < columnZPositions.length - 1; i++) {
           const z0 = columnZPositions[i];
           const z1 = columnZPositions[i + 1];
           const segLength = z1 - z0;
-          result.push({
-            x: gableX,
-            y: girtY,
-            z: z0,
-            segLength,
+
+          // Check if this segment is blocked by a gate opening
+          const isBlocked = endWallGates.some((gate) => {
+            if (gate.wall !== wallName) return false;
+
+            // Convert gate positionX to world Z
+            let centerZ: number;
+            if (wallName === 'end_front') {
+              centerZ = span - gate.positionX;
+            } else {
+              centerZ = gate.positionX;
+            }
+
+            const gateLeftZ = centerZ - gate.width / 2;
+            const gateRightZ = centerZ + gate.width / 2;
+
+            // Gate vertical extent: from floor (0) to gate.height
+            const gateBottomY = 0;
+            const gateTopY = gate.height;
+
+            // Check vertical overlap: girt Y is within gate height range
+            const yOverlaps = girtY >= gateBottomY && girtY <= gateTopY;
+
+            // Check horizontal (Z) overlap: segment overlaps with gate Z range
+            const zOverlaps = z0 < gateRightZ && z1 > gateLeftZ;
+
+            return yOverlaps && zOverlaps;
           });
+
+          if (!isBlocked) {
+            result.push({
+              x: gableX,
+              y: girtY,
+              z: z0,
+              segLength,
+            });
+          }
         }
       }
     }
 
     return result;
-  }, [girtHeights, hallLength, columnZPositions]);
+  }, [girtHeights, hallLength, columnZPositions, endWallGates, span]);
 
   return (
     <group name="gable-girts">

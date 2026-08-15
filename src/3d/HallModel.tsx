@@ -276,6 +276,7 @@ export const HallModel = React.memo(function HallModel({ params, results, claddi
           wallHeight={effectiveColumnHeight}
           span={span}
           hallLength={hallLength}
+          openings={openings}
         />
       )}
 

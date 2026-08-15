@@ -6,7 +6,7 @@ import type { HallParameters, Opening } from '../../types';
 const GATE_PROFILE_W = 0.100;
 const GATE_PROFILE_H = 0.100;
 // Lintel: 2 horizontal beams at 450mm outside-to-outside spacing
-const LINTEL_HEIGHT = 0.450;
+export const LINTEL_HEIGHT = 0.450;
 // Number of vertical posts in lintel
 const LINTEL_POSTS = 4;
 

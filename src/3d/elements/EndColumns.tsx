@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { useRHSGeometry } from '../profiles/RHSGeometry';
 import { columnMaterial } from '../materials';
+import { LINTEL_HEIGHT } from './GateFrame';
 import type { SteelProfile, Opening } from '../../types';
 
 interface DynamicColumnEntry {
@@ -109,7 +110,7 @@ function generateDynamicColumns(
     } else {
       centerZ = gate.positionX;
     }
-    const lintelTop = gate.height + 0.450; // LINTEL_HEIGHT
+    const lintelTop = gate.height + LINTEL_HEIGHT;
     const roofHeightAtCenter = getHeightAtZ(centerZ);
     const aboveLintelHeight = roofHeightAtCenter - lintelTop;
     if (aboveLintelHeight > 0.05) {
