@@ -197,9 +197,6 @@ export const Cladding = React.memo(function Cladding({
     ? getTrapezoidalParams((cladding.endWallType as string) === 'T35' ? 'T35' : 'T18').height
     : (cladding.sandwichThickness ?? 100) / 1000 / 2;
 
-  // End wall width for gable calculations
-  const endWallWidth = span + 2 * (columnOuterFlangeOffset + 2 * sideWallThicknessOffset);
-
   // Wall geometries
   // panelOrientation determines the direction of ribs:
   // 'horizontal' -> ribs run horizontally -> wave repeats along Y -> waveAxis = 'y'
@@ -866,13 +863,12 @@ export const Cladding = React.memo(function Cladding({
           const panelCenterZ = (zLeft + zRight) / 2;
 
           // Calculate trapezoid heights at left and right edges of this panel
-          // The roof narrows from wallHeight to ridge. At distance d from center, height = gableTriangleHeight * (1 - |d| / (endWallWidth/2))
-          const halfWidth = endWallWidth / 2;
+          // Use exact roof angle (tan) so gable follows roof slope precisely, with 50mm inset
           const centerZ = span / 2;
           const distLeft = Math.abs(zLeft - centerZ);
           const distRight = Math.abs(zRight - centerZ);
-          const hLeft = gableTriangleHeight * Math.max(0, 1 - distLeft / halfWidth);
-          const hRight = gableTriangleHeight * Math.max(0, 1 - distRight / halfWidth);
+          const hLeft = Math.max(0, (span / 2 - distLeft)) * Math.tan(roofAngleRad) - 0.05;
+          const hRight = Math.max(0, (span / 2 - distRight)) * Math.tan(roofAngleRad) - 0.05;
           const avgH = (hLeft + hRight) / 2;
 
           if (avgH < 0.01) continue; // skip negligible panels
@@ -889,7 +885,7 @@ export const Cladding = React.memo(function Cladding({
           if (isEndWallTrapezoid) {
             const { height: amp, plateau, valley, period } = getTrapezoidalParams('T18');
             const maxH = Math.max(hLeft, hRight);
-            const extent = wallWaveAxis === 'x' ? panelWidth : maxH;
+            const extent = maxH;
             const waveCount = Math.ceil(extent / period);
             const segW = Math.min(waveCount * 10, 500);
             const segH = Math.min(Math.ceil(maxH * 10), 100);
@@ -910,7 +906,7 @@ export const Cladding = React.memo(function Cladding({
                 pos.setY(v, maxYatX - maxH / 2);
               }
               // Apply trapezoidal displacement
-              const coord = wallWaveAxis === 'x' ? px : py;
+              const coord = py;
               const displacement = trapezoidHeight(coord + extent / 2, period, plateau, valley, amp);
               pos.setZ(v, -displacement);
             }
@@ -1062,12 +1058,12 @@ export const Cladding = React.memo(function Cladding({
           const panelCenterZ = (zLeft + zRight) / 2;
 
           // Calculate trapezoid heights at left and right edges of this panel
-          const halfWidth = endWallWidth / 2;
+          // Use exact roof angle (tan) so gable follows roof slope precisely, with 50mm inset
           const centerZ = span / 2;
           const distLeft = Math.abs(zLeft - centerZ);
           const distRight = Math.abs(zRight - centerZ);
-          const hLeft = gableTriangleHeight * Math.max(0, 1 - distLeft / halfWidth);
-          const hRight = gableTriangleHeight * Math.max(0, 1 - distRight / halfWidth);
+          const hLeft = Math.max(0, (span / 2 - distLeft)) * Math.tan(roofAngleRad) - 0.05;
+          const hRight = Math.max(0, (span / 2 - distRight)) * Math.tan(roofAngleRad) - 0.05;
           const avgH = (hLeft + hRight) / 2;
 
           if (avgH < 0.01) continue; // skip negligible panels
@@ -1084,7 +1080,7 @@ export const Cladding = React.memo(function Cladding({
           if (isEndWallTrapezoid) {
             const { height: amp, plateau, valley, period } = getTrapezoidalParams('T18');
             const maxH = Math.max(hLeft, hRight);
-            const extent = wallWaveAxis === 'x' ? panelWidth : maxH;
+            const extent = maxH;
             const waveCount = Math.ceil(extent / period);
             const segW = Math.min(waveCount * 10, 500);
             const segH = Math.min(Math.ceil(maxH * 10), 100);
@@ -1105,7 +1101,7 @@ export const Cladding = React.memo(function Cladding({
                 pos.setY(v, maxYatX - maxH / 2);
               }
               // Apply trapezoidal displacement
-              const coord = wallWaveAxis === 'x' ? px : py;
+              const coord = py;
               const displacement = trapezoidHeight(coord + extent / 2, period, plateau, valley, amp);
               pos.setZ(v, -displacement);
             }
