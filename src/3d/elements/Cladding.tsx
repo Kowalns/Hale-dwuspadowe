@@ -237,7 +237,7 @@ export const Cladding = React.memo(function Cladding({
 
   // Gable triangle: height must match roof angle with the full end wall width
   const endWallWidth = span + 2 * (columnOuterFlangeOffset + 2 * sideWallThicknessOffset);
-  const gableTriangleActualHeight = endWallWidth / 2 * Math.tan(roofAngleRad) - 0.10;
+  const gableTriangleActualHeight = endWallWidth / 2 * Math.tan(roofAngleRad);
 
   // Wall geometries
   // panelOrientation determines the direction of ribs:
@@ -902,7 +902,7 @@ export const Cladding = React.memo(function Cladding({
         elements.push(
           <mesh
             key="end-front-gable-triangle"
-            position={[xPos, wallHeight, span / 2]}
+            position={[xPos, wallHeight - 0.03, span / 2]}
             rotation={[0, Math.PI / 2, 0]}
             material={endWallMat}
             geometry={frontTriangleGeo}
@@ -1032,7 +1032,7 @@ export const Cladding = React.memo(function Cladding({
         elements.push(
           <mesh
             key="end-back-gable-triangle"
-            position={[xPos, wallHeight, span / 2]}
+            position={[xPos, wallHeight - 0.03, span / 2]}
             rotation={[0, -Math.PI / 2, 0]}
             material={endWallMat}
             geometry={backTriangleGeo}
