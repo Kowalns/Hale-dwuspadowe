@@ -280,7 +280,7 @@ export const Cladding = React.memo(function Cladding({
     return uniformPositions;
   }, [span]);
 
-  // Gates on end walls (for panel exclusion)
+  // Gates on end walls (for column position computation)
   const endFrontGates = useMemo(() => {
     if (!openings) return [] as Opening[];
     return openings.filter(
@@ -375,30 +375,7 @@ export const Cladding = React.memo(function Cladding({
   }, [endBackGates, endColZPositionsUniform, span]);
 
 
-  // Determine which bays have gates and store gate info for cutout rendering
-  const sideLeftGatesByBay = useMemo(() => {
-    if (!openings) return new Map<number, Opening>();
-    const map = new Map<number, Opening>();
-    for (const o of openings) {
-      if ((o.wall === 'side_left') && (o.type === 'sectional_gate' || o.type === 'sliding_gate')) {
-        const bay = Math.floor(o.positionX / columnSpacing);
-        map.set(bay, o);
-      }
-    }
-    return map;
-  }, [openings, columnSpacing]);
 
-  const sideRightGatesByBay = useMemo(() => {
-    if (!openings) return new Map<number, Opening>();
-    const map = new Map<number, Opening>();
-    for (const o of openings) {
-      if ((o.wall === 'side_right') && (o.type === 'sectional_gate' || o.type === 'sliding_gate')) {
-        const bay = Math.floor((hallLength - o.positionX) / columnSpacing);
-        map.set(bay, o);
-      }
-    }
-    return map;
-  }, [openings, columnSpacing, hallLength]);
 
   /**
    * Handle side wall click for opening placement.
@@ -547,75 +524,6 @@ export const Cladding = React.memo(function Cladding({
           panelCenterX = (leftEdge + rightEdge) / 2;
         }
 
-        const gate = sideLeftGatesByBay.get(bayIndex);
-        if (gate) {
-          // Render 3 fragments around the gate cutout
-          const panelLeftEdge = panelCenterX - panelWidth / 2;
-          const panelRightEdge = panelCenterX + panelWidth / 2;
-          const gateLeftEdge = gate.positionX - gate.width / 2;
-          const gateRightEdge = gate.positionX + gate.width / 2;
-          const gateTop = gate.height; // gate bottom is at ground level (sillHeight=0)
-
-          const fragments: React.ReactNode[] = [];
-
-          // Left fragment
-          const leftFragWidth = gateLeftEdge - panelLeftEdge;
-          if (leftFragWidth > 0.001) {
-            const leftFragCenterX = panelLeftEdge + leftFragWidth / 2;
-            fragments.push(
-              <mesh
-                key={`side-left-${bayIndex}-frag-left`}
-                position={[leftFragCenterX, sideWallHeight / 2, -(columnOuterFlangeOffset + sideWallThicknessOffset)]}
-                material={sideWallMat}
-              >
-                {isSideWallTrapezoid
-                  ? <primitive object={createTrapezoidalGeometry(leftFragWidth, sideWallHeight, sideWallProfileType, wallWaveAxis, true)} attach="geometry" />
-                  : <boxGeometry args={[leftFragWidth, sideWallHeight, sandwichThicknessM]} />
-                }
-              </mesh>
-            );
-          }
-
-          // Right fragment
-          const rightFragWidth = panelRightEdge - gateRightEdge;
-          if (rightFragWidth > 0.001) {
-            const rightFragCenterX = gateRightEdge + rightFragWidth / 2;
-            fragments.push(
-              <mesh
-                key={`side-left-${bayIndex}-frag-right`}
-                position={[rightFragCenterX, sideWallHeight / 2, -(columnOuterFlangeOffset + sideWallThicknessOffset)]}
-                material={sideWallMat}
-              >
-                {isSideWallTrapezoid
-                  ? <primitive object={createTrapezoidalGeometry(rightFragWidth, sideWallHeight, sideWallProfileType, wallWaveAxis, true)} attach="geometry" />
-                  : <boxGeometry args={[rightFragWidth, sideWallHeight, sandwichThicknessM]} />
-                }
-              </mesh>
-            );
-          }
-
-          // Top fragment (above gate, full gate width)
-          const topFragHeight = sideWallHeight - gateTop;
-          if (topFragHeight > 0.001) {
-            const topFragCenterX = gate.positionX;
-            const topFragCenterY = gateTop + topFragHeight / 2;
-            fragments.push(
-              <mesh
-                key={`side-left-${bayIndex}-frag-top`}
-                position={[topFragCenterX, topFragCenterY, -(columnOuterFlangeOffset + sideWallThicknessOffset)]}
-                material={sideWallMat}
-              >
-                {isSideWallTrapezoid
-                  ? <primitive object={createTrapezoidalGeometry(gate.width, topFragHeight, sideWallProfileType, wallWaveAxis, true)} attach="geometry" />
-                  : <boxGeometry args={[gate.width, topFragHeight, sandwichThicknessM]} />
-                }
-              </mesh>
-            );
-          }
-
-          return <React.Fragment key={`side-left-${bayIndex}`}>{fragments}</React.Fragment>;
-        }
-
         // Compute color segments for this bay panel
         const panelHeightM = cladding.panelWidth / 1000;
         const numLayers = Math.floor(sideWallHeight / panelHeightM);
@@ -713,87 +621,6 @@ export const Cladding = React.memo(function Cladding({
           const rightEdge = hallLength + endColumnOuterOffset + endWallThicknessOffset - 0.010;
           panelWidth = rightEdge - leftEdge;
           panelCenterX = (leftEdge + rightEdge) / 2;
-        }
-
-        const gate = sideRightGatesByBay.get(bayIndex);
-        if (gate) {
-          // For the right wall, gate.positionX is measured from the wall's perspective
-          // The bay index is computed as Math.floor((hallLength - gate.positionX) / columnSpacing)
-          // So the gate's X position in world space is gate.positionX (from X=0)
-          // But the right wall panels are positioned using the same bayStart/bayEnd as left wall
-          // The gate world X is: hallLength - gate.positionX (mirrored)
-          // Actually: positionX for side_right is from left edge of that wall's local space
-          // In the bay calculation above: bay = Math.floor((hallLength - o.positionX) / columnSpacing)
-          // This means the panel world X is bayStart..bayEnd, and gate world X is hallLength - o.positionX
-          // Let's use the gate's actual position in the same coordinate system as panels:
-          const gateWorldX = hallLength - gate.positionX;
-          const panelLeftEdge = panelCenterX - panelWidth / 2;
-          const panelRightEdge = panelCenterX + panelWidth / 2;
-          const gateLeftEdge = gateWorldX - gate.width / 2;
-          const gateRightEdge = gateWorldX + gate.width / 2;
-          const gateTop = gate.height;
-
-          const fragments: React.ReactNode[] = [];
-
-          // Left fragment
-          const leftFragWidth = gateLeftEdge - panelLeftEdge;
-          if (leftFragWidth > 0.001) {
-            const leftFragCenterX = panelLeftEdge + leftFragWidth / 2;
-            fragments.push(
-              <mesh
-                key={`side-right-${bayIndex}-frag-left`}
-                position={[leftFragCenterX, sideWallHeight / 2, span + columnOuterFlangeOffset + sideWallThicknessOffset]}
-                rotation={[0, Math.PI, 0]}
-                material={sideWallMat}
-              >
-                {isSideWallTrapezoid
-                  ? <primitive object={createTrapezoidalGeometry(leftFragWidth, sideWallHeight, sideWallProfileType, wallWaveAxis, true)} attach="geometry" />
-                  : <boxGeometry args={[leftFragWidth, sideWallHeight, sandwichThicknessM]} />
-                }
-              </mesh>
-            );
-          }
-
-          // Right fragment
-          const rightFragWidth = panelRightEdge - gateRightEdge;
-          if (rightFragWidth > 0.001) {
-            const rightFragCenterX = gateRightEdge + rightFragWidth / 2;
-            fragments.push(
-              <mesh
-                key={`side-right-${bayIndex}-frag-right`}
-                position={[rightFragCenterX, sideWallHeight / 2, span + columnOuterFlangeOffset + sideWallThicknessOffset]}
-                rotation={[0, Math.PI, 0]}
-                material={sideWallMat}
-              >
-                {isSideWallTrapezoid
-                  ? <primitive object={createTrapezoidalGeometry(rightFragWidth, sideWallHeight, sideWallProfileType, wallWaveAxis, true)} attach="geometry" />
-                  : <boxGeometry args={[rightFragWidth, sideWallHeight, sandwichThicknessM]} />
-                }
-              </mesh>
-            );
-          }
-
-          // Top fragment (above gate, full gate width)
-          const topFragHeight = sideWallHeight - gateTop;
-          if (topFragHeight > 0.001) {
-            const topFragCenterX = gateWorldX;
-            const topFragCenterY = gateTop + topFragHeight / 2;
-            fragments.push(
-              <mesh
-                key={`side-right-${bayIndex}-frag-top`}
-                position={[topFragCenterX, topFragCenterY, span + columnOuterFlangeOffset + sideWallThicknessOffset]}
-                rotation={[0, Math.PI, 0]}
-                material={sideWallMat}
-              >
-                {isSideWallTrapezoid
-                  ? <primitive object={createTrapezoidalGeometry(gate.width, topFragHeight, sideWallProfileType, wallWaveAxis, true)} attach="geometry" />
-                  : <boxGeometry args={[gate.width, topFragHeight, sandwichThicknessM]} />
-                }
-              </mesh>
-            );
-          }
-
-          return <React.Fragment key={`side-right-${bayIndex}`}>{fragments}</React.Fragment>;
         }
 
         // Compute color segments for this bay panel
@@ -904,12 +731,7 @@ export const Cladding = React.memo(function Cladding({
           const panelWidth = (zRight - zLeft) - 0.020; // 20mm dilation
           const panelCenterZ = (zLeft + zRight) / 2;
 
-          // Check if this panel span contains a gate
-          const hasGate = endFrontGates.some((gate) => {
-            const centerZ = span - gate.positionX;
-            return centerZ > zLeft && centerZ < zRight;
-          });
-          if (hasGate) continue;
+
 
           if (endStripes.length === 0) {
             elements.push(
@@ -1026,12 +848,7 @@ export const Cladding = React.memo(function Cladding({
           const panelWidth = (zRight - zLeft) - 0.020; // 20mm dilation
           const panelCenterZ = (zLeft + zRight) / 2;
 
-          // Check if this panel span contains a gate
-          const hasGate = endBackGates.some((gate) => {
-            const centerZ = gate.positionX;
-            return centerZ > zLeft && centerZ < zRight;
-          });
-          if (hasGate) continue;
+
 
           if (endStripes.length === 0) {
             elements.push(
