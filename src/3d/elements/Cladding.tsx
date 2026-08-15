@@ -877,17 +877,43 @@ export const Cladding = React.memo(function Cladding({
 
           if (avgH < 0.01) continue; // skip negligible panels
 
+          // Build trapezoidal shape: bottom edge = panelWidth, top edge narrower per roof angle
+          const trapShape = new THREE.Shape();
+          trapShape.moveTo(-panelWidth / 2, 0);
+          trapShape.lineTo(panelWidth / 2, 0);
+          trapShape.lineTo(panelWidth / 2, hRight);
+          trapShape.lineTo(-panelWidth / 2, hLeft);
+          trapShape.closePath();
+
+          let gableGeo: THREE.BufferGeometry;
+          if (isEndWallTrapezoid) {
+            const { height: amp, plateau, valley, period } = getTrapezoidalParams('T18');
+            const extent = wallWaveAxis === 'x' ? panelWidth : Math.max(hLeft, hRight);
+            const waveCount = Math.ceil(extent / period);
+            const segments = Math.min(waveCount * 10, 500);
+            gableGeo = new THREE.ShapeGeometry(trapShape, segments);
+            const pos = gableGeo.attributes.position;
+            for (let v = 0; v < pos.count; v++) {
+              const coord = wallWaveAxis === 'x' ? pos.getX(v) : pos.getY(v);
+              const displacement = trapezoidHeight(coord + extent / 2, period, plateau, valley, amp);
+              pos.setZ(v, -displacement);
+            }
+            pos.needsUpdate = true;
+            gableGeo.computeVertexNormals();
+          } else {
+            gableGeo = new THREE.ExtrudeGeometry(trapShape, { depth: sandwichThicknessM, bevelEnabled: false });
+            gableGeo.translate(0, 0, -sandwichThicknessM / 2);
+            gableGeo.computeVertexNormals();
+          }
+
           elements.push(
             <mesh
               key={`end-front-gable-panel-${i}`}
-              position={[xPos, wallHeight + avgH / 2, panelCenterZ]}
+              position={[xPos, wallHeight, panelCenterZ]}
               rotation={[0, Math.PI / 2, 0]}
               material={endWallMat}
             >
-              {isEndWallTrapezoid
-                ? <primitive object={createTrapezoidalGeometry(panelWidth, avgH, 'T18', wallWaveAxis, true)} attach="geometry" />
-                : <boxGeometry args={[panelWidth, avgH, sandwichThicknessM]} />
-              }
+              <primitive object={gableGeo} attach="geometry" />
             </mesh>
           );
         }
@@ -1028,17 +1054,43 @@ export const Cladding = React.memo(function Cladding({
 
           if (avgH < 0.01) continue; // skip negligible panels
 
+          // Build trapezoidal shape: bottom edge = panelWidth, top edge narrower per roof angle
+          const trapShape = new THREE.Shape();
+          trapShape.moveTo(-panelWidth / 2, 0);
+          trapShape.lineTo(panelWidth / 2, 0);
+          trapShape.lineTo(panelWidth / 2, hRight);
+          trapShape.lineTo(-panelWidth / 2, hLeft);
+          trapShape.closePath();
+
+          let gableGeo: THREE.BufferGeometry;
+          if (isEndWallTrapezoid) {
+            const { height: amp, plateau, valley, period } = getTrapezoidalParams('T18');
+            const extent = wallWaveAxis === 'x' ? panelWidth : Math.max(hLeft, hRight);
+            const waveCount = Math.ceil(extent / period);
+            const segments = Math.min(waveCount * 10, 500);
+            gableGeo = new THREE.ShapeGeometry(trapShape, segments);
+            const pos = gableGeo.attributes.position;
+            for (let v = 0; v < pos.count; v++) {
+              const coord = wallWaveAxis === 'x' ? pos.getX(v) : pos.getY(v);
+              const displacement = trapezoidHeight(coord + extent / 2, period, plateau, valley, amp);
+              pos.setZ(v, -displacement);
+            }
+            pos.needsUpdate = true;
+            gableGeo.computeVertexNormals();
+          } else {
+            gableGeo = new THREE.ExtrudeGeometry(trapShape, { depth: sandwichThicknessM, bevelEnabled: false });
+            gableGeo.translate(0, 0, -sandwichThicknessM / 2);
+            gableGeo.computeVertexNormals();
+          }
+
           elements.push(
             <mesh
               key={`end-back-gable-panel-${i}`}
-              position={[xPos, wallHeight + avgH / 2, panelCenterZ]}
+              position={[xPos, wallHeight, panelCenterZ]}
               rotation={[0, -Math.PI / 2, 0]}
               material={endWallMat}
             >
-              {isEndWallTrapezoid
-                ? <primitive object={createTrapezoidalGeometry(panelWidth, avgH, 'T18', wallWaveAxis, true)} attach="geometry" />
-                : <boxGeometry args={[panelWidth, avgH, sandwichThicknessM]} />
-              }
+              <primitive object={gableGeo} attach="geometry" />
             </mesh>
           );
         }
