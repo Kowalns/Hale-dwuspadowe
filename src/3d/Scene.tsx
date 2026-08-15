@@ -63,7 +63,7 @@ export function Scene({ params, results }: SceneProps) {
     <Canvas
       shadows
       camera={{ position: [20, 15, 20], fov: 50 }}
-      gl={{ antialias: true }}
+      gl={{ antialias: true, localClippingEnabled: true }}
       className="w-full h-full"
     >
       <color attach="background" args={['#f0f4f8']} />
