@@ -136,6 +136,7 @@ export const HallModel = React.memo(function HallModel({ params, results }: Hall
           numberOfFrames={numberOfFrames}
           columnFlangeOffset={columnFlangeOffset}
           headLength={headLength}
+          purlinSpacing={purlinSpacing}
         />
       )}
 

@@ -33,7 +33,7 @@ export const TrussColumnHead = React.memo(function TrussColumnHead({
   trussHeight,
   columnSpacing,
   numberOfFrames,
-  connectionPlates,
+  connectionPlates: _connectionPlates,
   columnFlangeOffset,
 }: TrussColumnHeadProps) {
   const framePositions = useMemo(() => {
@@ -50,12 +50,6 @@ export const TrussColumnHead = React.memo(function TrussColumnHead({
 
   const roofAngleRad = (roofAngle * Math.PI) / 180;
 
-  // End plate dimensions from connectionPlates
-  const { width, height, thickness } = connectionPlates.endPlate;
-  const plateW = width / 1000;
-  const plateH = height / 1000;
-  const plateT = thickness / 1000;
-
   return (
     <group name="truss-column-heads">
       {framePositions.map((x, i) => (
@@ -69,9 +63,6 @@ export const TrussColumnHead = React.memo(function TrussColumnHead({
             headLength={headLength}
             chordSize={chordSize}
             webSize={webSize}
-            plateW={plateW}
-            plateH={plateH}
-            plateT={plateT}
             side="left"
             columnFlangeOffset={columnFlangeOffset}
           />
@@ -84,9 +75,6 @@ export const TrussColumnHead = React.memo(function TrussColumnHead({
             headLength={headLength}
             chordSize={chordSize}
             webSize={webSize}
-            plateW={plateW}
-            plateH={plateH}
-            plateT={plateT}
             side="right"
             span={span}
             columnFlangeOffset={columnFlangeOffset}
@@ -105,9 +93,6 @@ interface ColumnHeadProps {
   headLength: number;
   chordSize: number;
   webSize: number;
-  plateW: number;
-  plateH: number;
-  plateT: number;
   side: 'left' | 'right';
   span?: number;
   columnFlangeOffset: number;
@@ -121,9 +106,6 @@ function ColumnHead({
   headLength,
   chordSize,
   webSize,
-  plateW,
-  plateH,
-  plateT,
   side,
   span = 0,
   columnFlangeOffset,
@@ -155,12 +137,7 @@ function ColumnHead({
     return { topStart, topEnd, bottomStart, bottomEnd };
   }, [x, wallHeight, roofAngleRad, trussHeight, headLength, side, span, columnFlangeOffset]);
 
-  // End plate positions: at the far ends of both chords, vertical (XY plane)
-  const platePosition = useMemo(() => {
-    // Plate is centered between topEnd and bottomEnd in Y, at the Z of the ends
-    const midY = (members.topEnd.y + members.bottomEnd.y) / 2;
-    return new THREE.Vector3(members.topEnd.x, midY, members.topEnd.z);
-  }, [members]);
+  const plateSize = chordSize + 0.04;
 
   return (
     <group>
@@ -178,21 +155,30 @@ function ColumnHead({
         size={chordSize}
         material={rafterMaterial}
       />
-      {/* Diagonal web member connecting far end of bottom to near end of top (or similar) */}
+      {/* Diagonal web member: from top start to bottom end */}
       <TrussHeadMember
-        start={members.bottomStart}
-        end={members.topEnd}
+        start={members.topStart}
+        end={members.bottomEnd}
         size={webSize}
         material={bracingMaterial}
       />
-      {/* End plate at the far end - vertical in XY plane */}
+      {/* End plate on top chord far end */}
       <mesh
         material={plateMaterial}
-        position={[platePosition.x, platePosition.y, platePosition.z]}
+        position={[members.topEnd.x, members.topEnd.y, members.topEnd.z]}
         castShadow
         receiveShadow
       >
-        <boxGeometry args={[plateW, plateH, plateT]} />
+        <boxGeometry args={[plateSize, plateSize, 0.015]} />
+      </mesh>
+      {/* End plate on bottom chord far end */}
+      <mesh
+        material={plateMaterial}
+        position={[members.bottomEnd.x, members.bottomEnd.y, members.bottomEnd.z]}
+        castShadow
+        receiveShadow
+      >
+        <boxGeometry args={[plateSize, plateSize, 0.015]} />
       </mesh>
     </group>
   );

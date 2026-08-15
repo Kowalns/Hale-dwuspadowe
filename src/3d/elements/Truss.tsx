@@ -13,6 +13,7 @@ interface TrussProps {
   numberOfFrames: number;
   columnFlangeOffset: number;
   headLength: number;
+  purlinSpacing: number;
 }
 
 /**
@@ -20,7 +21,7 @@ interface TrussProps {
  * Each frame has a truss spanning the full width.
  * - Top chord follows the roof slope (on both sides)
  * - Bottom chord is PARALLEL to the top chord, offset down by trussHeight
- * - Web members: V-pattern diagonals with vertical members (Pratt/Warren style)
+ * - Web members: V-pattern diagonals meeting at bottom midpoints
  */
 export const Truss = React.memo(function Truss({
   chordProfile,
@@ -32,6 +33,7 @@ export const Truss = React.memo(function Truss({
   numberOfFrames,
   columnFlangeOffset,
   headLength,
+  purlinSpacing,
 }: TrussProps) {
   const framePositions = useMemo(() => {
     const positions: number[] = [];
@@ -56,6 +58,7 @@ export const Truss = React.memo(function Truss({
           chordSize={chordSize}
           columnFlangeOffset={columnFlangeOffset}
           headLength={headLength}
+          purlinSpacing={purlinSpacing}
         />
       ))}
     </group>
@@ -71,6 +74,7 @@ interface TrussFrameProps {
   chordSize: number;
   columnFlangeOffset: number;
   headLength: number;
+  purlinSpacing: number;
 }
 
 function TrussFrame({
@@ -82,6 +86,7 @@ function TrussFrame({
   chordSize,
   columnFlangeOffset,
   headLength,
+  purlinSpacing,
 }: TrussFrameProps) {
   const roofAngleRad = (roofAngle * Math.PI) / 180;
   // Main truss starts after the starters (column heads)
@@ -95,21 +100,19 @@ function TrussFrame({
 
   // Compute nodes for both slopes
   const { chordSegments, webMembers } = useMemo(() => {
-    // Panel size: approximately 2m along slope
-    const panelTargetSize = 2.0;
-    const slopeLength = effectiveHalfSpan / Math.cos(roofAngleRad);
-    const numPanelsPerSlope = Math.max(3, Math.round(slopeLength / panelTargetSize));
+    // Top chord nodes at purlin positions
+    const numPanels = Math.max(3, Math.round(effectiveHalfSpan / purlinSpacing));
 
     // Generate nodes along each slope
-    // Left slope: Z goes from trussStartOffset (after starters) to span/2 (ridge)
-    // Right slope: Z goes from span - trussStartOffset (after starters) to span/2 (ridge)
+    // Left slope: Z goes from trussStartOffset to span/2 (ridge)
+    // Right slope: Z goes from span - trussStartOffset to span/2 (ridge)
     const topNodesLeft: THREE.Vector3[] = [];
     const bottomNodesLeft: THREE.Vector3[] = [];
     const topNodesRight: THREE.Vector3[] = [];
     const bottomNodesRight: THREE.Vector3[] = [];
 
-    for (let i = 0; i <= numPanelsPerSlope; i++) {
-      const t = i / numPanelsPerSlope;
+    for (let i = 0; i <= numPanels; i++) {
+      const t = i / numPanels;
 
       // Left slope
       const zLeft = trussStartOffset + t * effectiveHalfSpan;
@@ -137,54 +140,42 @@ function TrussFrame({
       segments.push({ start: topNodesRight[i], end: topNodesRight[i + 1] });
     }
 
-    // Bottom chord segments
-    for (let i = 0; i < bottomNodesLeft.length - 1; i++) {
-      segments.push({ start: bottomNodesLeft[i], end: bottomNodesLeft[i + 1] });
-    }
-    for (let i = 0; i < bottomNodesRight.length - 1; i++) {
-      segments.push({ start: bottomNodesRight[i], end: bottomNodesRight[i + 1] });
-    }
+    // Bottom chord: single segment from start to end on each side
+    segments.push({ start: bottomNodesLeft[0], end: bottomNodesLeft[bottomNodesLeft.length - 1] });
+    segments.push({ start: bottomNodesRight[0], end: bottomNodesRight[bottomNodesRight.length - 1] });
 
-    // Web members - V pattern with vertical members
+    // Web members: V-pattern meeting at bottom midpoints
     const webs: Array<{ start: THREE.Vector3; end: THREE.Vector3 }> = [];
 
-    // Left slope web members - alternating V pattern
-    for (let i = 0; i < numPanelsPerSlope; i++) {
-      if (i % 2 === 0) {
-        // Even panel: diagonal from bottom-left to top-right (/)
-        webs.push({ start: bottomNodesLeft[i], end: topNodesLeft[i + 1] });
-      } else {
-        // Odd panel: diagonal from top-left to bottom-right (\)
-        webs.push({ start: topNodesLeft[i], end: bottomNodesLeft[i + 1] });
-      }
+    // Left slope web members
+    for (let i = 0; i < numPanels; i++) {
+      // Bottom midpoint between top[i] and top[i+1]
+      const midZ = (topNodesLeft[i].z + topNodesLeft[i + 1].z) / 2;
+      const midYTop = (topNodesLeft[i].y + topNodesLeft[i + 1].y) / 2;
+      const midYBottom = midYTop - trussHeight;
+      const bottomMid = new THREE.Vector3(x, midYBottom, midZ);
+
+      webs.push({ start: topNodesLeft[i], end: bottomMid });
+      webs.push({ start: topNodesLeft[i + 1], end: bottomMid });
     }
 
-    // Left slope vertical members (interior nodes only)
-    for (let i = 1; i < numPanelsPerSlope; i++) {
-      webs.push({ start: bottomNodesLeft[i], end: topNodesLeft[i] });
-    }
+    // Right slope web members
+    for (let i = 0; i < numPanels; i++) {
+      // Bottom midpoint between top[i] and top[i+1]
+      const midZ = (topNodesRight[i].z + topNodesRight[i + 1].z) / 2;
+      const midYTop = (topNodesRight[i].y + topNodesRight[i + 1].y) / 2;
+      const midYBottom = midYTop - trussHeight;
+      const bottomMid = new THREE.Vector3(x, midYBottom, midZ);
 
-    // Right slope web members - alternating V pattern
-    for (let i = 0; i < numPanelsPerSlope; i++) {
-      if (i % 2 === 0) {
-        // Even panel: diagonal from bottom-left to top-right (/)
-        webs.push({ start: bottomNodesRight[i], end: topNodesRight[i + 1] });
-      } else {
-        // Odd panel: diagonal from top-left to bottom-right (\)
-        webs.push({ start: topNodesRight[i], end: bottomNodesRight[i + 1] });
-      }
-    }
-
-    // Right slope vertical members (interior nodes only)
-    for (let i = 1; i < numPanelsPerSlope; i++) {
-      webs.push({ start: bottomNodesRight[i], end: topNodesRight[i] });
+      webs.push({ start: topNodesRight[i], end: bottomMid });
+      webs.push({ start: topNodesRight[i + 1], end: bottomMid });
     }
 
     return {
       chordSegments: segments,
       webMembers: webs,
     };
-  }, [x, wallHeight, span, effectiveHalfSpan, trussStartOffset, columnFlangeOffset, roofAngleRad, trussHeight]);
+  }, [x, wallHeight, span, effectiveHalfSpan, trussStartOffset, columnFlangeOffset, roofAngleRad, trussHeight, purlinSpacing]);
 
   return (
     <group>
