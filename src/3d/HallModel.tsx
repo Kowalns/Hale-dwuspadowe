@@ -126,6 +126,7 @@ export const HallModel = React.memo(function HallModel({ params, results, claddi
         span={span}
         length={hallLength}
         ridgeHeight={effectiveRidgeHeight}
+        openings={openings}
       />
 
       {/* Rafters or Trusses depending on span */}
@@ -283,6 +284,7 @@ export const HallModel = React.memo(function HallModel({ params, results, claddi
           cladding={cladding}
           showCladding={showCladding ?? true}
           columnOuterFlangeOffset={columnOuterFlangeOffset}
+          columnSpacing={columnSpacing}
           placementMode={placementMode}
           openings={openings}
           onPlaceOpening={onPlaceOpening}

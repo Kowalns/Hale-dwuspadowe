@@ -60,7 +60,8 @@ function OpeningMesh({ opening, params, cutoutMat, detailMat }: { opening: Openi
     [opening, params]
   );
 
-  const { width, height, type } = opening;
+  const { width, height, type, wall } = opening;
+  const isEndWall = wall === 'end_front' || wall === 'end_back';
 
   return (
     <group position={position} rotation={rotation}>
@@ -70,28 +71,68 @@ function OpeningMesh({ opening, params, cutoutMat, detailMat }: { opening: Openi
       </mesh>
 
       {/* Type-specific decorations */}
-      {type === 'sliding_gate' && <SlidingGateDetail width={width} height={height} material={detailMat} />}
+      {type === 'sliding_gate' && <SlidingGateDetail width={width} height={height} material={detailMat} wall={wall} />}
       {type === 'sectional_gate' && <SectionalGateDetail width={width} height={height} material={detailMat} />}
       {type === 'door' && <DoorDetail width={width} height={height} material={detailMat} />}
       {type === 'window' && <WindowDetail width={width} height={height} material={detailMat} />}
+
+      {/* Lintel beam for end wall gates */}
+      {isEndWall && (type === 'sliding_gate' || type === 'sectional_gate') && (
+        <mesh position={[0, height / 2 + 0.15, 0.075]} material={detailMat}>
+          <boxGeometry args={[width + 0.6, 0.2, 0.15]} />
+        </mesh>
+      )}
     </group>
   );
 }
 
 /**
  * Sliding gate: rail at the top.
+ * Side walls: single rail extending to +X direction by the gate width.
+ * End walls: two half-rails extending to both sides from gate edges.
  */
-function SlidingGateDetail({ width, height, material }: { width: number; height: number; material: THREE.MeshStandardMaterial }) {
+function SlidingGateDetail({ width, height, material, wall }: { width: number; height: number; material: THREE.MeshStandardMaterial; wall: WallIdentifier }) {
   const railHeight = 0.06;
   const railDepth = 0.04;
-  return (
-    <mesh
-      position={[0, height / 2 + railHeight / 2, railDepth / 2]}
-      material={material}
-    >
-      <boxGeometry args={[width * 1.15, railHeight, railDepth]} />
-    </mesh>
-  );
+  const isSideWall = wall === 'side_left' || wall === 'side_right';
+
+  if (isSideWall) {
+    // Single rail: total length = 2 * width (gate itself + sliding space to one side)
+    const railLength = width * 2;
+    // Offset so the rail extends from -width/2 to +width*1.5 (gate occupies -width/2 to +width/2, rail extends +width to the right)
+    const offsetX = width / 2;
+    return (
+      <mesh
+        position={[offsetX, height / 2 + railHeight / 2, railDepth / 2]}
+        material={material}
+      >
+        <boxGeometry args={[railLength, railHeight, railDepth]} />
+      </mesh>
+    );
+  } else {
+    // End walls: two half-rails extending outward from both sides of the gate
+    const halfRailLength = width / 2;
+    // Left rail: from gate left edge extending further left
+    const leftOffsetX = -width / 2 - halfRailLength / 2;
+    // Right rail: from gate right edge extending further right
+    const rightOffsetX = width / 2 + halfRailLength / 2;
+    return (
+      <>
+        <mesh
+          position={[leftOffsetX, height / 2 + railHeight / 2, railDepth / 2]}
+          material={material}
+        >
+          <boxGeometry args={[halfRailLength, railHeight, railDepth]} />
+        </mesh>
+        <mesh
+          position={[rightOffsetX, height / 2 + railHeight / 2, railDepth / 2]}
+          material={material}
+        >
+          <boxGeometry args={[halfRailLength, railHeight, railDepth]} />
+        </mesh>
+      </>
+    );
+  }
 }
 
 /**

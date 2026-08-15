@@ -10,6 +10,7 @@ interface CladdingProps {
   cladding: CladdingParameters;
   showCladding: boolean;
   columnOuterFlangeOffset: number;
+  columnSpacing: number;
   placementMode?: boolean;
   openings?: Opening[];
   onPlaceOpening?: (opening: Opening) => void;
@@ -130,6 +131,7 @@ export const Cladding = React.memo(function Cladding({
   cladding,
   showCladding,
   columnOuterFlangeOffset,
+  columnSpacing,
   placementMode,
   openings,
   onPlaceOpening,
@@ -221,6 +223,7 @@ export const Cladding = React.memo(function Cladding({
   /**
    * Handle wall click for opening placement.
    * Computes local coordinates, snaps to 100mm grid, validates bounds + collision.
+   * On side walls, gates are centered within the clicked bay.
    */
   const handleWallClick = (wall: WallIdentifier, wallWidth: number, event: ThreeEvent<PointerEvent>) => {
     if (!placementMode || !onPlaceOpening || !selectedOpeningType) return;
@@ -241,6 +244,16 @@ export const Cladding = React.memo(function Cladding({
     // Snap to 100mm grid
     posX = Math.round(posX * 10) / 10;
     posY = Math.round(posY * 10) / 10;
+
+    // For side walls, center the opening within the clicked bay
+    if (wall === 'side_left' || wall === 'side_right') {
+      // Reject if gate is wider than bay
+      if (w > columnSpacing) return;
+      const bayIndex = Math.floor(posX / columnSpacing);
+      const bayStart = bayIndex * columnSpacing;
+      const bayEnd = bayStart + columnSpacing;
+      posX = (bayStart + bayEnd) / 2;
+    }
 
     // For gates and doors, bottom should be at ground level
     // For windows, bottom should be at sill height

@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { useRHSGeometry } from '../profiles/RHSGeometry';
 import { columnMaterial } from '../materials';
-import type { SteelProfile } from '../../types';
+import type { SteelProfile, Opening } from '../../types';
 
 interface EndColumnsProps {
   profile: SteelProfile;
@@ -9,6 +9,7 @@ interface EndColumnsProps {
   span: number;
   length: number;
   ridgeHeight: number;
+  openings?: Opening[];
 }
 
 /**
@@ -22,6 +23,7 @@ export const EndColumns = React.memo(function EndColumns({
   span,
   length: hallLength,
   ridgeHeight,
+  openings,
 }: EndColumnsProps) {
   // Convert mm to meters
   const width = profile.b / 1000;
@@ -45,32 +47,70 @@ export const EndColumns = React.memo(function EndColumns({
     return positions;
   }, [span, wallHeight, ridgeHeight]);
 
+  /**
+   * Check if a column at a given Z position on a given wall is overlapped by an opening.
+   * Returns the Y offset (top of the opening) if overlapped, or 0 if not.
+   */
+  const getColumnStartY = (wallName: 'end_front' | 'end_back', zPos: number): number => {
+    if (!openings) return 0;
+    for (const opening of openings) {
+      if (opening.wall !== wallName) continue;
+      // For end_front: positionX is stored in rotated local coords,
+      // un-mirrored to world Z as (span - positionX).
+      // For end_back: positionX maps directly to world Z.
+      let openingWorldZ: number;
+      if (wallName === 'end_front') {
+        openingWorldZ = span - opening.positionX;
+      } else {
+        openingWorldZ = opening.positionX;
+      }
+      const halfW = opening.width / 2;
+      if (zPos >= openingWorldZ - halfW && zPos <= openingWorldZ + halfW) {
+        // Column overlaps with this opening; start from top of opening
+        return opening.positionY + opening.height / 2;
+      }
+    }
+    return 0;
+  };
+
   return (
     <group name="end-columns">
       {/* Gable end at X=0 */}
-      {intermediatePositions.map((pos, i) => (
-        <EndColumn
-          key={`front-${i}`}
-          x={0}
-          z={pos.z}
-          colHeight={pos.colHeight}
-          width={width}
-          height={height}
-          thickness={thickness}
-        />
-      ))}
+      {intermediatePositions.map((pos, i) => {
+        const startY = getColumnStartY('end_front', pos.z);
+        const adjustedHeight = pos.colHeight - startY;
+        if (adjustedHeight <= 0) return null;
+        return (
+          <EndColumn
+            key={`front-${i}`}
+            x={0}
+            z={pos.z}
+            startY={startY}
+            colHeight={adjustedHeight}
+            width={width}
+            height={height}
+            thickness={thickness}
+          />
+        );
+      })}
       {/* Gable end at X=length */}
-      {intermediatePositions.map((pos, i) => (
-        <EndColumn
-          key={`back-${i}`}
-          x={hallLength}
-          z={pos.z}
-          colHeight={pos.colHeight}
-          width={width}
-          height={height}
-          thickness={thickness}
-        />
-      ))}
+      {intermediatePositions.map((pos, i) => {
+        const startY = getColumnStartY('end_back', pos.z);
+        const adjustedHeight = pos.colHeight - startY;
+        if (adjustedHeight <= 0) return null;
+        return (
+          <EndColumn
+            key={`back-${i}`}
+            x={hallLength}
+            z={pos.z}
+            startY={startY}
+            colHeight={adjustedHeight}
+            width={width}
+            height={height}
+            thickness={thickness}
+          />
+        );
+      })}
     </group>
   );
 });
@@ -78,19 +118,20 @@ export const EndColumns = React.memo(function EndColumns({
 interface EndColumnProps {
   x: number;
   z: number;
+  startY: number;
   colHeight: number;
   width: number;
   height: number;
   thickness: number;
 }
 
-function EndColumn({ x, z, colHeight, width, height, thickness }: EndColumnProps) {
+function EndColumn({ x, z, startY, colHeight, width, height, thickness }: EndColumnProps) {
   const geometry = useRHSGeometry({ width, height, thickness, length: colHeight });
   return (
     <mesh
       geometry={geometry}
       material={columnMaterial}
-      position={[x, 0, z]}
+      position={[x, startY, z]}
       rotation={[-Math.PI / 2, 0, 0]}
       castShadow
       receiveShadow

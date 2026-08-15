@@ -58,9 +58,11 @@ export const Skylight = React.memo(function Skylight({
       0,
       Math.PI
     );
-    // Scale Y to achieve desired arch height (ratio of archHeight to radius)
-    const scaleY = archHeight / radius;
-    geo.scale(1, scaleY, 1);
+    // Scale X to achieve desired arch height (ratio of archHeight to radius).
+    // The cylinder axis is along local Y. After rotation [0,0,PI/2], local X maps to world Y (arch height).
+    // Scaling local X compresses the circular cross-section vertically without affecting the length.
+    const scaleX = archHeight / radius;
+    geo.scale(scaleX, 1, 1);
     return geo;
   }, [radius, skylightLength, archHeight]);
 
