@@ -350,6 +350,31 @@ export const Cladding = React.memo(function Cladding({
     [cladding.colorStripes]
   );
 
+  // Determine which bays have gates (to skip cladding panels)
+  const sideLeftGateBays = useMemo(() => {
+    if (!openings) return new Set<number>();
+    const bays = new Set<number>();
+    for (const o of openings) {
+      if ((o.wall === 'side_left') && (o.type === 'sectional_gate' || o.type === 'sliding_gate')) {
+        const bay = Math.floor(o.positionX / columnSpacing);
+        bays.add(bay);
+      }
+    }
+    return bays;
+  }, [openings, columnSpacing]);
+
+  const sideRightGateBays = useMemo(() => {
+    if (!openings) return new Set<number>();
+    const bays = new Set<number>();
+    for (const o of openings) {
+      if ((o.wall === 'side_right') && (o.type === 'sectional_gate' || o.type === 'sliding_gate')) {
+        const bay = Math.floor((hallLength - o.positionX) / columnSpacing);
+        bays.add(bay);
+      }
+    }
+    return bays;
+  }, [openings, columnSpacing, hallLength]);
+
   /**
    * Handle side wall click for opening placement.
    * Side walls are per-bay panels, so localPoint is relative to the panel, not the full wall.
@@ -480,6 +505,7 @@ export const Cladding = React.memo(function Cladding({
     <group name="cladding">
       {/* Side wall panels - left (Z=0 side) */}
       {Array.from({ length: numberOfBays }).map((_, bayIndex) => {
+        if (sideLeftGateBays.has(bayIndex)) return null;
         const bayStart = bayIndex * columnSpacing;
         const bayEnd = (bayIndex + 1) * columnSpacing;
         let panelWidth = columnSpacing - 0.020;
@@ -504,6 +530,7 @@ export const Cladding = React.memo(function Cladding({
 
       {/* Side wall panels - right (Z=span side) */}
       {Array.from({ length: numberOfBays }).map((_, bayIndex) => {
+        if (sideRightGateBays.has(bayIndex)) return null;
         const bayStart = bayIndex * columnSpacing;
         const bayEnd = (bayIndex + 1) * columnSpacing;
         let panelWidth = columnSpacing - 0.020;
@@ -534,7 +561,7 @@ export const Cladding = React.memo(function Cladding({
           wallWidth={sideWallLength}
           wallHeight={sideWallHeight}
           panelWidth={cladding.panelWidth}
-          position={[hallLength / 2, sideWallHeight / 2, -(columnOuterFlangeOffset + sideWallThicknessOffset)]}
+          position={[hallLength / 2, sideWallHeight / 2, -(columnOuterFlangeOffset + sideWallThicknessOffset) + 0.005]}
           rotation={[0, 0, 0]}
         />
       )}
@@ -546,7 +573,7 @@ export const Cladding = React.memo(function Cladding({
           wallWidth={sideWallLength}
           wallHeight={sideWallHeight}
           panelWidth={cladding.panelWidth}
-          position={[hallLength / 2, sideWallHeight / 2, span + columnOuterFlangeOffset + sideWallThicknessOffset]}
+          position={[hallLength / 2, sideWallHeight / 2, span + columnOuterFlangeOffset + sideWallThicknessOffset - 0.005]}
           rotation={[0, Math.PI, 0]}
         />
       )}

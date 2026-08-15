@@ -13,6 +13,8 @@ const LINTEL_POSTS = 4;
 interface GateFrameProps {
   openings: Opening[];
   params: HallParameters;
+  wallHeight: number;
+  ridgeHeight: number;
 }
 
 /**
@@ -24,6 +26,8 @@ interface GateFrameProps {
 export const GateFrame = React.memo(function GateFrame({
   openings,
   params,
+  wallHeight,
+  ridgeHeight,
 }: GateFrameProps) {
   const { span, length: hallLength } = params;
 
@@ -43,6 +47,8 @@ export const GateFrame = React.memo(function GateFrame({
           opening={opening}
           span={span}
           hallLength={hallLength}
+          wallHeight={wallHeight}
+          ridgeHeight={ridgeHeight}
         />
       ))}
     </group>
@@ -53,9 +59,11 @@ interface SingleGateFrameProps {
   opening: Opening;
   span: number;
   hallLength: number;
+  wallHeight: number;
+  ridgeHeight: number;
 }
 
-function SingleGateFrame({ opening, span, hallLength }: SingleGateFrameProps) {
+function SingleGateFrame({ opening, span, hallLength, wallHeight, ridgeHeight }: SingleGateFrameProps) {
   const { wall, width: gateWidth, height: gateHeight, positionX } = opening;
 
   // Compute world position based on wall
@@ -81,13 +89,28 @@ function SingleGateFrame({ opening, span, hallLength }: SingleGateFrameProps) {
     return { x, z, halfW };
   }, [wall, positionX, gateWidth, span, hallLength]);
 
-  // Column height = gate opening height (lintel sits above)
-  const columnHeight = gateHeight;
-  // Lintel bottom Y = gate height
-  const lintelBottomY = gateHeight;
-
   // Determine orientation: side walls run along X, end walls run along Z
   const isSideWall = wall === 'side_left' || wall === 'side_right';
+
+  // Per-column heights:
+  // Side wall: column reaches from floor to eave (wallHeight)
+  // End wall: column reaches from floor to the underside of the rafter at that Z position
+  const leftColumnHeight = useMemo(() => {
+    if (isSideWall) return wallHeight;
+    const colZ = position.z + (-position.halfW);
+    const distFromEdge = Math.min(colZ, span - colZ);
+    return wallHeight + (ridgeHeight - wallHeight) * (distFromEdge / (span / 2));
+  }, [isSideWall, wallHeight, ridgeHeight, span, position.z, position.halfW]);
+
+  const rightColumnHeight = useMemo(() => {
+    if (isSideWall) return wallHeight;
+    const colZ = position.z + position.halfW;
+    const distFromEdge = Math.min(colZ, span - colZ);
+    return wallHeight + (ridgeHeight - wallHeight) * (distFromEdge / (span / 2));
+  }, [isSideWall, wallHeight, ridgeHeight, span, position.z, position.halfW]);
+
+  // Lintel bottom Y = gate height (lintel is always at gate opening height)
+  const lintelBottomY = gateHeight;
 
   // For side walls, check that the gate fits in the bay
   // For positioning: gate columns at +/- gateWidth/2 from center
@@ -107,7 +130,7 @@ function SingleGateFrame({ opening, span, hallLength }: SingleGateFrameProps) {
         x={position.x + (isSideWall ? leftColOffset : 0)}
         y={0}
         z={position.z + (isSideWall ? 0 : leftColOffset)}
-        height={columnHeight}
+        height={leftColumnHeight}
         isSideWall={isSideWall}
       />
       {/* Right gate column */}
@@ -115,7 +138,7 @@ function SingleGateFrame({ opening, span, hallLength }: SingleGateFrameProps) {
         x={position.x + (isSideWall ? rightColOffset : 0)}
         y={0}
         z={position.z + (isSideWall ? 0 : rightColOffset)}
-        height={columnHeight}
+        height={rightColumnHeight}
         isSideWall={isSideWall}
       />
       {/* Lintel assembly */}

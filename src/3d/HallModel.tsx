@@ -319,7 +319,7 @@ export const HallModel = React.memo(function HallModel({ params, results, claddi
 
       {/* Gate structural frames (columns + lintel) */}
       {openings && openings.length > 0 && (
-        <GateFrame openings={openings} params={params} />
+        <GateFrame openings={openings} params={params} wallHeight={effectiveColumnHeight} ridgeHeight={effectiveRidgeHeight} />
       )}
 
       {/* Ridge skylight */}
