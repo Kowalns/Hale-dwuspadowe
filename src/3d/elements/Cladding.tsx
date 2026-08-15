@@ -157,7 +157,7 @@ function createGableTriangleGeometry(
   const shape = new THREE.Shape();
   shape.moveTo(-width / 2, 0);
   shape.lineTo(width / 2, 0);
-  shape.lineTo(0, height);
+  shape.lineTo(0, height - 0.10);
   shape.closePath();
 
   if (isTrapezoid) {
@@ -905,6 +905,19 @@ export const Cladding = React.memo(function Cladding({
           />
         );
 
+        {/* Gable front joint lines above wallHeight */}
+        endColZPositionsFront.slice(1, -1).forEach((colZ, idx) => {
+          const distFromCenter = Math.abs(colZ - span / 2);
+          const lineHeight = (gableTriangleHeight - 0.10) * (1 - distFromCenter / (span / 2));
+          if (lineHeight < 0.05) return;
+          elements.push(
+            <mesh key={`gable-front-joint-${idx}`} position={[-(endColumnOuterOffset + endWallThicknessOffset) - 0.001, wallHeight + lineHeight / 2, colZ]}>
+              <boxGeometry args={[0.005, lineHeight, 0.02]} />
+              <meshStandardMaterial color="#404040" />
+            </mesh>
+          );
+        });
+
         return elements;
       })()}
 
@@ -1022,6 +1035,19 @@ export const Cladding = React.memo(function Cladding({
           />
         );
 
+        {/* Gable back joint lines above wallHeight */}
+        endColZPositionsBack.slice(1, -1).forEach((colZ, idx) => {
+          const distFromCenter = Math.abs(colZ - span / 2);
+          const lineHeight = (gableTriangleHeight - 0.10) * (1 - distFromCenter / (span / 2));
+          if (lineHeight < 0.05) return;
+          elements.push(
+            <mesh key={`gable-back-joint-${idx}`} position={[hallLength + endColumnOuterOffset + endWallThicknessOffset + 0.001, wallHeight + lineHeight / 2, colZ]}>
+              <boxGeometry args={[0.005, lineHeight, 0.02]} />
+              <meshStandardMaterial color="#404040" />
+            </mesh>
+          );
+        });
+
         return elements;
       })()}
 
@@ -1118,6 +1144,19 @@ export const Cladding = React.memo(function Cladding({
           </React.Fragment>
         );
       })}
+
+      {/* Corner joint lines */}
+      {([
+        [-(endColumnOuterOffset + endWallThicknessOffset), -(columnOuterFlangeOffset + sideWallThicknessOffset)],
+        [-(endColumnOuterOffset + endWallThicknessOffset), span + columnOuterFlangeOffset + sideWallThicknessOffset],
+        [hallLength + endColumnOuterOffset + endWallThicknessOffset, -(columnOuterFlangeOffset + sideWallThicknessOffset)],
+        [hallLength + endColumnOuterOffset + endWallThicknessOffset, span + columnOuterFlangeOffset + sideWallThicknessOffset],
+      ] as [number, number][]).map(([cx, cz], i) => (
+        <mesh key={`corner-joint-${i}`} position={[cx, wallHeight / 2, cz]}>
+          <boxGeometry args={[0.01, wallHeight, 0.01]} />
+          <meshStandardMaterial color="#303030" />
+        </mesh>
+      ))}
     </group>
   );
 });
