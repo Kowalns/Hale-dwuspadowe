@@ -448,8 +448,24 @@ export const Cladding = React.memo(function Cladding({
       {Array.from({ length: numberOfBays }).map((_, bayIndex) => {
         const bayStart = bayIndex * columnSpacing;
         const bayEnd = (bayIndex + 1) * columnSpacing;
-        const panelWidth = columnSpacing - 0.020;
-        const panelCenterX = (bayStart + bayEnd) / 2;
+        let panelWidth = columnSpacing - 0.020;
+        let panelCenterX = (bayStart + bayEnd) / 2;
+
+        if (bayIndex === 0) {
+          // First bay: left edge = endColumnOuterOffset + endWallThicknessOffset + 0.010 (10mm from end wall cladding surface)
+          // Right edge = columnSpacing - 0.010 (20mm/2 dilation at column)
+          const leftEdge = endColumnOuterOffset + endWallThicknessOffset + 0.010;
+          const rightEdge = columnSpacing - 0.010;
+          panelWidth = rightEdge - leftEdge;
+          panelCenterX = (leftEdge + rightEdge) / 2;
+        } else if (bayIndex === numberOfBays - 1) {
+          // Last bay: left edge = (numberOfBays-1)*columnSpacing + 0.010 (20mm/2 dilation at column)
+          // Right edge = hallLength - (endColumnOuterOffset + endWallThicknessOffset) - 0.010 (10mm from end wall cladding surface)
+          const leftEdge = (numberOfBays - 1) * columnSpacing + 0.010;
+          const rightEdge = hallLength - (endColumnOuterOffset + endWallThicknessOffset) - 0.010;
+          panelWidth = rightEdge - leftEdge;
+          panelCenterX = (leftEdge + rightEdge) / 2;
+        }
 
         const gate = sideLeftGatesByBay.get(bayIndex);
         if (gate) {
@@ -576,8 +592,24 @@ export const Cladding = React.memo(function Cladding({
       {Array.from({ length: numberOfBays }).map((_, bayIndex) => {
         const bayStart = bayIndex * columnSpacing;
         const bayEnd = (bayIndex + 1) * columnSpacing;
-        const panelWidth = columnSpacing - 0.020;
-        const panelCenterX = (bayStart + bayEnd) / 2;
+        let panelWidth = columnSpacing - 0.020;
+        let panelCenterX = (bayStart + bayEnd) / 2;
+
+        if (bayIndex === 0) {
+          // First bay: left edge = endColumnOuterOffset + endWallThicknessOffset + 0.010 (10mm from end wall cladding surface)
+          // Right edge = columnSpacing - 0.010 (20mm/2 dilation at column)
+          const leftEdge = endColumnOuterOffset + endWallThicknessOffset + 0.010;
+          const rightEdge = columnSpacing - 0.010;
+          panelWidth = rightEdge - leftEdge;
+          panelCenterX = (leftEdge + rightEdge) / 2;
+        } else if (bayIndex === numberOfBays - 1) {
+          // Last bay: left edge = (numberOfBays-1)*columnSpacing + 0.010 (20mm/2 dilation at column)
+          // Right edge = hallLength - (endColumnOuterOffset + endWallThicknessOffset) - 0.010 (10mm from end wall cladding surface)
+          const leftEdge = (numberOfBays - 1) * columnSpacing + 0.010;
+          const rightEdge = hallLength - (endColumnOuterOffset + endWallThicknessOffset) - 0.010;
+          panelWidth = rightEdge - leftEdge;
+          panelCenterX = (leftEdge + rightEdge) / 2;
+        }
 
         const gate = sideRightGatesByBay.get(bayIndex);
         if (gate) {
