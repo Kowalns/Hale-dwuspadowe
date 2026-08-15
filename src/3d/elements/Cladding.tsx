@@ -1161,6 +1161,134 @@ export const Cladding = React.memo(function Cladding({
           <meshStandardMaterial color="#303030" />
         </mesh>
       ))}
+
+      {/* Wind boards (wiatrownice) - L-shaped barge board flashings at gable roof edges */}
+      {(() => {
+        const windBoardColor = getRALHex(cladding.flashingColor);
+        const windBoardMat = new THREE.MeshStandardMaterial({
+          color: windBoardColor,
+          side: THREE.DoubleSide,
+          depthWrite: true,
+        });
+        const roofSlopeLen = (span / 2) / Math.cos(roofAngleRad);
+        const frontX = -(endColumnOuterOffset + endWallThicknessOffset);
+        const backX = hallLength + endColumnOuterOffset + endWallThicknessOffset;
+        const thickness = 0.001; // 1mm sheet metal
+        const legSize = 0.2; // 200mm each leg
+
+        // Each wind board has two legs:
+        // - Roof leg: lies on the roof surface (200mm along the slope, parallel to roof)
+        // - Wall leg: hangs down on the gable wall (200mm downward, perpendicular to roof surface)
+        // Both run from eave to ridge along the slope length.
+
+        const boards: React.ReactNode[] = [];
+
+        // Helper: for each board we need position at center of slope, and rotations.
+        // The slope center Y = wallHeight + gableTriangleHeight/2
+        // The slope center Z offset depends on left/right slope.
+
+        // Front-left: front gable, left roof slope (Z < span/2 side)
+        // Roof leg lies on the roof plane, wall leg goes outward (-X direction from front gable)
+        // Left slope: center Z = span/4, tilted by roofAngleRad around X
+        // Position: at frontX, centered along the slope
+        const slopeCenterY = wallHeight + (roofSlopeLen / 2) * Math.sin(roofAngleRad);
+        const leftSlopeCenterZ = (span / 2) - (roofSlopeLen / 2) * Math.cos(roofAngleRad);
+        const rightSlopeCenterZ = (span / 2) + (roofSlopeLen / 2) * Math.cos(roofAngleRad);
+
+        // Front-left wind board: roof leg on left slope at front gable
+        boards.push(
+          <mesh
+            key="wind-board-front-left-roof"
+            position={[frontX, slopeCenterY, leftSlopeCenterZ]}
+            rotation={[Math.PI / 2 - roofAngleRad, 0, 0]}
+          >
+            <boxGeometry args={[legSize, roofSlopeLen, thickness]} />
+            <primitive object={windBoardMat} attach="material" />
+          </mesh>
+        );
+        // Front-left wind board: wall leg hanging down on front gable wall
+        boards.push(
+          <mesh
+            key="wind-board-front-left-wall"
+            position={[frontX - thickness / 2, slopeCenterY, leftSlopeCenterZ]}
+            rotation={[Math.PI / 2 - roofAngleRad, 0, 0]}
+          >
+            <boxGeometry args={[thickness, roofSlopeLen, legSize]} />
+            <primitive object={windBoardMat} attach="material" />
+          </mesh>
+        );
+
+        // Front-right wind board: roof leg on right slope at front gable
+        boards.push(
+          <mesh
+            key="wind-board-front-right-roof"
+            position={[frontX, slopeCenterY, rightSlopeCenterZ]}
+            rotation={[-(Math.PI / 2 - roofAngleRad), 0, 0]}
+          >
+            <boxGeometry args={[legSize, roofSlopeLen, thickness]} />
+            <primitive object={windBoardMat} attach="material" />
+          </mesh>
+        );
+        // Front-right wind board: wall leg hanging down on front gable wall
+        boards.push(
+          <mesh
+            key="wind-board-front-right-wall"
+            position={[frontX - thickness / 2, slopeCenterY, rightSlopeCenterZ]}
+            rotation={[-(Math.PI / 2 - roofAngleRad), 0, 0]}
+          >
+            <boxGeometry args={[thickness, roofSlopeLen, legSize]} />
+            <primitive object={windBoardMat} attach="material" />
+          </mesh>
+        );
+
+        // Back-left wind board: roof leg on left slope at back gable
+        boards.push(
+          <mesh
+            key="wind-board-back-left-roof"
+            position={[backX, slopeCenterY, leftSlopeCenterZ]}
+            rotation={[Math.PI / 2 - roofAngleRad, 0, 0]}
+          >
+            <boxGeometry args={[legSize, roofSlopeLen, thickness]} />
+            <primitive object={windBoardMat} attach="material" />
+          </mesh>
+        );
+        // Back-left wind board: wall leg hanging down on back gable wall
+        boards.push(
+          <mesh
+            key="wind-board-back-left-wall"
+            position={[backX + thickness / 2, slopeCenterY, leftSlopeCenterZ]}
+            rotation={[Math.PI / 2 - roofAngleRad, 0, 0]}
+          >
+            <boxGeometry args={[thickness, roofSlopeLen, legSize]} />
+            <primitive object={windBoardMat} attach="material" />
+          </mesh>
+        );
+
+        // Back-right wind board: roof leg on right slope at back gable
+        boards.push(
+          <mesh
+            key="wind-board-back-right-roof"
+            position={[backX, slopeCenterY, rightSlopeCenterZ]}
+            rotation={[-(Math.PI / 2 - roofAngleRad), 0, 0]}
+          >
+            <boxGeometry args={[legSize, roofSlopeLen, thickness]} />
+            <primitive object={windBoardMat} attach="material" />
+          </mesh>
+        );
+        // Back-right wind board: wall leg hanging down on back gable wall
+        boards.push(
+          <mesh
+            key="wind-board-back-right-wall"
+            position={[backX + thickness / 2, slopeCenterY, rightSlopeCenterZ]}
+            rotation={[-(Math.PI / 2 - roofAngleRad), 0, 0]}
+          >
+            <boxGeometry args={[thickness, roofSlopeLen, legSize]} />
+            <primitive object={windBoardMat} attach="material" />
+          </mesh>
+        );
+
+        return boards;
+      })()}
     </group>
   );
 });
