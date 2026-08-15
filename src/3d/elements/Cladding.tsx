@@ -865,53 +865,35 @@ export const Cladding = React.memo(function Cladding({
           const centerZ = span / 2;
           const distLeft = Math.abs(zLeft - centerZ);
           const distRight = Math.abs(zRight - centerZ);
-          const hLeft = Math.max(0, (span / 2 - distLeft)) * Math.tan(roofAngleRad) - 0.10;
-          const hRight = Math.max(0, (span / 2 - distRight)) * Math.tan(roofAngleRad) - 0.10;
+          const hLeft = Math.max(0, (span / 2 - distLeft)) * Math.tan(roofAngleRad) - 0.03;
+          const hRight = Math.max(0, (span / 2 - distRight)) * Math.tan(roofAngleRad) - 0.03;
           const avgH = (hLeft + hRight) / 2;
 
           if (avgH < 0.01) continue; // skip negligible panels
 
-          // Build trapezoidal shape: bottom edge = panelWidth, top edge narrower per roof angle
           const trapShape = new THREE.Shape();
           trapShape.moveTo(-panelWidth / 2, 0);
           trapShape.lineTo(panelWidth / 2, 0);
-          trapShape.lineTo(panelWidth / 2, hLeft);
-          trapShape.lineTo(-panelWidth / 2, hRight);
+          trapShape.lineTo(panelWidth / 2, hRight);
+          trapShape.lineTo(-panelWidth / 2, hLeft);
           trapShape.closePath();
 
           let gableGeo: THREE.BufferGeometry;
-          if (isEndWallTrapezoid) {
+          if (isSideWallTrapezoid) {
             const { height: amp, plateau, valley, period } = getTrapezoidalParams('T18');
             const maxH = Math.max(hLeft, hRight);
             const extent = maxH;
             const waveCount = Math.ceil(extent / period);
-            const segW = Math.min(waveCount * 10, 500);
-            const segH = Math.min(Math.ceil(maxH * 10), 100);
-
-            // Use PlaneGeometry and clip vertices outside trapezoid
-            gableGeo = new THREE.PlaneGeometry(panelWidth, maxH, segW, segH);
+            const segments = Math.min(waveCount * 10, 300);
+            gableGeo = new THREE.ShapeGeometry(trapShape, segments);
             const pos = gableGeo.attributes.position;
             for (let v = 0; v < pos.count; v++) {
-              const px = pos.getX(v);
-              const py = pos.getY(v);
-              // Map py from [-maxH/2, maxH/2] to [0, maxH]
-              const localY = py + maxH / 2;
-              // Interpolate max height at this X position
-              const t = (px + panelWidth / 2) / panelWidth; // 0 to 1
-              const maxYatX = hRight + t * (hLeft - hRight);
-              // Clip: if vertex above the slope line, push it down
-              if (localY > maxYatX) {
-                pos.setY(v, maxYatX - maxH / 2);
-              }
-              // Apply trapezoidal displacement
-              const coord = py;
+              const coord = pos.getY(v);
               const displacement = trapezoidHeight(coord + extent / 2, period, plateau, valley, amp);
               pos.setZ(v, -displacement);
             }
             pos.needsUpdate = true;
             gableGeo.computeVertexNormals();
-            // Shift geometry so bottom is at Y=0
-            gableGeo.translate(0, maxH / 2, 0);
           } else {
             gableGeo = new THREE.ExtrudeGeometry(trapShape, { depth: sandwichThicknessM, bevelEnabled: false });
             gableGeo.translate(0, 0, -sandwichThicknessM / 2);
@@ -1060,13 +1042,12 @@ export const Cladding = React.memo(function Cladding({
           const centerZ = span / 2;
           const distLeft = Math.abs(zLeft - centerZ);
           const distRight = Math.abs(zRight - centerZ);
-          const hLeft = Math.max(0, (span / 2 - distLeft)) * Math.tan(roofAngleRad) - 0.10;
-          const hRight = Math.max(0, (span / 2 - distRight)) * Math.tan(roofAngleRad) - 0.10;
+          const hLeft = Math.max(0, (span / 2 - distLeft)) * Math.tan(roofAngleRad) - 0.03;
+          const hRight = Math.max(0, (span / 2 - distRight)) * Math.tan(roofAngleRad) - 0.03;
           const avgH = (hLeft + hRight) / 2;
 
           if (avgH < 0.01) continue; // skip negligible panels
 
-          // Build trapezoidal shape: bottom edge = panelWidth, top edge narrower per roof angle
           const trapShape = new THREE.Shape();
           trapShape.moveTo(-panelWidth / 2, 0);
           trapShape.lineTo(panelWidth / 2, 0);
@@ -1075,38 +1056,21 @@ export const Cladding = React.memo(function Cladding({
           trapShape.closePath();
 
           let gableGeo: THREE.BufferGeometry;
-          if (isEndWallTrapezoid) {
+          if (isSideWallTrapezoid) {
             const { height: amp, plateau, valley, period } = getTrapezoidalParams('T18');
             const maxH = Math.max(hLeft, hRight);
             const extent = maxH;
             const waveCount = Math.ceil(extent / period);
-            const segW = Math.min(waveCount * 10, 500);
-            const segH = Math.min(Math.ceil(maxH * 10), 100);
-
-            // Use PlaneGeometry and clip vertices outside trapezoid
-            gableGeo = new THREE.PlaneGeometry(panelWidth, maxH, segW, segH);
+            const segments = Math.min(waveCount * 10, 300);
+            gableGeo = new THREE.ShapeGeometry(trapShape, segments);
             const pos = gableGeo.attributes.position;
             for (let v = 0; v < pos.count; v++) {
-              const px = pos.getX(v);
-              const py = pos.getY(v);
-              // Map py from [-maxH/2, maxH/2] to [0, maxH]
-              const localY = py + maxH / 2;
-              // Interpolate max height at this X position
-              const t = (px + panelWidth / 2) / panelWidth; // 0 to 1
-              const maxYatX = hLeft + t * (hRight - hLeft);
-              // Clip: if vertex above the slope line, push it down
-              if (localY > maxYatX) {
-                pos.setY(v, maxYatX - maxH / 2);
-              }
-              // Apply trapezoidal displacement
-              const coord = py;
+              const coord = pos.getY(v);
               const displacement = trapezoidHeight(coord + extent / 2, period, plateau, valley, amp);
               pos.setZ(v, -displacement);
             }
             pos.needsUpdate = true;
             gableGeo.computeVertexNormals();
-            // Shift geometry so bottom is at Y=0
-            gableGeo.translate(0, maxH / 2, 0);
           } else {
             gableGeo = new THREE.ExtrudeGeometry(trapShape, { depth: sandwichThicknessM, bevelEnabled: false });
             gableGeo.translate(0, 0, -sandwichThicknessM / 2);
