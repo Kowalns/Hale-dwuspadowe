@@ -108,6 +108,46 @@ function createTrapezoidalGeometry(
   return geo;
 }
 
+function createGableTriangleGeometry(
+  width: number,
+  height: number,
+  isTrapezoid: boolean,
+  profileType: 'T18' | 'T35',
+  waveAxis: 'x' | 'y',
+  sandwichThickness: number
+): THREE.BufferGeometry {
+  const shape = new THREE.Shape();
+  shape.moveTo(-width / 2, 0);
+  shape.lineTo(width / 2, 0);
+  shape.lineTo(0, height);
+  shape.closePath();
+
+  if (isTrapezoid) {
+    const { height: amp, plateau, valley, period } = getTrapezoidalParams(profileType);
+    const extent = waveAxis === 'x' ? width : height;
+    const waveCount = Math.ceil(extent / period);
+    const segments = Math.min(waveCount * 10, 500);
+    const geo = new THREE.ShapeGeometry(shape, segments);
+    const pos = geo.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      const coord = waveAxis === 'x' ? pos.getX(i) : pos.getY(i);
+      const displacement = trapezoidHeight(coord + extent / 2, period, plateau, valley, amp);
+      pos.setZ(i, -displacement);
+    }
+    pos.needsUpdate = true;
+    geo.computeVertexNormals();
+    return geo;
+  } else {
+    const geo = new THREE.ExtrudeGeometry(shape, {
+      depth: sandwichThickness,
+      bevelEnabled: false,
+    });
+    geo.translate(0, 0, -sandwichThickness / 2);
+    geo.computeVertexNormals();
+    return geo;
+  }
+}
+
 interface ColorSegment { startLayer: number; endLayer: number; color: string; }
 
 /**
@@ -939,12 +979,15 @@ export const Cladding = React.memo(function Cladding({
         }
 
         // Gable triangle above wallHeight
-        const triangleShape = new THREE.Shape();
-        triangleShape.moveTo(-span / 2, 0);
-        triangleShape.lineTo(span / 2, 0);
-        triangleShape.lineTo(0, gableTriangleHeight);
-        triangleShape.closePath();
-        const triangleGeo = new THREE.ShapeGeometry(triangleShape);
+        const frontTriangleWidth = span + 2 * (columnOuterFlangeOffset + 2 * sideWallThicknessOffset);
+        const frontTriangleGeo = createGableTriangleGeometry(
+          frontTriangleWidth,
+          gableTriangleHeight,
+          isEndWallTrapezoid,
+          'T18',
+          wallWaveAxis,
+          sandwichThicknessM
+        );
 
         elements.push(
           <mesh
@@ -952,7 +995,7 @@ export const Cladding = React.memo(function Cladding({
             position={[xPos, wallHeight, span / 2]}
             rotation={[0, Math.PI / 2, 0]}
             material={endWallMat}
-            geometry={triangleGeo}
+            geometry={frontTriangleGeo}
           />
         );
 
@@ -1058,12 +1101,15 @@ export const Cladding = React.memo(function Cladding({
         }
 
         // Gable triangle above wallHeight
-        const triangleShape = new THREE.Shape();
-        triangleShape.moveTo(-span / 2, 0);
-        triangleShape.lineTo(span / 2, 0);
-        triangleShape.lineTo(0, gableTriangleHeight);
-        triangleShape.closePath();
-        const triangleGeo = new THREE.ShapeGeometry(triangleShape);
+        const backTriangleWidth = span + 2 * (columnOuterFlangeOffset + 2 * sideWallThicknessOffset);
+        const backTriangleGeo = createGableTriangleGeometry(
+          backTriangleWidth,
+          gableTriangleHeight,
+          isEndWallTrapezoid,
+          'T18',
+          wallWaveAxis,
+          sandwichThicknessM
+        );
 
         elements.push(
           <mesh
@@ -1071,7 +1117,7 @@ export const Cladding = React.memo(function Cladding({
             position={[xPos, wallHeight, span / 2]}
             rotation={[0, -Math.PI / 2, 0]}
             material={endWallMat}
-            geometry={triangleGeo}
+            geometry={backTriangleGeo}
           />
         );
 
