@@ -148,24 +148,35 @@ function TrussFrame({
     const webs: Array<{ start: THREE.Vector3; end: THREE.Vector3 }> = [];
 
     // Left slope web members
+    // First diagonal: from bottom start UP to first top node (under first purlin)
+    webs.push({ start: bottomNL[0], end: topNL[0] });
+
+    // Then pairs meeting at top nodes (under purlins)
     for (let i = 0; i < numPanels; i++) {
+      // Bottom midpoint between top[i] and top[i+1]
       const midZ = (topNL[i].z + topNL[i + 1].z) / 2;
       const midYTop = (topNL[i].y + topNL[i + 1].y) / 2;
       const midYBottom = midYTop - trussHeight;
       const bottomMid = new THREE.Vector3(x, midYBottom, midZ);
 
-      webs.push({ start: bottomMid, end: topNL[i] });
+      // From top[i] DOWN to bottomMid
+      webs.push({ start: topNL[i], end: bottomMid });
+      // From bottomMid UP to top[i+1]
       webs.push({ start: bottomMid, end: topNL[i + 1] });
     }
 
     // Right slope web members
+    // First diagonal: from bottom start UP to first top node
+    webs.push({ start: bottomNR[0], end: topNR[0] });
+
+    // Then pairs meeting at top nodes (under purlins)
     for (let i = 0; i < numPanels; i++) {
       const midZ = (topNR[i].z + topNR[i + 1].z) / 2;
       const midYTop = (topNR[i].y + topNR[i + 1].y) / 2;
       const midYBottom = midYTop - trussHeight;
       const bottomMid = new THREE.Vector3(x, midYBottom, midZ);
 
-      webs.push({ start: bottomMid, end: topNR[i] });
+      webs.push({ start: topNR[i], end: bottomMid });
       webs.push({ start: bottomMid, end: topNR[i + 1] });
     }
 
