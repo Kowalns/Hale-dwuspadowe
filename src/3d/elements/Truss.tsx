@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import * as THREE from 'three';
-import { rafterMaterial, bracingMaterial } from '../materials';
+import { rafterMaterial, bracingMaterial, plateMaterial } from '../materials';
 import type { SteelProfile } from '../../types';
 
 interface TrussProps {
@@ -99,17 +99,17 @@ function TrussFrame({
   const webSize = 0.03;
 
   // Compute nodes for both slopes
-  const { chordSegments, webMembers } = useMemo(() => {
+  const { chordSegments, webMembers, topNodesLeft, bottomNodesLeft, topNodesRight, bottomNodesRight } = useMemo(() => {
     // Top chord nodes at purlin positions
     const numPanels = Math.max(3, Math.round(effectiveHalfSpan / purlinSpacing));
 
     // Generate nodes along each slope
     // Left slope: Z goes from trussStartOffset to span/2 (ridge)
     // Right slope: Z goes from span - trussStartOffset to span/2 (ridge)
-    const topNodesLeft: THREE.Vector3[] = [];
-    const bottomNodesLeft: THREE.Vector3[] = [];
-    const topNodesRight: THREE.Vector3[] = [];
-    const bottomNodesRight: THREE.Vector3[] = [];
+    const topNL: THREE.Vector3[] = [];
+    const bottomNL: THREE.Vector3[] = [];
+    const topNR: THREE.Vector3[] = [];
+    const bottomNR: THREE.Vector3[] = [];
 
     for (let i = 0; i <= numPanels; i++) {
       const t = i / numPanels;
@@ -118,64 +118,86 @@ function TrussFrame({
       const zLeft = trussStartOffset + t * effectiveHalfSpan;
       const yTopLeft = wallHeight + (zLeft - columnFlangeOffset) * Math.tan(roofAngleRad);
       const yBottomLeft = yTopLeft - trussHeight;
-      topNodesLeft.push(new THREE.Vector3(x, yTopLeft, zLeft));
-      bottomNodesLeft.push(new THREE.Vector3(x, yBottomLeft, zLeft));
+      topNL.push(new THREE.Vector3(x, yTopLeft, zLeft));
+      bottomNL.push(new THREE.Vector3(x, yBottomLeft, zLeft));
 
       // Right slope
       const zRight = (span - trussStartOffset) - t * effectiveHalfSpan;
       const yTopRight = wallHeight + ((span - columnFlangeOffset) - zRight) * Math.tan(roofAngleRad);
       const yBottomRight = yTopRight - trussHeight;
-      topNodesRight.push(new THREE.Vector3(x, yTopRight, zRight));
-      bottomNodesRight.push(new THREE.Vector3(x, yBottomRight, zRight));
+      topNR.push(new THREE.Vector3(x, yTopRight, zRight));
+      bottomNR.push(new THREE.Vector3(x, yBottomRight, zRight));
     }
 
     // Generate chord segments (connecting consecutive nodes)
     const segments: Array<{ start: THREE.Vector3; end: THREE.Vector3 }> = [];
 
     // Top chord segments
-    for (let i = 0; i < topNodesLeft.length - 1; i++) {
-      segments.push({ start: topNodesLeft[i], end: topNodesLeft[i + 1] });
+    for (let i = 0; i < topNL.length - 1; i++) {
+      segments.push({ start: topNL[i], end: topNL[i + 1] });
     }
-    for (let i = 0; i < topNodesRight.length - 1; i++) {
-      segments.push({ start: topNodesRight[i], end: topNodesRight[i + 1] });
+    for (let i = 0; i < topNR.length - 1; i++) {
+      segments.push({ start: topNR[i], end: topNR[i + 1] });
     }
 
     // Bottom chord: single segment from start to end on each side
-    segments.push({ start: bottomNodesLeft[0], end: bottomNodesLeft[bottomNodesLeft.length - 1] });
-    segments.push({ start: bottomNodesRight[0], end: bottomNodesRight[bottomNodesRight.length - 1] });
+    segments.push({ start: bottomNL[0], end: bottomNL[bottomNL.length - 1] });
+    segments.push({ start: bottomNR[0], end: bottomNR[bottomNR.length - 1] });
 
-    // Web members: V-pattern meeting at bottom midpoints
+    // Web members: zigzag starting from bottom
     const webs: Array<{ start: THREE.Vector3; end: THREE.Vector3 }> = [];
 
     // Left slope web members
+    // First: from bottom start to top[0]
+    webs.push({ start: bottomNL[0], end: topNL[0] });
+
     for (let i = 0; i < numPanels; i++) {
-      // Bottom midpoint between top[i] and top[i+1]
-      const midZ = (topNodesLeft[i].z + topNodesLeft[i + 1].z) / 2;
-      const midYTop = (topNodesLeft[i].y + topNodesLeft[i + 1].y) / 2;
+      // Mid-bottom point between top[i] and top[i+1]
+      const midZ = (topNL[i].z + topNL[i + 1].z) / 2;
+      const midYTop = (topNL[i].y + topNL[i + 1].y) / 2;
       const midYBottom = midYTop - trussHeight;
       const bottomMid = new THREE.Vector3(x, midYBottom, midZ);
 
-      webs.push({ start: topNodesLeft[i], end: bottomMid });
-      webs.push({ start: topNodesLeft[i + 1], end: bottomMid });
+      // From top[i] down to bottomMid
+      webs.push({ start: topNL[i], end: bottomMid });
+      // From bottomMid up to top[i+1]
+      webs.push({ start: bottomMid, end: topNL[i + 1] });
     }
+
+    // Last: from top[last] to bottom end
+    webs.push({ start: topNL[numPanels], end: bottomNL[bottomNL.length - 1] });
 
     // Right slope web members
+    // First: from bottom start to top[0]
+    webs.push({ start: bottomNR[0], end: topNR[0] });
+
     for (let i = 0; i < numPanels; i++) {
-      // Bottom midpoint between top[i] and top[i+1]
-      const midZ = (topNodesRight[i].z + topNodesRight[i + 1].z) / 2;
-      const midYTop = (topNodesRight[i].y + topNodesRight[i + 1].y) / 2;
+      // Mid-bottom point between top[i] and top[i+1]
+      const midZ = (topNR[i].z + topNR[i + 1].z) / 2;
+      const midYTop = (topNR[i].y + topNR[i + 1].y) / 2;
       const midYBottom = midYTop - trussHeight;
       const bottomMid = new THREE.Vector3(x, midYBottom, midZ);
 
-      webs.push({ start: topNodesRight[i], end: bottomMid });
-      webs.push({ start: topNodesRight[i + 1], end: bottomMid });
+      // From top[i] down to bottomMid
+      webs.push({ start: topNR[i], end: bottomMid });
+      // From bottomMid up to top[i+1]
+      webs.push({ start: bottomMid, end: topNR[i + 1] });
     }
+
+    // Last: from top[last] to bottom end
+    webs.push({ start: topNR[numPanels], end: bottomNR[bottomNR.length - 1] });
 
     return {
       chordSegments: segments,
       webMembers: webs,
+      topNodesLeft: topNL,
+      bottomNodesLeft: bottomNL,
+      topNodesRight: topNR,
+      bottomNodesRight: bottomNR,
     };
   }, [x, wallHeight, span, effectiveHalfSpan, trussStartOffset, columnFlangeOffset, roofAngleRad, trussHeight, purlinSpacing]);
+
+  const plateSize = chordSize + 0.04;
 
   return (
     <group>
@@ -189,7 +211,7 @@ function TrussFrame({
           material={rafterMaterial}
         />
       ))}
-      {/* Web members (diagonals + verticals) */}
+      {/* Web members (diagonals) */}
       {webMembers.map((member, i) => (
         <TrussMember
           key={`web-${i}`}
@@ -199,6 +221,32 @@ function TrussFrame({
           material={bracingMaterial}
         />
       ))}
+      {/* Plates at truss start (splice with starters) */}
+      <mesh position={[topNodesLeft[0].x, topNodesLeft[0].y, topNodesLeft[0].z]} castShadow receiveShadow material={plateMaterial}>
+        <boxGeometry args={[plateSize, plateSize, 0.015]} />
+      </mesh>
+      <mesh position={[bottomNodesLeft[0].x, bottomNodesLeft[0].y, bottomNodesLeft[0].z]} castShadow receiveShadow material={plateMaterial}>
+        <boxGeometry args={[plateSize, plateSize, 0.015]} />
+      </mesh>
+      <mesh position={[topNodesRight[0].x, topNodesRight[0].y, topNodesRight[0].z]} castShadow receiveShadow material={plateMaterial}>
+        <boxGeometry args={[plateSize, plateSize, 0.015]} />
+      </mesh>
+      <mesh position={[bottomNodesRight[0].x, bottomNodesRight[0].y, bottomNodesRight[0].z]} castShadow receiveShadow material={plateMaterial}>
+        <boxGeometry args={[plateSize, plateSize, 0.015]} />
+      </mesh>
+      {/* Plates at truss end (ridge) */}
+      <mesh position={[topNodesLeft[topNodesLeft.length - 1].x, topNodesLeft[topNodesLeft.length - 1].y, topNodesLeft[topNodesLeft.length - 1].z]} castShadow receiveShadow material={plateMaterial}>
+        <boxGeometry args={[plateSize, plateSize, 0.015]} />
+      </mesh>
+      <mesh position={[bottomNodesLeft[bottomNodesLeft.length - 1].x, bottomNodesLeft[bottomNodesLeft.length - 1].y, bottomNodesLeft[bottomNodesLeft.length - 1].z]} castShadow receiveShadow material={plateMaterial}>
+        <boxGeometry args={[plateSize, plateSize, 0.015]} />
+      </mesh>
+      <mesh position={[topNodesRight[topNodesRight.length - 1].x, topNodesRight[topNodesRight.length - 1].y, topNodesRight[topNodesRight.length - 1].z]} castShadow receiveShadow material={plateMaterial}>
+        <boxGeometry args={[plateSize, plateSize, 0.015]} />
+      </mesh>
+      <mesh position={[bottomNodesRight[bottomNodesRight.length - 1].x, bottomNodesRight[bottomNodesRight.length - 1].y, bottomNodesRight[bottomNodesRight.length - 1].z]} castShadow receiveShadow material={plateMaterial}>
+        <boxGeometry args={[plateSize, plateSize, 0.015]} />
+      </mesh>
     </group>
   );
 }
