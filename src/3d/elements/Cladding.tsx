@@ -452,17 +452,13 @@ export const Cladding = React.memo(function Cladding({
         let panelCenterX = (bayStart + bayEnd) / 2;
 
         if (bayIndex === 0) {
-          // First bay: left edge = endColumnOuterOffset + endWallThicknessOffset + 0.010 (10mm from end wall cladding surface)
-          // Right edge = columnSpacing - 0.010 (20mm/2 dilation at column)
-          const leftEdge = endColumnOuterOffset + endWallThicknessOffset + 0.010;
+          const leftEdge = 0.010;
           const rightEdge = columnSpacing - 0.010;
           panelWidth = rightEdge - leftEdge;
           panelCenterX = (leftEdge + rightEdge) / 2;
         } else if (bayIndex === numberOfBays - 1) {
-          // Last bay: left edge = (numberOfBays-1)*columnSpacing + 0.010 (20mm/2 dilation at column)
-          // Right edge = hallLength - (endColumnOuterOffset + endWallThicknessOffset) - 0.010 (10mm from end wall cladding surface)
           const leftEdge = (numberOfBays - 1) * columnSpacing + 0.010;
-          const rightEdge = hallLength - (endColumnOuterOffset + endWallThicknessOffset) - 0.010;
+          const rightEdge = hallLength - 0.010;
           panelWidth = rightEdge - leftEdge;
           panelCenterX = (leftEdge + rightEdge) / 2;
         }
@@ -540,6 +536,27 @@ export const Cladding = React.memo(function Cladding({
         const panelHeightM = cladding.panelWidth / 1000;
         const numLayers = Math.floor(sideWallHeight / panelHeightM);
 
+        const zPosition = -(columnOuterFlangeOffset + sideWallThicknessOffset);
+
+        // When no color stripes, render a single mesh covering full sideWallHeight
+        if (sideStripes.length === 0) {
+          return (
+            <React.Fragment key={`side-left-${bayIndex}`}>
+              <mesh
+                key={`side-left-${bayIndex}-full`}
+                position={[panelCenterX, sideWallHeight / 2, zPosition]}
+                material={sideWallMat}
+                onPointerDown={placementMode ? (e) => handleSideWallClick('side_left', bayIndex, e) : undefined}
+              >
+                {isSideWallTrapezoid
+                  ? <primitive object={createTrapezoidalGeometry(panelWidth, sideWallHeight, sideWallProfileType, wallWaveAxis, true)} attach="geometry" />
+                  : <boxGeometry args={[panelWidth, sideWallHeight, sandwichThicknessM]} />
+                }
+              </mesh>
+            </React.Fragment>
+          );
+        }
+
         const layerColors: string[] = [];
         for (let layer = 1; layer <= numLayers; layer++) {
           const stripe = sideStripes.find(s => layer >= s.layerStart && layer <= s.layerEnd);
@@ -560,13 +577,20 @@ export const Cladding = React.memo(function Cladding({
           segments.push({ startLayer: segStartLayer, endLayer: numLayers, color: currentColor });
         }
 
-        const zPosition = -(columnOuterFlangeOffset + sideWallThicknessOffset);
+        // Ensure segments cover the full sideWallHeight: if numLayers * panelHeightM < sideWallHeight,
+        // extend the last segment to reach sideWallHeight
+        const coveredHeight = numLayers * panelHeightM;
+        const remainder = sideWallHeight - coveredHeight;
 
         return (
           <React.Fragment key={`side-left-${bayIndex}`}>
             {segments.map((seg, segIdx) => {
-              const segHeight = (seg.endLayer - seg.startLayer + 1) * panelHeightM;
+              let segHeight = (seg.endLayer - seg.startLayer + 1) * panelHeightM;
               const segBottomY = (seg.startLayer - 1) * panelHeightM;
+              // Add remainder to the last segment so it reaches sideWallHeight
+              if (segIdx === segments.length - 1 && remainder > 0.0001) {
+                segHeight += remainder;
+              }
               const segCenterY = segBottomY + segHeight / 2;
               const segMat = seg.color === cladding.sideWallColor ? sideWallMat : makeCladdingMaterial(seg.color);
 
@@ -596,17 +620,13 @@ export const Cladding = React.memo(function Cladding({
         let panelCenterX = (bayStart + bayEnd) / 2;
 
         if (bayIndex === 0) {
-          // First bay: left edge = endColumnOuterOffset + endWallThicknessOffset + 0.010 (10mm from end wall cladding surface)
-          // Right edge = columnSpacing - 0.010 (20mm/2 dilation at column)
-          const leftEdge = endColumnOuterOffset + endWallThicknessOffset + 0.010;
+          const leftEdge = 0.010;
           const rightEdge = columnSpacing - 0.010;
           panelWidth = rightEdge - leftEdge;
           panelCenterX = (leftEdge + rightEdge) / 2;
         } else if (bayIndex === numberOfBays - 1) {
-          // Last bay: left edge = (numberOfBays-1)*columnSpacing + 0.010 (20mm/2 dilation at column)
-          // Right edge = hallLength - (endColumnOuterOffset + endWallThicknessOffset) - 0.010 (10mm from end wall cladding surface)
           const leftEdge = (numberOfBays - 1) * columnSpacing + 0.010;
-          const rightEdge = hallLength - (endColumnOuterOffset + endWallThicknessOffset) - 0.010;
+          const rightEdge = hallLength - 0.010;
           panelWidth = rightEdge - leftEdge;
           panelCenterX = (leftEdge + rightEdge) / 2;
         }
@@ -696,6 +716,28 @@ export const Cladding = React.memo(function Cladding({
         const panelHeightM = cladding.panelWidth / 1000;
         const numLayers = Math.floor(sideWallHeight / panelHeightM);
 
+        const zPosition = span + columnOuterFlangeOffset + sideWallThicknessOffset;
+
+        // When no color stripes, render a single mesh covering full sideWallHeight
+        if (sideStripes.length === 0) {
+          return (
+            <React.Fragment key={`side-right-${bayIndex}`}>
+              <mesh
+                key={`side-right-${bayIndex}-full`}
+                position={[panelCenterX, sideWallHeight / 2, zPosition]}
+                rotation={[0, Math.PI, 0]}
+                material={sideWallMat}
+                onPointerDown={placementMode ? (e) => handleSideWallClick('side_right', bayIndex, e) : undefined}
+              >
+                {isSideWallTrapezoid
+                  ? <primitive object={createTrapezoidalGeometry(panelWidth, sideWallHeight, sideWallProfileType, wallWaveAxis, true)} attach="geometry" />
+                  : <boxGeometry args={[panelWidth, sideWallHeight, sandwichThicknessM]} />
+                }
+              </mesh>
+            </React.Fragment>
+          );
+        }
+
         const layerColors: string[] = [];
         for (let layer = 1; layer <= numLayers; layer++) {
           const stripe = sideStripes.find(s => layer >= s.layerStart && layer <= s.layerEnd);
@@ -716,13 +758,20 @@ export const Cladding = React.memo(function Cladding({
           segments.push({ startLayer: segStartLayer, endLayer: numLayers, color: currentColor });
         }
 
-        const zPosition = span + columnOuterFlangeOffset + sideWallThicknessOffset;
+        // Ensure segments cover the full sideWallHeight: if numLayers * panelHeightM < sideWallHeight,
+        // extend the last segment to reach sideWallHeight
+        const coveredHeight = numLayers * panelHeightM;
+        const remainder = sideWallHeight - coveredHeight;
 
         return (
           <React.Fragment key={`side-right-${bayIndex}`}>
             {segments.map((seg, segIdx) => {
-              const segHeight = (seg.endLayer - seg.startLayer + 1) * panelHeightM;
+              let segHeight = (seg.endLayer - seg.startLayer + 1) * panelHeightM;
               const segBottomY = (seg.startLayer - 1) * panelHeightM;
+              // Add remainder to the last segment so it reaches sideWallHeight
+              if (segIdx === segments.length - 1 && remainder > 0.0001) {
+                segHeight += remainder;
+              }
               const segCenterY = segBottomY + segHeight / 2;
               const segMat = seg.color === cladding.sideWallColor ? sideWallMat : makeCladdingMaterial(seg.color);
 
