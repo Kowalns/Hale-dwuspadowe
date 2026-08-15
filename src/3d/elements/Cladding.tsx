@@ -56,6 +56,44 @@ function trapezoidHeight(x: number, period: number, plateauWidth: number, valley
 }
 
 /**
+ * Creates a PlaneGeometry with V-groove microlining on the surface.
+ * V-groove every 33mm (0.033m), depth 0.5mm (0.0005m).
+ * The grooves run horizontally (along the width of the plane).
+ */
+function createMicrolinedGeometry(
+  width: number,
+  height: number,
+): THREE.PlaneGeometry {
+  const grooveSpacing = 0.033; // 33mm
+  const grooveDepth = 0.0005; // 0.5mm
+
+  // We need enough vertical segments to represent grooves
+  const segY = Math.min(Math.ceil(height / grooveSpacing) * 4, 2000);
+  const segX = Math.max(Math.ceil(width * 2), 20);
+
+  const geo = new THREE.PlaneGeometry(width, height, segX, segY);
+  const pos = geo.attributes.position;
+
+  for (let i = 0; i < pos.count; i++) {
+    const y = pos.getY(i);
+    // Position in groove cycle (offset to start from bottom)
+    const localY = y + height / 2;
+    const phase = ((localY % grooveSpacing) + grooveSpacing) % grooveSpacing;
+    const normalized = phase / grooveSpacing;
+    // V-groove: sharp dip at the groove line (normalized ~ 0 or ~ 1)
+    // Use a triangle wave that creates a V-shape at each groove boundary
+    const distFromGroove = Math.abs(normalized - 0.5) * 2; // 0 at center, 1 at edges (groove lines)
+    // Invert: deepest at edges (groove lines), flat at center
+    const displacement = -grooveDepth * Math.pow(distFromGroove, 4);
+    pos.setZ(i, displacement);
+  }
+
+  pos.needsUpdate = true;
+  geo.computeVertexNormals();
+  return geo;
+}
+
+/**
  * Profile parameters for trapezoidal sheets (in meters).
  * T18: height 18mm, plateau 70mm, valley 188mm, period ~290mm
  * T35: height 35mm, plateau 126mm, valley 210mm, period ~381mm
@@ -500,6 +538,52 @@ export const Cladding = React.memo(function Cladding({
 
     onPlaceOpening(newOpening);
   };
+
+  // Joint line (dark strip) material for visible locks/dilation at column positions
+  const jointLineMaterial = useMemo(() => new THREE.MeshStandardMaterial({
+    color: '#404040',
+    roughness: 0.6,
+    metalness: 0.3,
+    depthWrite: true,
+  }), []);
+
+  useEffect(() => {
+    return () => { jointLineMaterial.dispose(); };
+  }, [jointLineMaterial]);
+
+  // Microlining overlay material (slightly darker than sandwich panel, to show groove shadow)
+  const microlineMaterialSide = useMemo(() => new THREE.MeshStandardMaterial({
+    color: getRALHex(cladding.sideWallColor),
+    roughness: 0.4,
+    metalness: 0.1,
+    side: THREE.FrontSide,
+    depthWrite: true,
+  }), [cladding.sideWallColor]);
+
+  useEffect(() => {
+    return () => { microlineMaterialSide.dispose(); };
+  }, [microlineMaterialSide]);
+
+  const microlineMaterialEnd = useMemo(() => new THREE.MeshStandardMaterial({
+    color: getRALHex(cladding.endWallColor),
+    roughness: 0.4,
+    metalness: 0.1,
+    side: THREE.FrontSide,
+    depthWrite: true,
+  }), [cladding.endWallColor]);
+
+  useEffect(() => {
+    return () => { microlineMaterialEnd.dispose(); };
+  }, [microlineMaterialEnd]);
+
+  // Column X positions for joint lines on side walls
+  const columnXPositions = useMemo(() => {
+    const positions: number[] = [];
+    for (let i = 0; i <= numberOfBays; i++) {
+      positions.push(i * columnSpacing);
+    }
+    return positions;
+  }, [numberOfBays, columnSpacing]);
 
   if (!showCladding) return null;
 
@@ -967,6 +1051,73 @@ export const Cladding = React.memo(function Cladding({
         geometry={roofGeometry}
         material={roofMat}
       />
+
+      {/* Microlining overlay on sandwich side walls (V-groove texture) */}
+      {!isSideWallTrapezoid && Array.from({ length: numberOfBays }).map((_, bayIndex) => {
+        const bayStart = bayIndex * columnSpacing;
+        const bayEnd = (bayIndex + 1) * columnSpacing;
+        let panelWidth = columnSpacing - 0.020;
+        let panelCenterX = (bayStart + bayEnd) / 2;
+
+        if (bayIndex === 0) {
+          const leftEdge = -(endColumnOuterOffset + endWallThicknessOffset) + 0.010;
+          const rightEdge = columnSpacing - 0.010;
+          panelWidth = rightEdge - leftEdge;
+          panelCenterX = (leftEdge + rightEdge) / 2;
+        } else if (bayIndex === numberOfBays - 1) {
+          const leftEdge = (numberOfBays - 1) * columnSpacing + 0.010;
+          const rightEdge = hallLength + endColumnOuterOffset + endWallThicknessOffset - 0.010;
+          panelWidth = rightEdge - leftEdge;
+          panelCenterX = (leftEdge + rightEdge) / 2;
+        }
+
+        const zLeft = -(columnOuterFlangeOffset + sideWallThicknessOffset) - 0.001;
+        const zRight = span + columnOuterFlangeOffset + sideWallThicknessOffset + 0.001;
+
+        return (
+          <React.Fragment key={`microline-side-${bayIndex}`}>
+            {/* Left wall microlining */}
+            <mesh
+              position={[panelCenterX, sideWallHeight / 2, zLeft]}
+              material={microlineMaterialSide}
+            >
+              <primitive object={createMicrolinedGeometry(panelWidth, sideWallHeight)} attach="geometry" />
+            </mesh>
+            {/* Right wall microlining */}
+            <mesh
+              position={[panelCenterX, sideWallHeight / 2, zRight]}
+              rotation={[0, Math.PI, 0]}
+              material={microlineMaterialSide}
+            >
+              <primitive object={createMicrolinedGeometry(panelWidth, sideWallHeight)} attach="geometry" />
+            </mesh>
+          </React.Fragment>
+        );
+      })}
+
+      {/* Joint lines (dark dilation strips) at column positions on side walls */}
+      {columnXPositions.map((xPos, idx) => {
+        const zLeft = -(columnOuterFlangeOffset + sideWallThicknessOffset);
+        const zRight = span + columnOuterFlangeOffset + sideWallThicknessOffset;
+        return (
+          <React.Fragment key={`joint-${idx}`}>
+            {/* Left wall joint */}
+            <mesh
+              position={[xPos, sideWallHeight / 2, zLeft]}
+              material={jointLineMaterial}
+            >
+              <boxGeometry args={[0.005, sideWallHeight, 0.020]} />
+            </mesh>
+            {/* Right wall joint */}
+            <mesh
+              position={[xPos, sideWallHeight / 2, zRight]}
+              material={jointLineMaterial}
+            >
+              <boxGeometry args={[0.005, sideWallHeight, 0.020]} />
+            </mesh>
+          </React.Fragment>
+        );
+      })}
     </group>
   );
 });
