@@ -52,8 +52,8 @@ export const ColumnCaps = React.memo(function ColumnCaps({
           {/* Left side (Z=0): cap plate rotated around its top surface */}
           <mesh
             material={plateMaterial}
-            position={[x, wallHeight - plateThickness / 2 - dropForSlope, 0]}
-            rotation={[-roofAngleRad, 0, 0]}
+            position={[x, wallHeight - plateThickness / 2 + dropForSlope, 0]}
+            rotation={[roofAngleRad, 0, 0]}
             castShadow
             receiveShadow
           >
@@ -62,8 +62,8 @@ export const ColumnCaps = React.memo(function ColumnCaps({
           {/* Right side (Z=span): cap plate rotated around its top surface */}
           <mesh
             material={plateMaterial}
-            position={[x, wallHeight - plateThickness / 2 - dropForSlope, span]}
-            rotation={[roofAngleRad, 0, 0]}
+            position={[x, wallHeight - plateThickness / 2 + dropForSlope, span]}
+            rotation={[-roofAngleRad, 0, 0]}
             castShadow
             receiveShadow
           >
