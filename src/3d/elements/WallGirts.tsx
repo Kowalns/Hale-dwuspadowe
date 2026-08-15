@@ -41,6 +41,11 @@ export const WallGirts = React.memo(function WallGirts({
   // Determine which bays have gates for each side wall
   const hasPerBayInfo = columnSpacing != null && numberOfFrames != null;
 
+  // Bay-level girt suppression: per specification ("Nie renderuj rygla w bay gdzie jest brama"),
+  // the entire bay's girt segment is skipped when a gate is present. This is intentional --
+  // splitting the girt into sub-segments around the gate would require additional structural
+  // supports and is not part of the current design. The resulting gap may be wider than the
+  // gate itself, but this matches the structural engineering intent.
   const bayData = useMemo(() => {
     if (!hasPerBayInfo || !openings || !columnSpacing || !numberOfFrames) return null;
 
@@ -55,16 +60,24 @@ export const WallGirts = React.memo(function WallGirts({
         // positionX is the local horizontal position along the wall (from left edge)
         // For side_left, worldX = positionX
         const worldX = opening.positionX;
-        const bayIndex = Math.floor(worldX / columnSpacing);
-        if (bayIndex >= 0 && bayIndex < numBays) {
-          leftBays[bayIndex] = true;
+        // Check all bays that the gate physically occupies (left edge to right edge),
+        // not just the bay containing the center. This handles gates straddling bay boundaries.
+        const gateLeftEdge = worldX - opening.width / 2;
+        const gateRightEdge = worldX + opening.width / 2;
+        const firstBay = Math.max(0, Math.floor(gateLeftEdge / columnSpacing));
+        const lastBay = Math.min(numBays - 1, Math.floor((gateRightEdge - 0.001) / columnSpacing));
+        for (let bay = firstBay; bay <= lastBay; bay++) {
+          leftBays[bay] = true;
         }
       } else if (opening.wall === 'side_right') {
         // For side_right, worldX = hallLength - positionX
         const worldX = hallLength - opening.positionX;
-        const bayIndex = Math.floor(worldX / columnSpacing);
-        if (bayIndex >= 0 && bayIndex < numBays) {
-          rightBays[bayIndex] = true;
+        const gateLeftEdge = worldX - opening.width / 2;
+        const gateRightEdge = worldX + opening.width / 2;
+        const firstBay = Math.max(0, Math.floor(gateLeftEdge / columnSpacing));
+        const lastBay = Math.min(numBays - 1, Math.floor((gateRightEdge - 0.001) / columnSpacing));
+        for (let bay = firstBay; bay <= lastBay; bay++) {
+          rightBays[bay] = true;
         }
       }
     }
@@ -177,6 +190,14 @@ interface BayGirtSegmentProps {
   thickness: number;
 }
 
+/**
+ * Each BayGirtSegment creates its own RHS geometry via useRHSGeometry. This means
+ * a 10-bay hall produces up to 20 geometry instances (10 bays x 2 walls) instead of
+ * sharing one. This tradeoff is acceptable because:
+ * - The last bay may have a different length (hallLength not an exact multiple of columnSpacing)
+ * - React Three Fiber / Three.js handles small geometry counts efficiently
+ * - Merging adjacent non-skipped segments would add complexity for minimal GPU savings
+ */
 function BayGirtSegment({
   bayIndex,
   columnSpacing,

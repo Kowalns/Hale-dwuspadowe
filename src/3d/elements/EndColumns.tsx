@@ -3,6 +3,127 @@ import { useRHSGeometry } from '../profiles/RHSGeometry';
 import { columnMaterial } from '../materials';
 import type { SteelProfile, Opening } from '../../types';
 
+interface DynamicColumnEntry {
+  z: number;
+  startY: number;
+  colHeight: number;
+}
+
+/**
+ * Pure function extracted outside the component so that useMemo dependency lists
+ * are explicit and no eslint-disable is needed for react-hooks/exhaustive-deps.
+ *
+ * Generates dynamic column placements for an end wall with gates.
+ * Gate jamb columns are NOT generated here because GateFrame already renders them.
+ * This function only produces:
+ * - Filler columns between gate jambs and corners/other jambs
+ * - Above-lintel columns at gate centers
+ */
+function generateDynamicColumns(
+  wallGates: Opening[],
+  wallName: 'end_front' | 'end_back',
+  span: number,
+  wallHeight: number,
+  ridgeHeight: number,
+): DynamicColumnEntry[] {
+  // Compute height at a given Z position following roof slope
+  const getHeightAtZ = (z: number): number => {
+    const distFromEdge = Math.min(z, span - z);
+    return wallHeight + (ridgeHeight - wallHeight) * (distFromEdge / (span / 2));
+  };
+
+  // Collect gate jamb positions in world Z
+  const jambPositions: Array<{ z: number; gateHeight: number; gateCenter: number }> = [];
+
+  for (const gate of wallGates) {
+    let centerZ: number;
+    if (wallName === 'end_front') {
+      centerZ = span - gate.positionX;
+    } else {
+      centerZ = gate.positionX;
+    }
+    const leftJamb = centerZ - gate.width / 2;
+    const rightJamb = centerZ + gate.width / 2;
+    jambPositions.push({ z: leftJamb, gateHeight: gate.height, gateCenter: centerZ });
+    jambPositions.push({ z: rightJamb, gateHeight: gate.height, gateCenter: centerZ });
+  }
+
+  // Collect all fixed Z positions (gate jambs), excluding corners at 0 and span
+  const fixedZs = jambPositions.map((j) => j.z).filter((z) => z > 0.01 && z < span - 0.01);
+  // Sort and deduplicate
+  const sortedFixedZs = [...new Set(fixedZs)].sort((a, b) => a - b);
+
+  // All boundary points including corners
+  const allBoundaries = [0, ...sortedFixedZs, span];
+
+  const columns: DynamicColumnEntry[] = [];
+
+  // Gate jamb columns are NOT rendered here - GateFrame already renders them.
+  // We only use jamb positions as boundary points for filler column placement.
+
+  // Add filler columns between adjacent boundaries
+  for (let i = 0; i < allBoundaries.length - 1; i++) {
+    const leftZ = allBoundaries[i];
+    const rightZ = allBoundaries[i + 1];
+    const gap = rightZ - leftZ;
+
+    // Check if this gap contains a gate (i.e., both boundaries are jambs of same gate)
+    const isGateSpan = wallGates.some((gate) => {
+      let centerZ: number;
+      if (wallName === 'end_front') {
+        centerZ = span - gate.positionX;
+      } else {
+        centerZ = gate.positionX;
+      }
+      const lj = centerZ - gate.width / 2;
+      const rj = centerZ + gate.width / 2;
+      return Math.abs(leftZ - lj) < 0.01 && Math.abs(rightZ - rj) < 0.01;
+    });
+
+    if (isGateSpan) {
+      // No filler columns inside the gate span
+      continue;
+    }
+
+    // Add filler columns: 1 at midpoint if gap <= 3m, else 2 evenly spaced
+    if (gap > 0.5) { // only add if meaningful gap
+      if (gap > 3.0) {
+        // 2 columns at 1/3 and 2/3
+        const z1 = leftZ + gap / 3;
+        const z2 = leftZ + (2 * gap) / 3;
+        columns.push({ z: z1, startY: 0, colHeight: getHeightAtZ(z1) });
+        columns.push({ z: z2, startY: 0, colHeight: getHeightAtZ(z2) });
+      } else {
+        // 1 column at midpoint
+        const zMid = leftZ + gap / 2;
+        columns.push({ z: zMid, startY: 0, colHeight: getHeightAtZ(zMid) });
+      }
+    }
+  }
+
+  // Add column above lintel at gate center (from lintel top to roof height)
+  for (const gate of wallGates) {
+    let centerZ: number;
+    if (wallName === 'end_front') {
+      centerZ = span - gate.positionX;
+    } else {
+      centerZ = gate.positionX;
+    }
+    const lintelTop = gate.height + 0.450; // LINTEL_HEIGHT
+    const roofHeightAtCenter = getHeightAtZ(centerZ);
+    const aboveLintelHeight = roofHeightAtCenter - lintelTop;
+    if (aboveLintelHeight > 0.05) {
+      columns.push({
+        z: centerZ,
+        startY: lintelTop,
+        colHeight: aboveLintelHeight,
+      });
+    }
+  }
+
+  return columns;
+}
+
 interface EndColumnsProps {
   profile: SteelProfile;
   wallHeight: number;
@@ -16,9 +137,11 @@ interface EndColumnsProps {
  * Renders RHS/SHS end columns on both gable ends (X=0 and X=length).
  * 
  * When gates are present on an end wall, columns are placed dynamically:
- * - 2 columns at gate jamb positions (gateCenter +/- gateWidth/2)
  * - Filler columns between gate jambs and corners (1 if distance <= 3m, else 2)
  * - 1 column above lintel at gate center (from lintel top to roof slope)
+ * 
+ * Gate jamb columns are NOT rendered here since GateFrame handles them,
+ * avoiding duplicate meshes at the same positions.
  * 
  * When no gates exist on a wall, uniform spacing is used (original behavior).
  */
@@ -64,128 +187,16 @@ export const EndColumns = React.memo(function EndColumns({
     return positions;
   }, [span, wallHeight, ridgeHeight]);
 
-  // Compute height at a given Z position following roof slope
-  const getHeightAtZ = (z: number): number => {
-    const distFromEdge = Math.min(z, span - z);
-    return wallHeight + (ridgeHeight - wallHeight) * (distFromEdge / (span / 2));
-  };
-
-  // Generate dynamic columns for a wall with gates
-  const generateDynamicColumns = (
-    wallGates: Opening[],
-    wallName: 'end_front' | 'end_back'
-  ): Array<{ z: number; startY: number; colHeight: number }> => {
-    // Collect gate jamb positions in world Z
-    const jambPositions: Array<{ z: number; gateHeight: number; gateCenter: number }> = [];
-
-    for (const gate of wallGates) {
-      let centerZ: number;
-      if (wallName === 'end_front') {
-        centerZ = span - gate.positionX;
-      } else {
-        centerZ = gate.positionX;
-      }
-      const leftJamb = centerZ - gate.width / 2;
-      const rightJamb = centerZ + gate.width / 2;
-      jambPositions.push({ z: leftJamb, gateHeight: gate.height, gateCenter: centerZ });
-      jambPositions.push({ z: rightJamb, gateHeight: gate.height, gateCenter: centerZ });
-    }
-
-    // Collect all fixed Z positions (gate jambs), excluding corners at 0 and span
-    const fixedZs = jambPositions.map((j) => j.z).filter((z) => z > 0.01 && z < span - 0.01);
-    // Sort and deduplicate
-    const sortedFixedZs = [...new Set(fixedZs)].sort((a, b) => a - b);
-
-    // All boundary points including corners
-    const allBoundaries = [0, ...sortedFixedZs, span];
-
-    const columns: Array<{ z: number; startY: number; colHeight: number }> = [];
-
-    // Add gate jamb columns (startY=0, height up to bottom of lintel = gate height)
-    for (const jamb of jambPositions) {
-      if (jamb.z <= 0.01 || jamb.z >= span - 0.01) continue; // skip if at corner
-      columns.push({
-        z: jamb.z,
-        startY: 0,
-        colHeight: jamb.gateHeight,
-      });
-    }
-
-    // Add filler columns between adjacent boundaries
-    for (let i = 0; i < allBoundaries.length - 1; i++) {
-      const leftZ = allBoundaries[i];
-      const rightZ = allBoundaries[i + 1];
-      const gap = rightZ - leftZ;
-
-      // Check if this gap contains a gate (i.e., both boundaries are jambs of same gate)
-      const isGateSpan = wallGates.some((gate) => {
-        let centerZ: number;
-        if (wallName === 'end_front') {
-          centerZ = span - gate.positionX;
-        } else {
-          centerZ = gate.positionX;
-        }
-        const lj = centerZ - gate.width / 2;
-        const rj = centerZ + gate.width / 2;
-        return Math.abs(leftZ - lj) < 0.01 && Math.abs(rightZ - rj) < 0.01;
-      });
-
-      if (isGateSpan) {
-        // No filler columns inside the gate span
-        continue;
-      }
-
-      // Add filler columns: 1 at midpoint if gap <= 3m, else 2 evenly spaced
-      if (gap > 0.5) { // only add if meaningful gap
-        if (gap > 3.0) {
-          // 2 columns at 1/3 and 2/3
-          const z1 = leftZ + gap / 3;
-          const z2 = leftZ + (2 * gap) / 3;
-          columns.push({ z: z1, startY: 0, colHeight: getHeightAtZ(z1) });
-          columns.push({ z: z2, startY: 0, colHeight: getHeightAtZ(z2) });
-        } else {
-          // 1 column at midpoint
-          const zMid = leftZ + gap / 2;
-          columns.push({ z: zMid, startY: 0, colHeight: getHeightAtZ(zMid) });
-        }
-      }
-    }
-
-    // Add column above lintel at gate center (from lintel top to roof height)
-    for (const gate of wallGates) {
-      let centerZ: number;
-      if (wallName === 'end_front') {
-        centerZ = span - gate.positionX;
-      } else {
-        centerZ = gate.positionX;
-      }
-      const lintelTop = gate.height + 0.450; // LINTEL_HEIGHT
-      const roofHeightAtCenter = getHeightAtZ(centerZ);
-      const aboveLintelHeight = roofHeightAtCenter - lintelTop;
-      if (aboveLintelHeight > 0.05) {
-        columns.push({
-          z: centerZ,
-          startY: lintelTop,
-          colHeight: aboveLintelHeight,
-        });
-      }
-    }
-
-    return columns;
-  };
-
   // Compute columns for front wall
   const frontColumns = useMemo(() => {
     if (frontGates.length === 0) return null;
-    return generateDynamicColumns(frontGates, 'end_front');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return generateDynamicColumns(frontGates, 'end_front', span, wallHeight, ridgeHeight);
   }, [frontGates, span, wallHeight, ridgeHeight]);
 
   // Compute columns for back wall
   const backColumns = useMemo(() => {
     if (backGates.length === 0) return null;
-    return generateDynamicColumns(backGates, 'end_back');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return generateDynamicColumns(backGates, 'end_back', span, wallHeight, ridgeHeight);
   }, [backGates, span, wallHeight, ridgeHeight]);
 
   /**
