@@ -231,7 +231,7 @@ export const Cladding = React.memo(function Cladding({
   const roofGeometryRight = useMemo(() => {
     if (isRoofTrapezoid) {
       const profileType = cladding.roofType === 'T35' ? 'T35' : 'T18';
-      return createTrapezoidalGeometry(roofWidth, roofSlopeLengthWithOverhang, profileType, 'x', true); // invert=true
+      return createTrapezoidalGeometry(roofWidth, roofSlopeLengthWithOverhang, profileType, 'x');
     }
     return new THREE.BoxGeometry(roofWidth, roofSlopeLengthWithOverhang, 0.1);
   }, [roofWidth, roofSlopeLengthWithOverhang, isRoofTrapezoid, cladding.roofType]);
@@ -1159,7 +1159,7 @@ export const Cladding = React.memo(function Cladding({
       {/* Roof - left slope (Z=0 side going up to ridge) */}
       {/* Roof panels extend beyond side walls by eaveOverhang */}
       {(() => {
-        const roofAmpOffset = isRoofTrapezoid ? getTrapezoidalParams(cladding.roofType === 'T35' ? 'T35' : 'T18').height * 2 : 0;
+        const roofAmpOffset = isRoofTrapezoid ? getTrapezoidalParams(cladding.roofType === 'T35' ? 'T35' : 'T18').height * 3 : 0;
         // Roof center Y: bottom edge must be at wallHeight (eave level), so center = wallHeight + half slope rise
         const roofCenterY = wallHeight + (roofSlopeLengthWithOverhang / 2) * Math.sin(roofAngleRad) + roofAmpOffset;
         // Z positions: left slope center, right slope center
