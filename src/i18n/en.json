@@ -219,7 +219,12 @@
     "noOpenings": "No openings",
     "delete": "Delete",
     "collisionWarning": "Collision with existing opening",
-    "outOfBounds": "Opening does not fit within wall"
+    "outOfBounds": "Opening does not fit within wall",
+    "gateFrame": {
+      "column": "Gate column",
+      "lintel": "Gate lintel",
+      "profile": "RHS 100x100x4"
+    }
   },
   "skylight": {
     "title": "Ridge skylight",

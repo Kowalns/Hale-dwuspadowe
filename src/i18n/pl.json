@@ -219,7 +219,12 @@
     "noOpenings": "Brak otworow",
     "delete": "Usun",
     "collisionWarning": "Kolizja z istniejacym otworem",
-    "outOfBounds": "Otwor nie miesci sie w scianie"
+    "outOfBounds": "Otwor nie miesci sie w scianie",
+    "gateFrame": {
+      "column": "Slup bramy",
+      "lintel": "Nadproze bramy",
+      "profile": "RHS 100x100x4"
+    }
   },
   "skylight": {
     "title": "Swietlik kalenicowy",

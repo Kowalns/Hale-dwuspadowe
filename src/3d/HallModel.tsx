@@ -17,6 +17,7 @@ import { TrussColumnHead } from './elements/TrussColumnHead';
 import { ColumnCaps } from './elements/ColumnCaps';
 import { Cladding } from './elements/Cladding';
 import { Openings } from './elements/Openings';
+import { GateFrame } from './elements/GateFrame';
 import { Skylight } from './elements/Skylight';
 import { getEffectiveRafterTop } from '../utils/geometry';
 import type { HallParameters, CalculationResults, CladdingParameters, Opening, OpeningType, SkylightParameters } from '../types';
@@ -262,6 +263,9 @@ export const HallModel = React.memo(function HallModel({ params, results, claddi
           wallHeight={effectiveColumnHeight}
           span={span}
           hallLength={hallLength}
+          openings={openings}
+          columnSpacing={columnSpacing}
+          numberOfFrames={numberOfFrames}
         />
       )}
 
@@ -310,6 +314,11 @@ export const HallModel = React.memo(function HallModel({ params, results, claddi
       {/* Openings (gates, doors, windows) */}
       {openings && openings.length > 0 && (
         <Openings params={params} openings={openings} wallZOffset={wallZOffset} />
+      )}
+
+      {/* Gate structural frames (columns + lintel) */}
+      {openings && openings.length > 0 && (
+        <GateFrame openings={openings} params={params} />
       )}
 
       {/* Ridge skylight */}
