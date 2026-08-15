@@ -35,7 +35,6 @@ export const ColumnCaps = React.memo(function ColumnCaps({
   const profileH = sideColumnProfile.h / 1000; // depth along Z
   const plateThickness = 0.01; // 10mm
   const roofAngleRad = (roofAngle * Math.PI) / 180;
-  const dropForSlope = (profileH / 2) * Math.sin(roofAngleRad);
 
   const framePositions = useMemo(() => {
     const positions: number[] = [];
@@ -49,26 +48,18 @@ export const ColumnCaps = React.memo(function ColumnCaps({
     <group name="column-caps">
       {framePositions.map((x, i) => (
         <React.Fragment key={i}>
-          {/* Left side (Z=0): cap plate rotated around its top surface */}
-          <mesh
-            material={plateMaterial}
-            position={[x, wallHeight - plateThickness / 2 + dropForSlope, 0]}
-            rotation={[roofAngleRad, 0, 0]}
-            castShadow
-            receiveShadow
-          >
-            <boxGeometry args={[profileB, plateThickness, profileH]} />
-          </mesh>
-          {/* Right side (Z=span): cap plate rotated around its top surface */}
-          <mesh
-            material={plateMaterial}
-            position={[x, wallHeight - plateThickness / 2 + dropForSlope, span]}
-            rotation={[-roofAngleRad, 0, 0]}
-            castShadow
-            receiveShadow
-          >
-            <boxGeometry args={[profileB, plateThickness, profileH]} />
-          </mesh>
+          {/* Left side (Z=0): inner edge (toward ridge, +Z) is higher */}
+          <group position={[x, wallHeight, 0]} rotation={[-roofAngleRad, 0, 0]}>
+            <mesh material={plateMaterial} position={[0, -plateThickness / 2, 0]} castShadow receiveShadow>
+              <boxGeometry args={[profileB, plateThickness, profileH]} />
+            </mesh>
+          </group>
+          {/* Right side (Z=span): inner edge (toward ridge, -Z) is higher */}
+          <group position={[x, wallHeight, span]} rotation={[roofAngleRad, 0, 0]}>
+            <mesh material={plateMaterial} position={[0, -plateThickness / 2, 0]} castShadow receiveShadow>
+              <boxGeometry args={[profileB, plateThickness, profileH]} />
+            </mesh>
+          </group>
         </React.Fragment>
       ))}
     </group>
