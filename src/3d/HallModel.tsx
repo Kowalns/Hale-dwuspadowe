@@ -297,7 +297,7 @@ export const HallModel = React.memo(function HallModel({ params, results, claddi
 
       {/* Openings (gates, doors, windows) */}
       {openings && openings.length > 0 && (
-        <Openings params={params} openings={openings} />
+        <Openings params={params} openings={openings} columnOuterFlangeOffset={columnOuterFlangeOffset} />
       )}
 
       {/* Ridge skylight */}

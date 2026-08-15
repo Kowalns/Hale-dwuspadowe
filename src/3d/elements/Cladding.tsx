@@ -44,8 +44,11 @@ function createTrapezoidalGeometry(
   period: number,
   waveAxis: 'x' | 'y',
 ): THREE.PlaneGeometry {
-  const segmentsW = 200;
-  const segmentsH = 100;
+  // Scale segments based on wave period to avoid under-sampling on long walls.
+  // At least 4 segments per wave cycle ensures smooth sinusoidal appearance.
+  // Capped to avoid excessive memory usage.
+  const segmentsW = Math.min(Math.ceil(width / period) * 4, 800);
+  const segmentsH = Math.min(Math.ceil(height / period) * 4, 400);
   const geo = new THREE.PlaneGeometry(width, height, segmentsW, segmentsH);
   const pos = geo.attributes.position;
 

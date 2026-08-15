@@ -5,47 +5,51 @@ import type { HallParameters, Opening, WallIdentifier } from '../../types';
 interface OpeningsProps {
   params: HallParameters;
   openings: Opening[];
+  columnOuterFlangeOffset: number;
 }
 
 /**
  * Computes the 3D position and rotation of an opening on its wall.
+ * Walls are positioned at columnOuterFlangeOffset outward from the column centers,
+ * so openings must also be placed on that outer surface.
  */
 function getOpeningTransform(
   opening: Opening,
-  params: HallParameters
+  params: HallParameters,
+  columnOuterFlangeOffset: number
 ): { position: [number, number, number]; rotation: [number, number, number] } {
   const { span, length: hallLength } = params;
   const wallOffset = 0.02; // offset from wall surface to avoid z-fighting
 
   switch (opening.wall) {
     case 'side_left':
-      // Z=0 face, looking from -Z
+      // Wall is at Z = -columnOuterFlangeOffset, opening sits just outside
       return {
-        position: [opening.positionX, opening.positionY, -wallOffset],
+        position: [opening.positionX, opening.positionY, -columnOuterFlangeOffset - wallOffset],
         rotation: [0, 0, 0],
       };
     case 'side_right':
-      // Z=span face, looking from +Z
+      // Wall is at Z = span + columnOuterFlangeOffset, opening sits just outside
       // positionX is stored in mirrored local coords (worldToLocal on PI-rotated mesh flips X),
       // so we un-mirror with hallLength - positionX to recover world X
       return {
-        position: [hallLength - opening.positionX, opening.positionY, span + wallOffset],
+        position: [hallLength - opening.positionX, opening.positionY, span + columnOuterFlangeOffset + wallOffset],
         rotation: [0, Math.PI, 0],
       };
     case 'end_front':
-      // X=0 face, looking from -X
+      // Wall is at X = -columnOuterFlangeOffset, opening sits just outside
       // positionX is stored in rotated local coords (PI/2 rotation mirrors Z),
       // so we un-mirror with span - positionX to recover world Z
       return {
-        position: [-wallOffset, opening.positionY, span - opening.positionX],
+        position: [-columnOuterFlangeOffset - wallOffset, opening.positionY, span - opening.positionX],
         rotation: [0, Math.PI / 2, 0],
       };
     case 'end_back':
-      // X=hallLength face, looking from +X
+      // Wall is at X = hallLength + columnOuterFlangeOffset, opening sits just outside
       // positionX is stored in rotated local coords (-PI/2 rotation),
       // which maps directly to world Z without mirroring
       return {
-        position: [hallLength + wallOffset, opening.positionY, opening.positionX],
+        position: [hallLength + columnOuterFlangeOffset + wallOffset, opening.positionY, opening.positionX],
         rotation: [0, -Math.PI / 2, 0],
       };
   }
@@ -54,10 +58,10 @@ function getOpeningTransform(
 /**
  * Renders a single opening with type-specific decorations.
  */
-function OpeningMesh({ opening, params, cutoutMat, detailMat }: { opening: Opening; params: HallParameters; cutoutMat: THREE.MeshStandardMaterial; detailMat: THREE.MeshStandardMaterial }) {
+function OpeningMesh({ opening, params, columnOuterFlangeOffset, cutoutMat, detailMat }: { opening: Opening; params: HallParameters; columnOuterFlangeOffset: number; cutoutMat: THREE.MeshStandardMaterial; detailMat: THREE.MeshStandardMaterial }) {
   const { position, rotation } = useMemo(
-    () => getOpeningTransform(opening, params),
-    [opening, params]
+    () => getOpeningTransform(opening, params, columnOuterFlangeOffset),
+    [opening, params, columnOuterFlangeOffset]
   );
 
   const { width, height, type, wall } = opening;
@@ -268,7 +272,7 @@ export function fitsInWall(opening: Opening, params: HallParameters): boolean {
  * Openings component rendering all openings from the array.
  * Materials are created inside the component and disposed on unmount.
  */
-export const Openings = React.memo(function Openings({ params, openings }: OpeningsProps) {
+export const Openings = React.memo(function Openings({ params, openings, columnOuterFlangeOffset }: OpeningsProps) {
   const cutoutMat = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
@@ -303,7 +307,7 @@ export const Openings = React.memo(function Openings({ params, openings }: Openi
   return (
     <group name="openings">
       {openings.map((opening) => (
-        <OpeningMesh key={opening.id} opening={opening} params={params} cutoutMat={cutoutMat} detailMat={detailMat} />
+        <OpeningMesh key={opening.id} opening={opening} params={params} columnOuterFlangeOffset={columnOuterFlangeOffset} cutoutMat={cutoutMat} detailMat={detailMat} />
       ))}
     </group>
   );
