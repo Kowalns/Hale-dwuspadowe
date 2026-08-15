@@ -1,8 +1,8 @@
 import React, { useMemo } from 'react';
 import { columnMaterial } from '../materials';
-import type { HallParameters, Opening } from '../../types';
+import type { HallParameters, Opening, SteelProfile } from '../../types';
 
-// Gate frame profile: RHS 100x100x4 in meters
+// Gate frame profile: RHS 100x100x4 in meters (used for side wall gates)
 const GATE_PROFILE_W = 0.100;
 const GATE_PROFILE_H = 0.100;
 // Lintel: 2 horizontal beams at 450mm outside-to-outside spacing
@@ -15,6 +15,7 @@ interface GateFrameProps {
   params: HallParameters;
   wallHeight: number;
   ridgeHeight: number;
+  endColumnProfile?: SteelProfile;
 }
 
 /**
@@ -28,8 +29,13 @@ export const GateFrame = React.memo(function GateFrame({
   params,
   wallHeight,
   ridgeHeight,
+  endColumnProfile,
 }: GateFrameProps) {
   const { span, length: hallLength } = params;
+
+  // End wall gate column dimensions from endColumnProfile (if provided)
+  const endColW = endColumnProfile ? endColumnProfile.b / 1000 : GATE_PROFILE_W;
+  const endColH = endColumnProfile ? endColumnProfile.h / 1000 : GATE_PROFILE_H;
 
   // Filter gate openings only
   const gateOpenings = useMemo(
@@ -49,6 +55,8 @@ export const GateFrame = React.memo(function GateFrame({
           hallLength={hallLength}
           wallHeight={wallHeight}
           ridgeHeight={ridgeHeight}
+          endColW={endColW}
+          endColH={endColH}
         />
       ))}
     </group>
@@ -61,9 +69,11 @@ interface SingleGateFrameProps {
   hallLength: number;
   wallHeight: number;
   ridgeHeight: number;
+  endColW: number;
+  endColH: number;
 }
 
-function SingleGateFrame({ opening, span, hallLength, wallHeight, ridgeHeight }: SingleGateFrameProps) {
+function SingleGateFrame({ opening, span, hallLength, wallHeight, ridgeHeight, endColW, endColH }: SingleGateFrameProps) {
   const { wall, width: gateWidth, height: gateHeight, positionX } = opening;
 
   // Compute world position based on wall
@@ -120,8 +130,12 @@ function SingleGateFrame({ opening, span, hallLength, wallHeight, ridgeHeight }:
   // Lintel beam length = distance between outer edges of columns
   const lintelLength = gateWidth;
 
-  // Post height = distance between inner faces of lintel beams = 450 - 2*100 = 250mm
-  const postInnerHeight = LINTEL_HEIGHT - 2 * GATE_PROFILE_H;
+  // Column profile dimensions: use endColumnProfile for end walls, RHS 100x100 for side walls
+  const colW = isSideWall ? GATE_PROFILE_W : endColW;
+  const colH = isSideWall ? GATE_PROFILE_H : endColH;
+
+  // Post height = distance between inner faces of lintel beams = 450 - 2*profileH
+  const postInnerHeight = LINTEL_HEIGHT - 2 * colH;
 
   return (
     <group>
@@ -132,6 +146,8 @@ function SingleGateFrame({ opening, span, hallLength, wallHeight, ridgeHeight }:
         z={position.z + (isSideWall ? 0 : leftColOffset)}
         height={leftColumnHeight}
         isSideWall={isSideWall}
+        profileW={colW}
+        profileH={colH}
       />
       {/* Right gate column */}
       <GateColumn
@@ -140,6 +156,8 @@ function SingleGateFrame({ opening, span, hallLength, wallHeight, ridgeHeight }:
         z={position.z + (isSideWall ? 0 : rightColOffset)}
         height={rightColumnHeight}
         isSideWall={isSideWall}
+        profileW={colW}
+        profileH={colH}
       />
       {/* Lintel assembly */}
       <LintelAssembly
@@ -160,13 +178,15 @@ interface GateColumnProps {
   z: number;
   height: number;
   isSideWall: boolean;
+  profileW: number;
+  profileH: number;
 }
 
-function GateColumn({ x, y, z, height, isSideWall }: GateColumnProps) {
-  // Column rendered as a box for simplicity (RHS 100x100)
+function GateColumn({ x, y, z, height, isSideWall, profileW, profileH }: GateColumnProps) {
+  // Column rendered as a box (RHS profile)
   // Oriented vertically (Y axis)
-  // For side wall: profile is flat on X-Z plane (100mm along Z, 100mm along X)
-  // For end wall: same but rotated
+  // For side wall: profile is flat on X-Z plane (W along X, H along Z)
+  // For end wall: same but rotated (H along X, W along Z)
   return (
     <mesh
       position={[x, y + height / 2, z]}
@@ -175,9 +195,9 @@ function GateColumn({ x, y, z, height, isSideWall }: GateColumnProps) {
       receiveShadow
     >
       <boxGeometry args={[
-        isSideWall ? GATE_PROFILE_W : GATE_PROFILE_H,
+        isSideWall ? profileW : profileH,
         height,
-        isSideWall ? GATE_PROFILE_H : GATE_PROFILE_W,
+        isSideWall ? profileH : profileW,
       ]} />
     </mesh>
   );

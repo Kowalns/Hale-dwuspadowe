@@ -228,15 +228,16 @@ export const Cladding = React.memo(function Cladding({
     [cladding.colorStripes]
   );
 
-  // End wall column Z positions (same logic as EndColumns)
-  const endColZPositions = useMemo(() => {
+  // End wall column Z positions (same logic as EndColumns, incorporating gates)
+  // Uniform positions (fallback when no gates on a wall)
+  const endColZPositionsUniform = useMemo(() => {
     const targetSpacing = 3.0;
     const n = Math.max(1, Math.round(span / targetSpacing) - 1);
-    const positions = [0];
-    for (let i = 1; i <= n; i++) positions.push((i / (n + 1)) * span);
-    positions.push(span);
-    positions.sort((a, b) => a - b);
-    return positions;
+    const uniformPositions = [0];
+    for (let i = 1; i <= n; i++) uniformPositions.push((i / (n + 1)) * span);
+    uniformPositions.push(span);
+    uniformPositions.sort((a, b) => a - b);
+    return uniformPositions;
   }, [span]);
 
   // Gates on end walls (for panel exclusion)
@@ -253,6 +254,85 @@ export const Cladding = React.memo(function Cladding({
       (o) => o.wall === 'end_back' && (o.type === 'sectional_gate' || o.type === 'sliding_gate')
     );
   }, [openings]);
+
+  // Dynamic end wall column Z positions incorporating gate jambs
+  // For front wall: gate center Z = span - gate.positionX
+  const endColZPositionsFront = useMemo(() => {
+    if (endFrontGates.length === 0) return endColZPositionsUniform;
+    // Start with corner positions
+    const positions = new Set<number>([0, span]);
+    // Add gate jamb positions
+    for (const gate of endFrontGates) {
+      const centerZ = span - gate.positionX;
+      const leftJamb = centerZ - gate.width / 2;
+      const rightJamb = centerZ + gate.width / 2;
+      if (leftJamb > 0.01 && leftJamb < span - 0.01) positions.add(leftJamb);
+      if (rightJamb > 0.01 && rightJamb < span - 0.01) positions.add(rightJamb);
+    }
+    // Add filler columns between boundaries (same logic as EndColumns)
+    const sorted = [...positions].sort((a, b) => a - b);
+    const fillerPositions: number[] = [];
+    for (let i = 0; i < sorted.length - 1; i++) {
+      const leftZ = sorted[i];
+      const rightZ = sorted[i + 1];
+      const gap = rightZ - leftZ;
+      // Check if this gap IS the gate span (skip filler inside gate)
+      const isGateSpan = endFrontGates.some((gate) => {
+        const centerZ = span - gate.positionX;
+        const lj = centerZ - gate.width / 2;
+        const rj = centerZ + gate.width / 2;
+        return Math.abs(leftZ - lj) < 0.01 && Math.abs(rightZ - rj) < 0.01;
+      });
+      if (isGateSpan) continue;
+      if (gap > 3.0) {
+        fillerPositions.push(leftZ + gap / 3);
+        fillerPositions.push(leftZ + (2 * gap) / 3);
+      } else if (gap > 0.5) {
+        fillerPositions.push(leftZ + gap / 2);
+      }
+    }
+    for (const p of fillerPositions) positions.add(p);
+    return [...positions].sort((a, b) => a - b);
+  }, [endFrontGates, endColZPositionsUniform, span]);
+
+  // For back wall: gate center Z = gate.positionX
+  const endColZPositionsBack = useMemo(() => {
+    if (endBackGates.length === 0) return endColZPositionsUniform;
+    // Start with corner positions
+    const positions = new Set<number>([0, span]);
+    // Add gate jamb positions
+    for (const gate of endBackGates) {
+      const centerZ = gate.positionX;
+      const leftJamb = centerZ - gate.width / 2;
+      const rightJamb = centerZ + gate.width / 2;
+      if (leftJamb > 0.01 && leftJamb < span - 0.01) positions.add(leftJamb);
+      if (rightJamb > 0.01 && rightJamb < span - 0.01) positions.add(rightJamb);
+    }
+    // Add filler columns between boundaries (same logic as EndColumns)
+    const sorted = [...positions].sort((a, b) => a - b);
+    const fillerPositions: number[] = [];
+    for (let i = 0; i < sorted.length - 1; i++) {
+      const leftZ = sorted[i];
+      const rightZ = sorted[i + 1];
+      const gap = rightZ - leftZ;
+      // Check if this gap IS the gate span (skip filler inside gate)
+      const isGateSpan = endBackGates.some((gate) => {
+        const centerZ = gate.positionX;
+        const lj = centerZ - gate.width / 2;
+        const rj = centerZ + gate.width / 2;
+        return Math.abs(leftZ - lj) < 0.01 && Math.abs(rightZ - rj) < 0.01;
+      });
+      if (isGateSpan) continue;
+      if (gap > 3.0) {
+        fillerPositions.push(leftZ + gap / 3);
+        fillerPositions.push(leftZ + (2 * gap) / 3);
+      } else if (gap > 0.5) {
+        fillerPositions.push(leftZ + gap / 2);
+      }
+    }
+    for (const p of fillerPositions) positions.add(p);
+    return [...positions].sort((a, b) => a - b);
+  }, [endBackGates, endColZPositionsUniform, span]);
 
 
   // Determine which bays have gates and store gate info for cutout rendering
@@ -769,9 +849,18 @@ export const Cladding = React.memo(function Cladding({
         const elements: React.ReactNode[] = [];
 
         // Rectangular panels between columns
-        for (let i = 0; i < endColZPositions.length - 1; i++) {
-          const zLeft = endColZPositions[i];
-          const zRight = endColZPositions[i + 1];
+        for (let i = 0; i < endColZPositionsFront.length - 1; i++) {
+          let zLeft = endColZPositionsFront[i];
+          let zRight = endColZPositionsFront[i + 1];
+
+          // Fix 2: Widen corner panels to cover side wall thickness
+          if (i === 0) {
+            zLeft = -(columnOuterFlangeOffset + 2 * sideWallThicknessOffset);
+          }
+          if (i === endColZPositionsFront.length - 2) {
+            zRight = span + columnOuterFlangeOffset + 2 * sideWallThicknessOffset;
+          }
+
           const panelWidth = (zRight - zLeft) - 0.020; // 20mm dilation
           const panelCenterZ = (zLeft + zRight) / 2;
 
@@ -879,9 +968,18 @@ export const Cladding = React.memo(function Cladding({
         const elements: React.ReactNode[] = [];
 
         // Rectangular panels between columns
-        for (let i = 0; i < endColZPositions.length - 1; i++) {
-          const zLeft = endColZPositions[i];
-          const zRight = endColZPositions[i + 1];
+        for (let i = 0; i < endColZPositionsBack.length - 1; i++) {
+          let zLeft = endColZPositionsBack[i];
+          let zRight = endColZPositionsBack[i + 1];
+
+          // Fix 2: Widen corner panels to cover side wall thickness
+          if (i === 0) {
+            zLeft = -(columnOuterFlangeOffset + 2 * sideWallThicknessOffset);
+          }
+          if (i === endColZPositionsBack.length - 2) {
+            zRight = span + columnOuterFlangeOffset + 2 * sideWallThicknessOffset;
+          }
+
           const panelWidth = (zRight - zLeft) - 0.020; // 20mm dilation
           const panelCenterZ = (zLeft + zRight) / 2;
 
