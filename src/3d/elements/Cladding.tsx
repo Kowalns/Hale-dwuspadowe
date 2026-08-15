@@ -844,6 +844,14 @@ export const Cladding = React.memo(function Cladding({
           }
         }
 
+        // One straight cut line: from Y=0 at Z=0/span to Y=ridgeHeight-wallHeight-0.03 at Z=span/2
+        // Height at any Z position along this line:
+        const roofLineHeightFront = (span / 2) * Math.tan(roofAngleRad) - 0.03; // max height at ridge
+        const hAtZFront = (z: number) => {
+          const distFromEdge = Math.min(z, span - z); // distance from nearest eave edge
+          return Math.max(0, (distFromEdge / (span / 2)) * roofLineHeightFront);
+        };
+
         // Gable panels above wallHeight - per section between columns
         for (let i = 0; i < endColZPositionsFront.length - 1; i++) {
           let zLeft = endColZPositionsFront[i];
@@ -860,13 +868,9 @@ export const Cladding = React.memo(function Cladding({
           const panelWidth = (zRight - zLeft) - 0.020; // 20mm dilation
           const panelCenterZ = (zLeft + zRight) / 2;
 
-          // Calculate trapezoid heights at left and right edges of this panel
-          // Use exact roof angle (tan) so gable follows roof slope precisely, with 50mm inset
-          const centerZ = span / 2;
-          const distLeft = Math.abs(zLeft - centerZ);
-          const distRight = Math.abs(zRight - centerZ);
-          const hLeft = Math.max(0, (span / 2 - distLeft)) * Math.tan(roofAngleRad) - 0.03;
-          const hRight = Math.max(0, (span / 2 - distRight)) * Math.tan(roofAngleRad) - 0.03;
+          // Calculate trapezoid heights at left and right edges using the single straight cut line
+          const hLeft = hAtZFront(Math.max(0, Math.min(span, zLeft + 0.010)));
+          const hRight = hAtZFront(Math.max(0, Math.min(span, zRight - 0.010)));
           const avgH = (hLeft + hRight) / 2;
 
           if (avgH < 0.01) continue; // skip negligible panels
@@ -1021,6 +1025,14 @@ export const Cladding = React.memo(function Cladding({
           }
         }
 
+        // One straight cut line: from Y=0 at Z=0/span to Y=ridgeHeight-wallHeight-0.03 at Z=span/2
+        // Height at any Z position along this line:
+        const roofLineHeightBack = (span / 2) * Math.tan(roofAngleRad) - 0.03; // max height at ridge
+        const hAtZBack = (z: number) => {
+          const distFromEdge = Math.min(z, span - z); // distance from nearest eave edge
+          return Math.max(0, (distFromEdge / (span / 2)) * roofLineHeightBack);
+        };
+
         // Gable panels above wallHeight - per section between columns
         for (let i = 0; i < endColZPositionsBack.length - 1; i++) {
           let zLeft = endColZPositionsBack[i];
@@ -1037,13 +1049,9 @@ export const Cladding = React.memo(function Cladding({
           const panelWidth = (zRight - zLeft) - 0.020; // 20mm dilation
           const panelCenterZ = (zLeft + zRight) / 2;
 
-          // Calculate trapezoid heights at left and right edges of this panel
-          // Use exact roof angle (tan) so gable follows roof slope precisely, with 50mm inset
-          const centerZ = span / 2;
-          const distLeft = Math.abs(zLeft - centerZ);
-          const distRight = Math.abs(zRight - centerZ);
-          const hLeft = Math.max(0, (span / 2 - distLeft)) * Math.tan(roofAngleRad) - 0.03;
-          const hRight = Math.max(0, (span / 2 - distRight)) * Math.tan(roofAngleRad) - 0.03;
+          // Calculate trapezoid heights at left and right edges using the single straight cut line
+          const hLeft = hAtZBack(Math.max(0, Math.min(span, zLeft + 0.010)));
+          const hRight = hAtZBack(Math.max(0, Math.min(span, zRight - 0.010)));
           const avgH = (hLeft + hRight) / 2;
 
           if (avgH < 0.01) continue; // skip negligible panels
