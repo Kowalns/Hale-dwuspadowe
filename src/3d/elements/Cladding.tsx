@@ -87,9 +87,9 @@ function createPentagonGeometry(
     const shape = new THREE.Shape();
     shape.moveTo(-width / 2, 0);
     shape.lineTo(width / 2, 0);
-    shape.lineTo(width / 2, wallHeight);
-    shape.lineTo(0, ridgeHeight);
-    shape.lineTo(-width / 2, wallHeight);
+    shape.lineTo(width / 2, wallHeight - 0.05);
+    shape.lineTo(0, ridgeHeight - 0.05);
+    shape.lineTo(-width / 2, wallHeight - 0.05);
     shape.closePath();
 
     // Need enough segments for displacement
@@ -113,9 +113,9 @@ function createPentagonGeometry(
     const shape = new THREE.Shape();
     shape.moveTo(-width / 2, 0);
     shape.lineTo(width / 2, 0);
-    shape.lineTo(width / 2, wallHeight);
-    shape.lineTo(0, ridgeHeight);
-    shape.lineTo(-width / 2, wallHeight);
+    shape.lineTo(width / 2, wallHeight - 0.05);
+    shape.lineTo(0, ridgeHeight - 0.05);
+    shape.lineTo(-width / 2, wallHeight - 0.05);
     shape.closePath();
 
     const geo = new THREE.ExtrudeGeometry(shape, {
@@ -483,9 +483,9 @@ export const Cladding = React.memo(function Cladding({
         <ColorStripePatches
           stripes={sideStripes}
           wallWidth={sideWallLength}
-          wallHeight={wallHeight}
+          wallHeight={sideWallHeight}
           panelWidth={cladding.panelWidth}
-          position={[hallLength / 2, wallHeight / 2, -(columnOuterFlangeOffset + sideWallThicknessOffset)]}
+          position={[hallLength / 2, sideWallHeight / 2, -(columnOuterFlangeOffset + sideWallThicknessOffset)]}
           rotation={[0, 0, 0]}
         />
       )}
@@ -495,9 +495,9 @@ export const Cladding = React.memo(function Cladding({
         <ColorStripePatches
           stripes={sideStripes}
           wallWidth={sideWallLength}
-          wallHeight={wallHeight}
+          wallHeight={sideWallHeight}
           panelWidth={cladding.panelWidth}
-          position={[hallLength / 2, wallHeight / 2, span + columnOuterFlangeOffset + sideWallThicknessOffset]}
+          position={[hallLength / 2, sideWallHeight / 2, span + columnOuterFlangeOffset + sideWallThicknessOffset]}
           rotation={[0, Math.PI, 0]}
         />
       )}
