@@ -99,7 +99,7 @@ function TrussFrame({
   const webSize = 0.03;
 
   // Compute nodes for both slopes
-  const { chordSegments, webMembers, topNodesLeft, topNodesRight } = useMemo(() => {
+  const { chordSegments, webMembers, topNodesLeft, topNodesRight, bottomStartL, bottomEndL, bottomStartR, bottomEndR } = useMemo(() => {
     // Top chord nodes at purlin positions (numPanels+1 nodes)
     const numPanels = Math.max(3, Math.round(effectiveHalfSpan / purlinSpacing));
 
@@ -152,56 +152,47 @@ function TrussFrame({
       segments.push({ start: topNR[i], end: topNR[i + 1] });
     }
 
-    // Bottom chord: single segment from first to last bottom node
-    if (bottomNL.length > 1) {
-      segments.push({ start: bottomNL[0], end: bottomNL[bottomNL.length - 1] });
-    }
-    if (bottomNR.length > 1) {
-      segments.push({ start: bottomNR[0], end: bottomNR[bottomNR.length - 1] });
-    }
+    // Bottom chord: full length (same extent as top chord, offset down by trussHeight)
+    const bottomStartL = new THREE.Vector3(topNL[0].x, topNL[0].y - trussHeight, topNL[0].z);
+    const bottomEndL = new THREE.Vector3(topNL[topNL.length - 1].x, topNL[topNL.length - 1].y - trussHeight, topNL[topNL.length - 1].z);
+    segments.push({ start: bottomStartL, end: bottomEndL });
+
+    const bottomStartR = new THREE.Vector3(topNR[0].x, topNR[0].y - trussHeight, topNR[0].z);
+    const bottomEndR = new THREE.Vector3(topNR[topNR.length - 1].x, topNR[topNR.length - 1].y - trussHeight, topNR[topNR.length - 1].z);
+    segments.push({ start: bottomStartR, end: bottomEndR });
 
     // Web members: /\ pattern meeting at top nodes (under purlins)
     const webs: Array<{ start: THREE.Vector3; end: THREE.Vector3 }> = [];
 
-    // Left slope
-    // First: from top[0] down to bottom[0]
-    webs.push({ start: topNL[0], end: bottomNL[0] });
-    // Pairs meeting at top nodes
+    // Left slope - pairs meeting at each top node from 1 to numPanels
     for (let i = 1; i <= numPanels; i++) {
       // bottom[i-1] goes UP to top[i]
       webs.push({ start: bottomNL[i - 1], end: topNL[i] });
-      // bottom[i] goes UP to top[i] (if exists)
+      // For all except the last: bottom[i] also goes UP to top[i]
       if (i < numPanels) {
         webs.push({ start: bottomNL[i], end: topNL[i] });
       }
     }
-    // Last: bottom[last] up to top[last]
-    webs.push({ start: bottomNL[bottomNL.length - 1], end: topNL[topNL.length - 1] });
 
-    // Right slope
-    webs.push({ start: topNR[0], end: bottomNR[0] });
+    // Right slope - same pattern
     for (let i = 1; i <= numPanels; i++) {
       webs.push({ start: bottomNR[i - 1], end: topNR[i] });
       if (i < numPanels) {
         webs.push({ start: bottomNR[i], end: topNR[i] });
       }
     }
-    webs.push({ start: bottomNR[bottomNR.length - 1], end: topNR[topNR.length - 1] });
 
     return {
       chordSegments: segments,
       webMembers: webs,
       topNodesLeft: topNL,
-      bottomNodesLeft: bottomNL,
       topNodesRight: topNR,
-      bottomNodesRight: bottomNR,
+      bottomStartL,
+      bottomEndL,
+      bottomStartR,
+      bottomEndR,
     };
   }, [x, wallHeight, span, effectiveHalfSpan, trussStartOffset, columnFlangeOffset, roofAngleRad, trussHeight, purlinSpacing]);
-
-  const bottomStartLeft = new THREE.Vector3(topNodesLeft[0].x, topNodesLeft[0].y - trussHeight, topNodesLeft[0].z);
-  const bottomEndLeft = new THREE.Vector3(topNodesLeft[topNodesLeft.length-1].x, topNodesLeft[topNodesLeft.length-1].y - trussHeight, topNodesLeft[topNodesLeft.length-1].z);
-  const bottomStartRight = new THREE.Vector3(topNodesRight[0].x, topNodesRight[0].y - trussHeight, topNodesRight[0].z);
-  const bottomEndRight = new THREE.Vector3(topNodesRight[topNodesRight.length-1].x, topNodesRight[topNodesRight.length-1].y - trussHeight, topNodesRight[topNodesRight.length-1].z);
 
   const plateSize = chordSize + 0.04;
 
@@ -231,26 +222,26 @@ function TrussFrame({
       <mesh position={[topNodesLeft[0].x, topNodesLeft[0].y, topNodesLeft[0].z]} castShadow receiveShadow material={plateMaterial}>
         <boxGeometry args={[plateSize, plateSize, 0.015]} />
       </mesh>
-      <mesh position={[bottomStartLeft.x, bottomStartLeft.y, bottomStartLeft.z]} castShadow receiveShadow material={plateMaterial}>
+      <mesh position={[bottomStartL.x, bottomStartL.y, bottomStartL.z]} castShadow receiveShadow material={plateMaterial}>
         <boxGeometry args={[plateSize, plateSize, 0.015]} />
       </mesh>
       <mesh position={[topNodesRight[0].x, topNodesRight[0].y, topNodesRight[0].z]} castShadow receiveShadow material={plateMaterial}>
         <boxGeometry args={[plateSize, plateSize, 0.015]} />
       </mesh>
-      <mesh position={[bottomStartRight.x, bottomStartRight.y, bottomStartRight.z]} castShadow receiveShadow material={plateMaterial}>
+      <mesh position={[bottomStartR.x, bottomStartR.y, bottomStartR.z]} castShadow receiveShadow material={plateMaterial}>
         <boxGeometry args={[plateSize, plateSize, 0.015]} />
       </mesh>
       {/* Plates at truss end (ridge) */}
       <mesh position={[topNodesLeft[topNodesLeft.length - 1].x, topNodesLeft[topNodesLeft.length - 1].y, topNodesLeft[topNodesLeft.length - 1].z]} castShadow receiveShadow material={plateMaterial}>
         <boxGeometry args={[plateSize, plateSize, 0.015]} />
       </mesh>
-      <mesh position={[bottomEndLeft.x, bottomEndLeft.y, bottomEndLeft.z]} castShadow receiveShadow material={plateMaterial}>
+      <mesh position={[bottomEndL.x, bottomEndL.y, bottomEndL.z]} castShadow receiveShadow material={plateMaterial}>
         <boxGeometry args={[plateSize, plateSize, 0.015]} />
       </mesh>
       <mesh position={[topNodesRight[topNodesRight.length - 1].x, topNodesRight[topNodesRight.length - 1].y, topNodesRight[topNodesRight.length - 1].z]} castShadow receiveShadow material={plateMaterial}>
         <boxGeometry args={[plateSize, plateSize, 0.015]} />
       </mesh>
-      <mesh position={[bottomEndRight.x, bottomEndRight.y, bottomEndRight.z]} castShadow receiveShadow material={plateMaterial}>
+      <mesh position={[bottomEndR.x, bottomEndR.y, bottomEndR.z]} castShadow receiveShadow material={plateMaterial}>
         <boxGeometry args={[plateSize, plateSize, 0.015]} />
       </mesh>
     </group>
