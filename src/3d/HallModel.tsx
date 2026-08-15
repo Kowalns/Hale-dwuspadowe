@@ -98,6 +98,7 @@ export const HallModel = React.memo(function HallModel({ params, results }: Hall
         roofAngle={roofAngle}
         columnSpacing={columnSpacing}
         numberOfFrames={numberOfFrames}
+        columnFlangeOffset={columnFlangeOffset}
       />
 
       {/* End columns on gable ends */}

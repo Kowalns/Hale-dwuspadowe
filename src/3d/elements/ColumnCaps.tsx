@@ -9,6 +9,7 @@ interface ColumnCapsProps {
   roofAngle: number;
   columnSpacing: number;
   numberOfFrames: number;
+  columnFlangeOffset: number;
 }
 
 /**
@@ -29,6 +30,7 @@ export const ColumnCaps = React.memo(function ColumnCaps({
   roofAngle,
   columnSpacing,
   numberOfFrames,
+  columnFlangeOffset,
 }: ColumnCapsProps) {
   // Column profile dimensions in meters
   const profileB = sideColumnProfile.b / 1000; // width along X
@@ -48,15 +50,15 @@ export const ColumnCaps = React.memo(function ColumnCaps({
     <group name="column-caps">
       {framePositions.map((x, i) => (
         <React.Fragment key={i}>
-          {/* Left side (Z=0): inner edge (toward ridge, +Z) is higher */}
-          <group position={[x, wallHeight, 0]} rotation={[-roofAngleRad, 0, 0]}>
-            <mesh material={plateMaterial} position={[0, -plateThickness / 2, 0]} castShadow receiveShadow>
+          {/* Left side: pivot at inner edge (Z=columnFlangeOffset), plate extends toward Z=0 (outside) */}
+          <group position={[x, wallHeight, columnFlangeOffset]} rotation={[roofAngleRad, 0, 0]}>
+            <mesh material={plateMaterial} position={[0, -plateThickness / 2, -profileH / 2]} castShadow receiveShadow>
               <boxGeometry args={[profileB, plateThickness, profileH]} />
             </mesh>
           </group>
-          {/* Right side (Z=span): inner edge (toward ridge, -Z) is higher */}
-          <group position={[x, wallHeight, span]} rotation={[roofAngleRad, 0, 0]}>
-            <mesh material={plateMaterial} position={[0, -plateThickness / 2, 0]} castShadow receiveShadow>
+          {/* Right side: pivot at inner edge (Z=span-columnFlangeOffset), plate extends toward Z=span (outside) */}
+          <group position={[x, wallHeight, span - columnFlangeOffset]} rotation={[-roofAngleRad, 0, 0]}>
+            <mesh material={plateMaterial} position={[0, -plateThickness / 2, profileH / 2]} castShadow receiveShadow>
               <boxGeometry args={[profileB, plateThickness, profileH]} />
             </mesh>
           </group>
