@@ -85,8 +85,10 @@ function TrussFrame({
 }: TrussFrameProps) {
   const roofAngleRad = (roofAngle * Math.PI) / 180;
   // Main truss starts after the starters (column heads)
-  const trussStartOffset = columnFlangeOffset + headLength;
-  const effectiveHalfSpan = span / 2 - trussStartOffset;
+  const spliceGap = 0.030; // 2 x 15mm end plates (starter plate + truss plate)
+  const ridgeGap = 0.015; // 15mm ridge plate
+  const trussStartOffset = columnFlangeOffset + headLength + spliceGap;
+  const effectiveHalfSpan = span / 2 - trussStartOffset - ridgeGap;
 
   // Web member size: 30x30mm square tube
   const webSize = 0.03;
