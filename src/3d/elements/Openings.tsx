@@ -1,5 +1,6 @@
 import React, { useMemo, useEffect } from 'react';
 import * as THREE from 'three';
+import { getRALHex } from '../../data/colors';
 import type { HallParameters, Opening, WallIdentifier } from '../../types';
 
 interface OpeningsProps {
@@ -66,6 +67,9 @@ function OpeningMesh({ opening, params, wallZOffset, cutoutMat, detailMat }: { o
   const { width, height, type, wall } = opening;
   const isEndWall = wall === 'end_front' || wall === 'end_back';
 
+  // Sliding gate hangs on a rail in front of the wall - add Z offset
+  const slidingGateZOffset = type === 'sliding_gate' ? 0.08 : 0;
+
   return (
     <group position={position} rotation={rotation}>
       {/* Dark rectangle (cutout) */}
@@ -74,7 +78,11 @@ function OpeningMesh({ opening, params, wallZOffset, cutoutMat, detailMat }: { o
       </mesh>
 
       {/* Type-specific decorations */}
-      {type === 'sliding_gate' && <SlidingGateDetail width={width} height={height} material={detailMat} wall={wall} />}
+      {type === 'sliding_gate' && (
+        <group position={[0, 0, slidingGateZOffset]}>
+          <SlidingGateDetail width={width} height={height} material={detailMat} wall={wall} />
+        </group>
+      )}
       {type === 'sectional_gate' && <SectionalGateDetail width={width} height={height} material={detailMat} />}
       {type === 'door' && <DoorDetail width={width} height={height} material={detailMat} />}
       {type === 'window' && <WindowDetail width={width} height={height} material={detailMat} />}
@@ -139,12 +147,22 @@ function SlidingGateDetail({ width, height, material, wall }: { width: number; h
 }
 
 /**
- * Sectional (panel) gate: horizontal segment lines.
+ * Sectional (panel) gate: box with 60mm thickness, RAL 9002 light grey, with horizontal segment lines.
  */
 function SectionalGateDetail({ width, height, material }: { width: number; height: number; material: THREE.MeshStandardMaterial }) {
   const segmentCount = Math.max(3, Math.round(height / 0.5));
   const segmentSpacing = height / segmentCount;
   const lineThickness = 0.02;
+
+  const panelMat = useMemo(() => new THREE.MeshStandardMaterial({
+    color: getRALHex('9002'),
+    side: THREE.DoubleSide,
+    depthWrite: true,
+  }), []);
+
+  useEffect(() => {
+    return () => { panelMat.dispose(); };
+  }, [panelMat]);
 
   const lines = useMemo(() => {
     const arr: number[] = [];
@@ -156,8 +174,13 @@ function SectionalGateDetail({ width, height, material }: { width: number; heigh
 
   return (
     <>
+      {/* Gate panel body with 60mm thickness */}
+      <mesh position={[0, 0, 0.03]} material={panelMat}>
+        <boxGeometry args={[width - 0.02, height - 0.02, 0.06]} />
+      </mesh>
+      {/* Horizontal segment lines */}
       {lines.map((y, idx) => (
-        <mesh key={idx} position={[0, y, 0.005]} material={material}>
+        <mesh key={idx} position={[0, y, 0.065]} material={material}>
           <boxGeometry args={[width - 0.04, lineThickness, 0.01]} />
         </mesh>
       ))}

@@ -95,12 +95,15 @@ export const HallModel = React.memo(function HallModel({ params, results, claddi
   // Column outer flange offset for cladding positioning
   const columnOuterFlangeOffset = sideColumnProfile.h / 2 / 1000;
 
+  // End column outer offset (RHS profile, h along X after placement)
+  const endColumnOuterOffset = (endColumnProfile.h / 2) / 1000;
+
   // Compute wall thickness offset for openings positioning
   const isSideWallTrapezoid = cladding?.sideWallType === 'trapezoid';
   const sideWallThicknessOffset = isSideWallTrapezoid
     ? 0.018 // T18 profile height default for trapezoid walls
     : ((cladding?.sandwichThickness ?? 100) / 1000) / 2;
-  const wallZOffset = columnOuterFlangeOffset + sideWallThicknessOffset + 0.005;
+  const wallZOffset = columnOuterFlangeOffset + sideWallThicknessOffset;
 
   return (
     <group position={[offsetX, 0, offsetZ]}>
@@ -291,6 +294,7 @@ export const HallModel = React.memo(function HallModel({ params, results, claddi
           cladding={cladding}
           showCladding={showCladding ?? true}
           columnOuterFlangeOffset={columnOuterFlangeOffset}
+          endColumnOuterOffset={endColumnOuterOffset}
           columnSpacing={columnSpacing}
           placementMode={placementMode}
           openings={openings}

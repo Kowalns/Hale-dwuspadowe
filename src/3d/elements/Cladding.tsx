@@ -10,6 +10,7 @@ interface CladdingProps {
   cladding: CladdingParameters;
   showCladding: boolean;
   columnOuterFlangeOffset: number;
+  endColumnOuterOffset: number;
   columnSpacing: number;
   placementMode?: boolean;
   openings?: Opening[];
@@ -172,6 +173,7 @@ export const Cladding = React.memo(function Cladding({
   cladding,
   showCladding,
   columnOuterFlangeOffset,
+  endColumnOuterOffset,
   columnSpacing,
   placementMode,
   openings,
@@ -221,7 +223,7 @@ export const Cladding = React.memo(function Cladding({
     return new THREE.BoxGeometry(hallLength, wallHeight, thickness);
   }, [hallLength, wallHeight, isSideWallTrapezoid, wallWaveAxis, cladding.sandwichThickness]);
 
-  const endWallWidth = span + 2 * (columnOuterFlangeOffset + sideWallThicknessOffset);
+  const endWallWidth = span + 2 * (columnOuterFlangeOffset + 2 * sideWallThicknessOffset);
 
   const endWallGeometry = useMemo(() => {
     if (isEndWallTrapezoid) {
@@ -410,7 +412,7 @@ export const Cladding = React.memo(function Cladding({
 
       {/* End wall X=-offset (front gable) - rectangular part */}
       <mesh
-        position={[-endWallThicknessOffset, wallHeight / 2, span / 2]}
+        position={[-(endColumnOuterOffset + endWallThicknessOffset), wallHeight / 2, span / 2]}
         rotation={[0, Math.PI / 2, 0]}
         geometry={endWallGeometry}
         material={endWallMat}
@@ -419,16 +421,16 @@ export const Cladding = React.memo(function Cladding({
 
       {/* End wall X=-offset - gable triangle */}
       <mesh
-        position={[-endWallThicknessOffset, wallHeight + gableTriangleHeight / 2, span / 2]}
+        position={[-(endColumnOuterOffset + endWallThicknessOffset), wallHeight + gableTriangleHeight / 2, span / 2]}
         rotation={[0, Math.PI / 2, 0]}
         material={endWallMat}
       >
-        <GableTriangleGeometry width={span} height={gableTriangleHeight} />
+        <GableTriangleGeometry width={endWallWidth} height={gableTriangleHeight} />
       </mesh>
 
       {/* End wall X=hallLength+offset (back gable) - rectangular part */}
       <mesh
-        position={[hallLength + endWallThicknessOffset, wallHeight / 2, span / 2]}
+        position={[hallLength + endColumnOuterOffset + endWallThicknessOffset, wallHeight / 2, span / 2]}
         rotation={[0, -Math.PI / 2, 0]}
         geometry={endWallGeometry}
         material={endWallMat}
@@ -437,11 +439,11 @@ export const Cladding = React.memo(function Cladding({
 
       {/* End wall X=hallLength+offset - gable triangle */}
       <mesh
-        position={[hallLength + endWallThicknessOffset, wallHeight + gableTriangleHeight / 2, span / 2]}
+        position={[hallLength + endColumnOuterOffset + endWallThicknessOffset, wallHeight + gableTriangleHeight / 2, span / 2]}
         rotation={[0, -Math.PI / 2, 0]}
         material={endWallMat}
       >
-        <GableTriangleGeometry width={span} height={gableTriangleHeight} />
+        <GableTriangleGeometry width={endWallWidth} height={gableTriangleHeight} />
       </mesh>
 
       {/* End wall color stripes - X=-offset */}
@@ -473,8 +475,8 @@ export const Cladding = React.memo(function Cladding({
       <mesh
         position={[
           hallLength / 2,
-          wallHeight + gableTriangleHeight / 2 + 0.003,
-          span / 4,
+          wallHeight + gableTriangleHeight / 2 + 0.003 - eaveOverhangM * Math.sin(roofAngleRad) / 2,
+          span / 4 - eaveOverhangM * Math.cos(roofAngleRad) / 2,
         ]}
         rotation={[Math.PI / 2 - roofAngleRad, 0, 0]}
         geometry={roofGeometry}
@@ -485,8 +487,8 @@ export const Cladding = React.memo(function Cladding({
       <mesh
         position={[
           hallLength / 2,
-          wallHeight + gableTriangleHeight / 2 + 0.003,
-          (3 * span) / 4,
+          wallHeight + gableTriangleHeight / 2 + 0.003 - eaveOverhangM * Math.sin(roofAngleRad) / 2,
+          (3 * span) / 4 + eaveOverhangM * Math.cos(roofAngleRad) / 2,
         ]}
         rotation={[-(Math.PI / 2 - roofAngleRad), 0, 0]}
         geometry={roofGeometry}
