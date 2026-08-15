@@ -146,45 +146,7 @@ function createTrapezoidalGeometry(
   return geo;
 }
 
-function createGableTriangleGeometry(
-  width: number,
-  height: number,
-  isTrapezoid: boolean,
-  profileType: 'T18' | 'T35',
-  waveAxis: 'x' | 'y',
-  sandwichThickness: number
-): THREE.BufferGeometry {
-  const shape = new THREE.Shape();
-  shape.moveTo(-width / 2, 0);
-  shape.lineTo(width / 2, 0);
-  shape.lineTo(0, height);
-  shape.closePath();
 
-  if (isTrapezoid) {
-    const { height: amp, plateau, valley, period } = getTrapezoidalParams(profileType);
-    const extent = waveAxis === 'x' ? width : height;
-    const waveCount = Math.ceil(extent / period);
-    const segments = Math.min(waveCount * 10, 500);
-    const geo = new THREE.ShapeGeometry(shape, segments);
-    const pos = geo.attributes.position;
-    for (let i = 0; i < pos.count; i++) {
-      const coord = waveAxis === 'x' ? pos.getX(i) : pos.getY(i);
-      const displacement = trapezoidHeight(coord + extent / 2, period, plateau, valley, amp);
-      pos.setZ(i, -displacement);
-    }
-    pos.needsUpdate = true;
-    geo.computeVertexNormals();
-    return geo;
-  } else {
-    const geo = new THREE.ExtrudeGeometry(shape, {
-      depth: sandwichThickness,
-      bevelEnabled: false,
-    });
-    geo.translate(0, 0, -sandwichThickness / 2);
-    geo.computeVertexNormals();
-    return geo;
-  }
-}
 
 interface ColorSegment { startLayer: number; endLayer: number; color: string; }
 
@@ -235,9 +197,8 @@ export const Cladding = React.memo(function Cladding({
     ? getTrapezoidalParams((cladding.endWallType as string) === 'T35' ? 'T35' : 'T18').height
     : (cladding.sandwichThickness ?? 100) / 1000 / 2;
 
-  // Gable triangle: height must match roof angle with the full end wall width
+  // End wall width for gable calculations
   const endWallWidth = span + 2 * (columnOuterFlangeOffset + 2 * sideWallThicknessOffset);
-  const gableTriangleActualHeight = endWallWidth / 2 * Math.tan(roofAngleRad);
 
   // Wall geometries
   // panelOrientation determines the direction of ribs:
@@ -888,26 +849,48 @@ export const Cladding = React.memo(function Cladding({
           }
         }
 
-        // Gable triangle above wallHeight
-        const frontTriangleWidth = span + 2 * (columnOuterFlangeOffset + 2 * sideWallThicknessOffset);
-        const frontTriangleGeo = createGableTriangleGeometry(
-          frontTriangleWidth,
-          gableTriangleActualHeight,
-          isEndWallTrapezoid,
-          'T18',
-          wallWaveAxis,
-          sandwichThicknessM
-        );
+        // Gable panels above wallHeight - per section between columns
+        for (let i = 0; i < endColZPositionsFront.length - 1; i++) {
+          let zLeft = endColZPositionsFront[i];
+          let zRight = endColZPositionsFront[i + 1];
 
-        elements.push(
-          <mesh
-            key="end-front-gable-triangle"
-            position={[xPos, wallHeight - 0.03, span / 2]}
-            rotation={[0, Math.PI / 2, 0]}
-            material={endWallMat}
-            geometry={frontTriangleGeo}
-          />
-        );
+          // Widen corner panels to cover side wall thickness
+          if (i === 0) {
+            zLeft = -(columnOuterFlangeOffset + 2 * sideWallThicknessOffset);
+          }
+          if (i === endColZPositionsFront.length - 2) {
+            zRight = span + columnOuterFlangeOffset + 2 * sideWallThicknessOffset;
+          }
+
+          const panelWidth = (zRight - zLeft) - 0.020; // 20mm dilation
+          const panelCenterZ = (zLeft + zRight) / 2;
+
+          // Calculate trapezoid heights at left and right edges of this panel
+          // The roof narrows from wallHeight to ridge. At distance d from center, height = gableTriangleHeight * (1 - |d| / (endWallWidth/2))
+          const halfWidth = endWallWidth / 2;
+          const centerZ = span / 2;
+          const distLeft = Math.abs(zLeft - centerZ);
+          const distRight = Math.abs(zRight - centerZ);
+          const hLeft = gableTriangleHeight * Math.max(0, 1 - distLeft / halfWidth);
+          const hRight = gableTriangleHeight * Math.max(0, 1 - distRight / halfWidth);
+          const avgH = (hLeft + hRight) / 2;
+
+          if (avgH < 0.01) continue; // skip negligible panels
+
+          elements.push(
+            <mesh
+              key={`end-front-gable-panel-${i}`}
+              position={[xPos, wallHeight + avgH / 2, panelCenterZ]}
+              rotation={[0, Math.PI / 2, 0]}
+              material={endWallMat}
+            >
+              {isEndWallTrapezoid
+                ? <primitive object={createTrapezoidalGeometry(panelWidth, avgH, 'T18', wallWaveAxis, true)} attach="geometry" />
+                : <boxGeometry args={[panelWidth, avgH, sandwichThicknessM]} />
+              }
+            </mesh>
+          );
+        }
 
         {/* Gable front joint lines above wallHeight */}
         endColZPositionsFront.slice(1, -1).forEach((colZ, idx) => {
@@ -1018,26 +1001,47 @@ export const Cladding = React.memo(function Cladding({
           }
         }
 
-        // Gable triangle above wallHeight
-        const backTriangleWidth = span + 2 * (columnOuterFlangeOffset + 2 * sideWallThicknessOffset);
-        const backTriangleGeo = createGableTriangleGeometry(
-          backTriangleWidth,
-          gableTriangleActualHeight,
-          isEndWallTrapezoid,
-          'T18',
-          wallWaveAxis,
-          sandwichThicknessM
-        );
+        // Gable panels above wallHeight - per section between columns
+        for (let i = 0; i < endColZPositionsBack.length - 1; i++) {
+          let zLeft = endColZPositionsBack[i];
+          let zRight = endColZPositionsBack[i + 1];
 
-        elements.push(
-          <mesh
-            key="end-back-gable-triangle"
-            position={[xPos, wallHeight - 0.03, span / 2]}
-            rotation={[0, -Math.PI / 2, 0]}
-            material={endWallMat}
-            geometry={backTriangleGeo}
-          />
-        );
+          // Widen corner panels to cover side wall thickness
+          if (i === 0) {
+            zLeft = -(columnOuterFlangeOffset + 2 * sideWallThicknessOffset);
+          }
+          if (i === endColZPositionsBack.length - 2) {
+            zRight = span + columnOuterFlangeOffset + 2 * sideWallThicknessOffset;
+          }
+
+          const panelWidth = (zRight - zLeft) - 0.020; // 20mm dilation
+          const panelCenterZ = (zLeft + zRight) / 2;
+
+          // Calculate trapezoid heights at left and right edges of this panel
+          const halfWidth = endWallWidth / 2;
+          const centerZ = span / 2;
+          const distLeft = Math.abs(zLeft - centerZ);
+          const distRight = Math.abs(zRight - centerZ);
+          const hLeft = gableTriangleHeight * Math.max(0, 1 - distLeft / halfWidth);
+          const hRight = gableTriangleHeight * Math.max(0, 1 - distRight / halfWidth);
+          const avgH = (hLeft + hRight) / 2;
+
+          if (avgH < 0.01) continue; // skip negligible panels
+
+          elements.push(
+            <mesh
+              key={`end-back-gable-panel-${i}`}
+              position={[xPos, wallHeight + avgH / 2, panelCenterZ]}
+              rotation={[0, -Math.PI / 2, 0]}
+              material={endWallMat}
+            >
+              {isEndWallTrapezoid
+                ? <primitive object={createTrapezoidalGeometry(panelWidth, avgH, 'T18', wallWaveAxis, true)} attach="geometry" />
+                : <boxGeometry args={[panelWidth, avgH, sandwichThicknessM]} />
+              }
+            </mesh>
+          );
+        }
 
         {/* Gable back joint lines above wallHeight */}
         endColZPositionsBack.slice(1, -1).forEach((colZ, idx) => {
