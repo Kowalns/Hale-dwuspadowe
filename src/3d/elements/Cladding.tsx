@@ -888,18 +888,36 @@ export const Cladding = React.memo(function Cladding({
           let gableGeo: THREE.BufferGeometry;
           if (isEndWallTrapezoid) {
             const { height: amp, plateau, valley, period } = getTrapezoidalParams('T18');
-            const extent = wallWaveAxis === 'x' ? panelWidth : Math.max(hLeft, hRight);
+            const maxH = Math.max(hLeft, hRight);
+            const extent = wallWaveAxis === 'x' ? panelWidth : maxH;
             const waveCount = Math.ceil(extent / period);
-            const segments = Math.min(waveCount * 10, 500);
-            gableGeo = new THREE.ShapeGeometry(trapShape, segments);
+            const segW = Math.min(waveCount * 10, 500);
+            const segH = Math.min(Math.ceil(maxH * 10), 100);
+
+            // Use PlaneGeometry and clip vertices outside trapezoid
+            gableGeo = new THREE.PlaneGeometry(panelWidth, maxH, segW, segH);
             const pos = gableGeo.attributes.position;
             for (let v = 0; v < pos.count; v++) {
-              const coord = wallWaveAxis === 'x' ? pos.getX(v) : pos.getY(v);
+              const px = pos.getX(v);
+              const py = pos.getY(v);
+              // Map py from [-maxH/2, maxH/2] to [0, maxH]
+              const localY = py + maxH / 2;
+              // Interpolate max height at this X position
+              const t = (px + panelWidth / 2) / panelWidth; // 0 to 1
+              const maxYatX = hRight + t * (hLeft - hRight);
+              // Clip: if vertex above the slope line, push it down
+              if (localY > maxYatX) {
+                pos.setY(v, maxYatX - maxH / 2);
+              }
+              // Apply trapezoidal displacement
+              const coord = wallWaveAxis === 'x' ? px : py;
               const displacement = trapezoidHeight(coord + extent / 2, period, plateau, valley, amp);
               pos.setZ(v, -displacement);
             }
             pos.needsUpdate = true;
             gableGeo.computeVertexNormals();
+            // Shift geometry so bottom is at Y=0
+            gableGeo.translate(0, maxH / 2, 0);
           } else {
             gableGeo = new THREE.ExtrudeGeometry(trapShape, { depth: sandwichThicknessM, bevelEnabled: false });
             gableGeo.translate(0, 0, -sandwichThicknessM / 2);
@@ -1065,18 +1083,36 @@ export const Cladding = React.memo(function Cladding({
           let gableGeo: THREE.BufferGeometry;
           if (isEndWallTrapezoid) {
             const { height: amp, plateau, valley, period } = getTrapezoidalParams('T18');
-            const extent = wallWaveAxis === 'x' ? panelWidth : Math.max(hLeft, hRight);
+            const maxH = Math.max(hLeft, hRight);
+            const extent = wallWaveAxis === 'x' ? panelWidth : maxH;
             const waveCount = Math.ceil(extent / period);
-            const segments = Math.min(waveCount * 10, 500);
-            gableGeo = new THREE.ShapeGeometry(trapShape, segments);
+            const segW = Math.min(waveCount * 10, 500);
+            const segH = Math.min(Math.ceil(maxH * 10), 100);
+
+            // Use PlaneGeometry and clip vertices outside trapezoid
+            gableGeo = new THREE.PlaneGeometry(panelWidth, maxH, segW, segH);
             const pos = gableGeo.attributes.position;
             for (let v = 0; v < pos.count; v++) {
-              const coord = wallWaveAxis === 'x' ? pos.getX(v) : pos.getY(v);
+              const px = pos.getX(v);
+              const py = pos.getY(v);
+              // Map py from [-maxH/2, maxH/2] to [0, maxH]
+              const localY = py + maxH / 2;
+              // Interpolate max height at this X position
+              const t = (px + panelWidth / 2) / panelWidth; // 0 to 1
+              const maxYatX = hLeft + t * (hRight - hLeft);
+              // Clip: if vertex above the slope line, push it down
+              if (localY > maxYatX) {
+                pos.setY(v, maxYatX - maxH / 2);
+              }
+              // Apply trapezoidal displacement
+              const coord = wallWaveAxis === 'x' ? px : py;
               const displacement = trapezoidHeight(coord + extent / 2, period, plateau, valley, amp);
               pos.setZ(v, -displacement);
             }
             pos.needsUpdate = true;
             gableGeo.computeVertexNormals();
+            // Shift geometry so bottom is at Y=0
+            gableGeo.translate(0, maxH / 2, 0);
           } else {
             gableGeo = new THREE.ExtrudeGeometry(trapShape, { depth: sandwichThicknessM, bevelEnabled: false });
             gableGeo.translate(0, 0, -sandwichThicknessM / 2);
@@ -1218,42 +1254,7 @@ export const Cladding = React.memo(function Cladding({
         </mesh>
       ))}
 
-      {/* Wind boards (wiatrownice) */}
-      {(() => {
-        const windBoardColor = getRALHex(cladding.flashingColor);
-        const windBoardMat = new THREE.MeshStandardMaterial({ color: windBoardColor, side: THREE.DoubleSide, depthWrite: true });
-        const roofSlopeLen = (span / 2) / Math.cos(roofAngleRad);
-        const frontX = -(endColumnOuterOffset + endWallThicknessOffset);
-        const backX = hallLength + endColumnOuterOffset + endWallThicknessOffset;
-        const legSize = 0.2;
-        const thickness = 0.001;
-        const gH = gableTriangleHeight;
 
-        return (
-          <>
-            {/* Front-left */}
-            <group position={[frontX, wallHeight + gH / 2, span / 4]} rotation={[-roofAngleRad, 0, 0]}>
-              <mesh material={windBoardMat}><boxGeometry args={[legSize, roofSlopeLen, thickness]} /></mesh>
-              <mesh position={[legSize / 2, 0, -legSize / 2]} material={windBoardMat}><boxGeometry args={[thickness, roofSlopeLen, legSize]} /></mesh>
-            </group>
-            {/* Front-right */}
-            <group position={[frontX, wallHeight + gH / 2, 3 * span / 4]} rotation={[roofAngleRad, 0, 0]}>
-              <mesh material={windBoardMat}><boxGeometry args={[legSize, roofSlopeLen, thickness]} /></mesh>
-              <mesh position={[legSize / 2, 0, legSize / 2]} material={windBoardMat}><boxGeometry args={[thickness, roofSlopeLen, legSize]} /></mesh>
-            </group>
-            {/* Back-left */}
-            <group position={[backX, wallHeight + gH / 2, span / 4]} rotation={[-roofAngleRad, 0, 0]}>
-              <mesh material={windBoardMat}><boxGeometry args={[legSize, roofSlopeLen, thickness]} /></mesh>
-              <mesh position={[-legSize / 2, 0, -legSize / 2]} material={windBoardMat}><boxGeometry args={[thickness, roofSlopeLen, legSize]} /></mesh>
-            </group>
-            {/* Back-right */}
-            <group position={[backX, wallHeight + gH / 2, 3 * span / 4]} rotation={[roofAngleRad, 0, 0]}>
-              <mesh material={windBoardMat}><boxGeometry args={[legSize, roofSlopeLen, thickness]} /></mesh>
-              <mesh position={[-legSize / 2, 0, legSize / 2]} material={windBoardMat}><boxGeometry args={[thickness, roofSlopeLen, legSize]} /></mesh>
-            </group>
-          </>
-        );
-      })()}
     </group>
   );
 });
