@@ -869,8 +869,8 @@ export const Cladding = React.memo(function Cladding({
           const panelCenterZ = (zLeft + zRight) / 2;
 
           // Calculate trapezoid heights at left and right edges using the single straight cut line
-          const hLeft = hAtZFront(Math.max(0, Math.min(span, zLeft + 0.010)));
-          const hRight = hAtZFront(Math.max(0, Math.min(span, zRight - 0.010)));
+          const hLeft = hAtZFront(Math.max(0, Math.min(span, zLeft)));
+          const hRight = hAtZFront(Math.max(0, Math.min(span, zRight)));
           const avgH = (hLeft + hRight) / 2;
 
           if (avgH < 0.01) continue; // skip negligible panels
@@ -1050,8 +1050,8 @@ export const Cladding = React.memo(function Cladding({
           const panelCenterZ = (zLeft + zRight) / 2;
 
           // Calculate trapezoid heights at left and right edges using the single straight cut line
-          const hLeft = hAtZBack(Math.max(0, Math.min(span, zLeft + 0.010)));
-          const hRight = hAtZBack(Math.max(0, Math.min(span, zRight - 0.010)));
+          const hLeft = hAtZBack(Math.max(0, Math.min(span, zRight)));
+          const hRight = hAtZBack(Math.max(0, Math.min(span, zLeft)));
           const avgH = (hLeft + hRight) / 2;
 
           if (avgH < 0.01) continue; // skip negligible panels
