@@ -95,6 +95,13 @@ export const HallModel = React.memo(function HallModel({ params, results, claddi
   // Column outer flange offset for cladding positioning
   const columnOuterFlangeOffset = sideColumnProfile.h / 2 / 1000;
 
+  // Compute wall thickness offset for openings positioning
+  const isSideWallTrapezoid = cladding?.sideWallType === 'trapezoid';
+  const sideWallThicknessOffset = isSideWallTrapezoid
+    ? 0.018 // T18 profile height default for trapezoid walls
+    : ((cladding?.sandwichThickness ?? 100) / 1000) / 2;
+  const wallZOffset = columnOuterFlangeOffset + sideWallThicknessOffset + 0.005;
+
   return (
     <group position={[offsetX, 0, offsetZ]}>
       {/* Side columns along both long walls */}
@@ -285,7 +292,6 @@ export const HallModel = React.memo(function HallModel({ params, results, claddi
           showCladding={showCladding ?? true}
           columnOuterFlangeOffset={columnOuterFlangeOffset}
           columnSpacing={columnSpacing}
-          purlinHeightM={purlinHeightM}
           placementMode={placementMode}
           openings={openings}
           onPlaceOpening={onPlaceOpening}
@@ -298,7 +304,7 @@ export const HallModel = React.memo(function HallModel({ params, results, claddi
 
       {/* Openings (gates, doors, windows) */}
       {openings && openings.length > 0 && (
-        <Openings params={params} openings={openings} columnOuterFlangeOffset={columnOuterFlangeOffset} />
+        <Openings params={params} openings={openings} wallZOffset={wallZOffset} />
       )}
 
       {/* Ridge skylight */}

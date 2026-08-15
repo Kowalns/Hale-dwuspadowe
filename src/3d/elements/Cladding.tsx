@@ -11,7 +11,6 @@ interface CladdingProps {
   showCladding: boolean;
   columnOuterFlangeOffset: number;
   columnSpacing: number;
-  purlinHeightM: number;
   placementMode?: boolean;
   openings?: Opening[];
   onPlaceOpening?: (opening: Opening) => void;
@@ -77,6 +76,7 @@ function createTrapezoidalGeometry(
   height: number,
   profileType: 'T18' | 'T35',
   waveAxis: 'x' | 'y',
+  invert: boolean = false,
 ): THREE.PlaneGeometry {
   const { height: amp, plateau, valley, period } = getTrapezoidalParams(profileType);
 
@@ -96,7 +96,7 @@ function createTrapezoidalGeometry(
     // Determine the coordinate along which the wave varies
     const coord = waveAxis === 'x' ? x : y;
     const displacement = trapezoidHeight(coord + (waveAxis === 'x' ? width : height) / 2, period, plateau, valley, amp);
-    pos.setZ(i, displacement);
+    pos.setZ(i, invert ? -displacement : displacement);
   }
 
   pos.needsUpdate = true;
@@ -173,7 +173,6 @@ export const Cladding = React.memo(function Cladding({
   showCladding,
   columnOuterFlangeOffset,
   columnSpacing,
-  purlinHeightM,
   placementMode,
   openings,
   onPlaceOpening,
@@ -215,21 +214,23 @@ export const Cladding = React.memo(function Cladding({
 
   const sideWallGeometry = useMemo(() => {
     if (isSideWallTrapezoid) {
-      return createTrapezoidalGeometry(hallLength, wallHeight, 'T18', wallWaveAxis);
+      return createTrapezoidalGeometry(hallLength, wallHeight, 'T18', wallWaveAxis, true);
     }
     // Sandwich: BoxGeometry with configurable thickness
     const thickness = (cladding.sandwichThickness ?? 100) / 1000;
     return new THREE.BoxGeometry(hallLength, wallHeight, thickness);
   }, [hallLength, wallHeight, isSideWallTrapezoid, wallWaveAxis, cladding.sandwichThickness]);
 
+  const endWallWidth = span + 2 * (columnOuterFlangeOffset + sideWallThicknessOffset);
+
   const endWallGeometry = useMemo(() => {
     if (isEndWallTrapezoid) {
-      return createTrapezoidalGeometry(span, wallHeight, 'T18', wallWaveAxis);
+      return createTrapezoidalGeometry(endWallWidth, wallHeight, 'T18', wallWaveAxis, true);
     }
     // Sandwich: BoxGeometry with configurable thickness
     const thickness = (cladding.sandwichThickness ?? 100) / 1000;
-    return new THREE.BoxGeometry(span, wallHeight, thickness);
-  }, [span, wallHeight, isEndWallTrapezoid, wallWaveAxis, cladding.sandwichThickness]);
+    return new THREE.BoxGeometry(endWallWidth, wallHeight, thickness);
+  }, [endWallWidth, wallHeight, isEndWallTrapezoid, wallWaveAxis, cladding.sandwichThickness]);
 
   // Roof geometry: ribs run along the slope (from ridge to eave).
   // The plane is hallLength x roofSlopeLengthWithOverhang.
@@ -420,14 +421,9 @@ export const Cladding = React.memo(function Cladding({
       <mesh
         position={[-endWallThicknessOffset, wallHeight + gableTriangleHeight / 2, span / 2]}
         rotation={[0, Math.PI / 2, 0]}
+        material={endWallMat}
       >
         <GableTriangleGeometry width={span} height={gableTriangleHeight} />
-        <meshStandardMaterial
-          color={getRALHex(cladding.endWallColor)}
-          opacity={1.0}
-          side={THREE.DoubleSide}
-          depthWrite={true}
-        />
       </mesh>
 
       {/* End wall X=hallLength+offset (back gable) - rectangular part */}
@@ -443,14 +439,9 @@ export const Cladding = React.memo(function Cladding({
       <mesh
         position={[hallLength + endWallThicknessOffset, wallHeight + gableTriangleHeight / 2, span / 2]}
         rotation={[0, -Math.PI / 2, 0]}
+        material={endWallMat}
       >
         <GableTriangleGeometry width={span} height={gableTriangleHeight} />
-        <meshStandardMaterial
-          color={getRALHex(cladding.endWallColor)}
-          opacity={1.0}
-          side={THREE.DoubleSide}
-          depthWrite={true}
-        />
       </mesh>
 
       {/* End wall color stripes - X=-offset */}
@@ -482,7 +473,7 @@ export const Cladding = React.memo(function Cladding({
       <mesh
         position={[
           hallLength / 2,
-          wallHeight + gableTriangleHeight / 2 + purlinHeightM,
+          wallHeight + gableTriangleHeight / 2 + 0.003,
           span / 4,
         ]}
         rotation={[Math.PI / 2 - roofAngleRad, 0, 0]}
@@ -494,7 +485,7 @@ export const Cladding = React.memo(function Cladding({
       <mesh
         position={[
           hallLength / 2,
-          wallHeight + gableTriangleHeight / 2 + purlinHeightM,
+          wallHeight + gableTriangleHeight / 2 + 0.003,
           (3 * span) / 4,
         ]}
         rotation={[-(Math.PI / 2 - roofAngleRad), 0, 0]}
