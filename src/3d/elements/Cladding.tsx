@@ -241,7 +241,7 @@ export const Cladding = React.memo(function Cladding({
   // so each rib stripe runs along Y (the slope direction).
   // Actually: "garby wzdluz spadku" means ridges go from ridge to eave = along Y on the plane.
   // That means the wave pattern repeats along X. So waveAxis = 'x'.
-  const roofWidth = hallLength;
+  const roofWidth = hallLength + 2 * (endColumnOuterOffset + endWallThicknessOffset);
   const roofSlopeLengthWithOverhang = roofSlopeLength + eaveOverhangM;
   const roofGeometry = useMemo(() => {
     if (isRoofTrapezoid) {
