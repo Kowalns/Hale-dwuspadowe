@@ -1159,7 +1159,7 @@ export const Cladding = React.memo(function Cladding({
       {/* Roof - left slope (Z=0 side going up to ridge) */}
       {/* Roof panels extend beyond side walls by eaveOverhang */}
       {(() => {
-        const roofAmpOffset = isRoofTrapezoid ? getTrapezoidalParams(cladding.roofType === 'T35' ? 'T35' : 'T18').height / 2 : 0;
+        const roofAmpOffset = isRoofTrapezoid ? getTrapezoidalParams(cladding.roofType === 'T35' ? 'T35' : 'T18').height : 0;
         return (
           <>
             <mesh
