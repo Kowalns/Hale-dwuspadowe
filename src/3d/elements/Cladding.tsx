@@ -1160,13 +1160,18 @@ export const Cladding = React.memo(function Cladding({
       {/* Roof panels extend beyond side walls by eaveOverhang */}
       {(() => {
         const roofAmpOffset = isRoofTrapezoid ? getTrapezoidalParams(cladding.roofType === 'T35' ? 'T35' : 'T18').height : 0;
+        // Roof center Y: bottom edge must be at wallHeight (eave level), so center = wallHeight + half slope rise
+        const roofCenterY = wallHeight + (roofSlopeLengthWithOverhang / 2) * Math.sin(roofAngleRad) + roofAmpOffset;
+        // Z positions: left slope center, right slope center
+        const leftRoofCenterZ = (span / 2) - (roofSlopeLengthWithOverhang / 2) * Math.cos(roofAngleRad);
+        const rightRoofCenterZ = (span / 2) + (roofSlopeLengthWithOverhang / 2) * Math.cos(roofAngleRad);
         return (
           <>
             <mesh
               position={[
                 hallLength / 2,
-                wallHeight + gableTriangleHeight / 2 + 0.003 + roofAmpOffset - eaveOverhangM * Math.sin(roofAngleRad) / 2,
-                span / 4 - eaveOverhangM * Math.cos(roofAngleRad) / 2,
+                roofCenterY,
+                leftRoofCenterZ,
               ]}
               rotation={[Math.PI / 2 - roofAngleRad, 0, 0]}
               geometry={roofGeometry}
@@ -1177,8 +1182,8 @@ export const Cladding = React.memo(function Cladding({
             <mesh
               position={[
                 hallLength / 2,
-                wallHeight + gableTriangleHeight / 2 + 0.003 + roofAmpOffset - eaveOverhangM * Math.sin(roofAngleRad) / 2,
-                (3 * span) / 4 + eaveOverhangM * Math.cos(roofAngleRad) / 2,
+                roofCenterY,
+                rightRoofCenterZ,
               ]}
               rotation={[-(Math.PI / 2 - roofAngleRad), 0, 0]}
               geometry={roofGeometryRight}
