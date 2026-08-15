@@ -223,5 +223,50 @@
     "enable": "Wlacz swietlik",
     "length": "Dlugosc swietlika",
     "width": "Szerokosc swietlika"
+  },
+  "pricing": {
+    "title": "Wycena",
+    "column": {
+      "name": "Pozycja",
+      "quantity": "Ilosc",
+      "unit": "Jm",
+      "unitPrice": "Cena jedn.",
+      "total": "Wartosc"
+    },
+    "categories": {
+      "steel": "Konstrukcja stalowa",
+      "cladding": "Obudowa (sciany + dach)",
+      "openings": "Otwory",
+      "skylights": "Swietliki",
+      "flashings": "Obrobki blacharskie",
+      "gutters": "Rynny",
+      "installation": "Montaz"
+    },
+    "detailedPrices": "Szczegolowe ceny jednostkowe",
+    "prices": {
+      "steelMain": "Stal glowna",
+      "steelPurlins": "Platwie",
+      "sandwichWall": "Panel sciana",
+      "sandwichRoof": "Panel dach",
+      "sheetT18": "Blacha T18",
+      "sheetT35": "Blacha T35",
+      "gateSlidingPerSqm": "Brama przesuwna",
+      "gateSectionalPerSqm": "Brama segmentowa",
+      "doorPerPiece": "Drzwi",
+      "windowPerSqm": "Okno",
+      "skylightPerM": "Swietlik",
+      "flashingsPerSqm": "Obrobki",
+      "gutterPerM": "Rynna"
+    },
+    "installation": "Montaz",
+    "installDays": "Liczba dni",
+    "installDayRate": "Stawka dzienna",
+    "daysUnit": "dni",
+    "totalNet": "Razem netto",
+    "vat": "+ VAT 23%",
+    "totalGross": "Razem brutto",
+    "costPerM2": "Koszt na m2 zabudowy",
+    "steelMassPerM2": "Masa stali na m2",
+    "breakdown": "Rozklad kosztow"
   }
 }

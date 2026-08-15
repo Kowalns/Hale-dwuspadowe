@@ -5,6 +5,9 @@ import { ResultsPanel } from './ResultsPanel';
 import { CladdingPanel } from './CladdingPanel';
 import { OpeningsPanel } from './OpeningsPanel';
 import { SkylightPanel } from './SkylightPanel';
+import { PricingPanel } from './PricingPanel';
+import type { PricingData } from '../data/pricing';
+import type { PricingResult } from '../utils/pricing';
 
 const DEFAULT_PARAMS: HallParameters = {
   span: 18,
@@ -94,9 +97,12 @@ interface FormPanelProps {
   skylight?: SkylightParameters;
   onSkylightChange?: (skylight: SkylightParameters) => void;
   hallLength?: number;
+  pricing?: PricingData;
+  onPricingChange?: (pricing: PricingData) => void;
+  pricingResult?: PricingResult;
 }
 
-export function FormPanel({ params, onParamsChange, results, profileOverrides, onProfileOverridesChange, rafterType, onRafterTypeChange, customTrussHeight, onCustomTrussHeightChange, cladding, onCladdingChange, showCladding, onShowCladdingChange, openings, onRemoveOpening, placementMode, onPlacementModeChange, selectedOpeningType, onSelectedOpeningTypeChange, openingWidth, onOpeningWidthChange, openingHeight, onOpeningHeightChange, sillHeight, onSillHeightChange, skylight, onSkylightChange, hallLength }: FormPanelProps) {
+export function FormPanel({ params, onParamsChange, results, profileOverrides, onProfileOverridesChange, rafterType, onRafterTypeChange, customTrussHeight, onCustomTrussHeightChange, cladding, onCladdingChange, showCladding, onShowCladdingChange, openings, onRemoveOpening, placementMode, onPlacementModeChange, selectedOpeningType, onSelectedOpeningTypeChange, openingWidth, onOpeningWidthChange, openingHeight, onOpeningHeightChange, sillHeight, onSillHeightChange, skylight, onSkylightChange, hallLength, pricing, onPricingChange, pricingResult }: FormPanelProps) {
   const { t } = useTranslation();
   const [wizardMode, setWizardMode] = useState(true);
   const [wizardStep, setWizardStep] = useState(0);
@@ -511,6 +517,16 @@ export function FormPanel({ params, onParamsChange, results, profileOverrides, o
                 />
               </>
             )}
+            {pricing && onPricingChange && pricingResult && (
+              <>
+                <div className="my-3 border-t border-border" />
+                <PricingPanel
+                  pricing={pricing}
+                  onPricingChange={onPricingChange}
+                  pricingResult={pricingResult}
+                />
+              </>
+            )}
           </>
         ) : (
           <>
@@ -558,6 +574,16 @@ export function FormPanel({ params, onParamsChange, results, profileOverrides, o
                   skylight={skylight}
                   onSkylightChange={onSkylightChange}
                   hallLength={hallLength ?? params.length}
+                />
+              </>
+            )}
+            {pricing && onPricingChange && pricingResult && (
+              <>
+                <div className="my-3 border-t border-border" />
+                <PricingPanel
+                  pricing={pricing}
+                  onPricingChange={onPricingChange}
+                  pricingResult={pricingResult}
                 />
               </>
             )}

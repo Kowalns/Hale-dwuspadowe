@@ -1,8 +1,11 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { FormPanel, DEFAULT_PARAMS } from './FormPanel';
 import { Scene } from '../3d/Scene';
 import { useHallCalculations } from '../hooks/useHallCalculations';
 import type { HallParameters, ProfileOverrides, RafterType, CladdingParameters, Opening, OpeningType, SkylightParameters } from '../types';
+import type { PricingData } from '../data/pricing';
+import { defaultPricing } from '../data/pricing';
+import { calculatePricing } from '../utils/pricing';
 
 export const DEFAULT_CLADDING: CladdingParameters = {
   sideWallType: 'sandwich',
@@ -31,6 +34,7 @@ export function Layout() {
   const [openingHeight, setOpeningHeight] = useState(4);
   const [sillHeight, setSillHeight] = useState(0.9);
   const [skylight, setSkylight] = useState<SkylightParameters>({ enabled: false, length: 6, width: 1.5 });
+  const [pricing, setPricing] = useState<PricingData>(defaultPricing);
 
   const addOpening = useCallback((opening: Opening) => {
     setOpenings((prev) => [...prev, opening]);
@@ -41,6 +45,15 @@ export function Layout() {
   }, []);
 
   const results = useHallCalculations(params, profileOverrides, rafterType, customTrussHeight);
+
+  const pricingResult = useMemo(() => calculatePricing({
+    params,
+    results,
+    cladding,
+    openings,
+    skylight,
+    pricing,
+  }), [params, results, cladding, openings, skylight, pricing]);
 
   return (
     <main className="flex flex-col md:flex-row flex-1 overflow-hidden">
@@ -75,6 +88,9 @@ export function Layout() {
           skylight={skylight}
           onSkylightChange={setSkylight}
           hallLength={params.length}
+          pricing={pricing}
+          onPricingChange={setPricing}
+          pricingResult={pricingResult}
         />
       </aside>
       {/* Right panel - 3D Canvas ~65% */}

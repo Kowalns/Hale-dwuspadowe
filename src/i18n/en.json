@@ -223,5 +223,50 @@
     "enable": "Enable skylight",
     "length": "Skylight length",
     "width": "Skylight width"
+  },
+  "pricing": {
+    "title": "Pricing",
+    "column": {
+      "name": "Item",
+      "quantity": "Quantity",
+      "unit": "Unit",
+      "unitPrice": "Unit price",
+      "total": "Value"
+    },
+    "categories": {
+      "steel": "Steel structure",
+      "cladding": "Cladding (walls + roof)",
+      "openings": "Openings",
+      "skylights": "Skylights",
+      "flashings": "Flashings",
+      "gutters": "Gutters",
+      "installation": "Installation"
+    },
+    "detailedPrices": "Detailed unit prices",
+    "prices": {
+      "steelMain": "Main steel",
+      "steelPurlins": "Purlins",
+      "sandwichWall": "Panel wall",
+      "sandwichRoof": "Panel roof",
+      "sheetT18": "Sheet T18",
+      "sheetT35": "Sheet T35",
+      "gateSlidingPerSqm": "Sliding gate",
+      "gateSectionalPerSqm": "Sectional gate",
+      "doorPerPiece": "Door",
+      "windowPerSqm": "Window",
+      "skylightPerM": "Skylight",
+      "flashingsPerSqm": "Flashings",
+      "gutterPerM": "Gutter"
+    },
+    "installation": "Installation",
+    "installDays": "Number of days",
+    "installDayRate": "Day rate",
+    "daysUnit": "days",
+    "totalNet": "Total net",
+    "vat": "+ VAT 23%",
+    "totalGross": "Total gross",
+    "costPerM2": "Cost per m2 of floor",
+    "steelMassPerM2": "Steel mass per m2",
+    "breakdown": "Cost breakdown"
   }
 }
