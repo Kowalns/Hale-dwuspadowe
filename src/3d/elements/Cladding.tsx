@@ -68,65 +68,7 @@ function getTrapezoidalParams(type: 'T18' | 'T35') {
   return { height: 0.018, plateau: 0.033, valley: 0.188, period: 0.290 };
 }
 
-/**
- * Creates a pentagon (5-point) geometry covering the full end wall from floor to ridge.
- * Uses ShapeGeometry with trapezoidal displacement for profiled sheets,
- * or ExtrudeGeometry with thickness for sandwich panels.
- */
-function createPentagonGeometry(
-  width: number,
-  wallHeight: number,
-  ridgeHeight: number,
-  profileType: 'T18' | 'T35' | null,
-  waveAxis: 'x' | 'y',
-  invert: boolean,
-  thickness: number
-): THREE.BufferGeometry {
-  if (profileType) {
-    // Trapezoidal: ShapeGeometry with displacement
-    const shape = new THREE.Shape();
-    shape.moveTo(-width / 2, 0);
-    shape.lineTo(width / 2, 0);
-    shape.lineTo(width / 2, wallHeight - 0.05);
-    shape.lineTo(0, ridgeHeight - 0.05);
-    shape.lineTo(-width / 2, wallHeight - 0.05);
-    shape.closePath();
 
-    // Need enough segments for displacement
-    const { height: amp, plateau, valley, period } = getTrapezoidalParams(profileType);
-    const extent = waveAxis === 'x' ? width : ridgeHeight;
-    const waveCount = Math.ceil(extent / period);
-    const segments = Math.min(waveCount * 10, 500);
-
-    const geo = new THREE.ShapeGeometry(shape, segments);
-    const pos = geo.attributes.position;
-    for (let i = 0; i < pos.count; i++) {
-      const coord = waveAxis === 'x' ? pos.getX(i) : pos.getY(i);
-      const displacement = trapezoidHeight(coord + extent / 2, period, plateau, valley, amp);
-      pos.setZ(i, invert ? -displacement : displacement);
-    }
-    pos.needsUpdate = true;
-    geo.computeVertexNormals();
-    return geo;
-  } else {
-    // Sandwich: ExtrudeGeometry with thickness
-    const shape = new THREE.Shape();
-    shape.moveTo(-width / 2, 0);
-    shape.lineTo(width / 2, 0);
-    shape.lineTo(width / 2, wallHeight - 0.05);
-    shape.lineTo(0, ridgeHeight - 0.05);
-    shape.lineTo(-width / 2, wallHeight - 0.05);
-    shape.closePath();
-
-    const geo = new THREE.ExtrudeGeometry(shape, {
-      depth: thickness,
-      bevelEnabled: false,
-    });
-    geo.translate(0, 0, -thickness / 2);
-    geo.computeVertexNormals();
-    return geo;
-  }
-}
 
 /**
  * Creates a PlaneGeometry with trapezoidal vertex displacement.
@@ -227,13 +169,6 @@ export const Cladding = React.memo(function Cladding({
   const sideWallProfileType: 'T18' | 'T35' = 'T18';
   const numberOfBays = numberOfFrames - 1;
 
-  const endWallWidth = span + 2 * (columnOuterFlangeOffset + 2 * sideWallThicknessOffset);
-
-  const endWallFullGeometry = useMemo(() => {
-    const profileType: 'T18' | 'T35' | null = isEndWallTrapezoid ? 'T18' : null;
-    return createPentagonGeometry(endWallWidth, wallHeight, ridgeHeight, profileType, wallWaveAxis, true, sandwichThicknessM);
-  }, [endWallWidth, wallHeight, ridgeHeight, isEndWallTrapezoid, wallWaveAxis, sandwichThicknessM]);
-
   // Roof geometry: ribs run along the slope (from ridge to eave).
   // The plane is hallLength x roofSlopeLengthWithOverhang.
   // On the plane, X = along building length, Y = along slope.
@@ -254,9 +189,6 @@ export const Cladding = React.memo(function Cladding({
   }, [roofWidth, roofSlopeLengthWithOverhang, isRoofTrapezoid, cladding.roofType]);
 
   // Dispose geometries
-  useEffect(() => {
-    return () => { endWallFullGeometry.dispose(); };
-  }, [endWallFullGeometry]);
   useEffect(() => {
     return () => { roofGeometry.dispose(); };
   }, [roofGeometry]);
@@ -289,6 +221,38 @@ export const Cladding = React.memo(function Cladding({
     () => cladding.colorStripes.filter((s) => s.wallType === 'side'),
     [cladding.colorStripes]
   );
+
+  // End wall stripes
+  const endStripes = useMemo(
+    () => cladding.colorStripes.filter((s) => s.wallType === 'end'),
+    [cladding.colorStripes]
+  );
+
+  // End wall column Z positions (same logic as EndColumns)
+  const endColZPositions = useMemo(() => {
+    const targetSpacing = 3.0;
+    const n = Math.max(1, Math.round(span / targetSpacing) - 1);
+    const positions = [0];
+    for (let i = 1; i <= n; i++) positions.push((i / (n + 1)) * span);
+    positions.push(span);
+    positions.sort((a, b) => a - b);
+    return positions;
+  }, [span]);
+
+  // Gates on end walls (for panel exclusion)
+  const endFrontGates = useMemo(() => {
+    if (!openings) return [] as Opening[];
+    return openings.filter(
+      (o) => o.wall === 'end_front' && (o.type === 'sectional_gate' || o.type === 'sliding_gate')
+    );
+  }, [openings]);
+
+  const endBackGates = useMemo(() => {
+    if (!openings) return [] as Opening[];
+    return openings.filter(
+      (o) => o.wall === 'end_back' && (o.type === 'sectional_gate' || o.type === 'sliding_gate')
+    );
+  }, [openings]);
 
 
   // Determine which bays have gates and store gate info for cutout rendering
@@ -796,23 +760,225 @@ export const Cladding = React.memo(function Cladding({
 
 
 
-      {/* End wall X=-offset (front gable) - full pentagon */}
-      <mesh
-        position={[-(endColumnOuterOffset + endWallThicknessOffset), 0, span / 2]}
-        rotation={[0, Math.PI / 2, 0]}
-        geometry={endWallFullGeometry}
-        material={endWallMat}
-        onPointerDown={placementMode ? (e) => handleWallClick('end_front', span, e) : undefined}
-      />
+      {/* End wall panels - front (X = -(endColumnOuterOffset + endWallThicknessOffset)) */}
+      {(() => {
+        const xPos = -(endColumnOuterOffset + endWallThicknessOffset);
+        const endWallProfileType: 'T18' | 'T35' = 'T18';
+        const panelHeightM = cladding.panelWidth / 1000;
+        const numLayers = Math.floor(wallHeight / panelHeightM);
+        const elements: React.ReactNode[] = [];
 
-      {/* End wall X=hallLength+offset (back gable) - full pentagon */}
-      <mesh
-        position={[hallLength + endColumnOuterOffset + endWallThicknessOffset, 0, span / 2]}
-        rotation={[0, -Math.PI / 2, 0]}
-        geometry={endWallFullGeometry}
-        material={endWallMat}
-        onPointerDown={placementMode ? (e) => handleWallClick('end_back', span, e) : undefined}
-      />
+        // Rectangular panels between columns
+        for (let i = 0; i < endColZPositions.length - 1; i++) {
+          const zLeft = endColZPositions[i];
+          const zRight = endColZPositions[i + 1];
+          const panelWidth = (zRight - zLeft) - 0.020; // 20mm dilation
+          const panelCenterZ = (zLeft + zRight) / 2;
+
+          // Check if this panel span contains a gate
+          const hasGate = endFrontGates.some((gate) => {
+            const centerZ = span - gate.positionX;
+            return centerZ > zLeft && centerZ < zRight;
+          });
+          if (hasGate) continue;
+
+          if (endStripes.length === 0) {
+            elements.push(
+              <mesh
+                key={`end-front-panel-${i}`}
+                position={[xPos, wallHeight / 2, panelCenterZ]}
+                rotation={[0, Math.PI / 2, 0]}
+                material={endWallMat}
+                onPointerDown={placementMode ? (e) => handleWallClick('end_front', span, e) : undefined}
+              >
+                {isEndWallTrapezoid
+                  ? <primitive object={createTrapezoidalGeometry(panelWidth, wallHeight, endWallProfileType, wallWaveAxis, true)} attach="geometry" />
+                  : <boxGeometry args={[panelWidth, wallHeight, sandwichThicknessM]} />
+                }
+              </mesh>
+            );
+          } else {
+            // Color stripe segments per panel
+            const layerColors: string[] = [];
+            for (let layer = 1; layer <= numLayers; layer++) {
+              const stripe = endStripes.find(s => layer >= s.layerStart && layer <= s.layerEnd);
+              layerColors.push(stripe ? stripe.color : cladding.endWallColor);
+            }
+
+            const segments: ColorSegment[] = [];
+            if (numLayers > 0) {
+              let currentColor = layerColors[0];
+              let segStartLayer = 1;
+              for (let li = 1; li < layerColors.length; li++) {
+                if (layerColors[li] !== currentColor) {
+                  segments.push({ startLayer: segStartLayer, endLayer: li, color: currentColor });
+                  currentColor = layerColors[li];
+                  segStartLayer = li + 1;
+                }
+              }
+              segments.push({ startLayer: segStartLayer, endLayer: numLayers, color: currentColor });
+            }
+
+            const coveredHeight = numLayers * panelHeightM;
+            const remainder = wallHeight - coveredHeight;
+
+            segments.forEach((seg, segIdx) => {
+              let segHeight = (seg.endLayer - seg.startLayer + 1) * panelHeightM;
+              const segBottomY = (seg.startLayer - 1) * panelHeightM;
+              if (segIdx === segments.length - 1 && remainder > 0.0001) {
+                segHeight += remainder;
+              }
+              const segCenterY = segBottomY + segHeight / 2;
+              const segMat = seg.color === cladding.endWallColor ? endWallMat : makeCladdingMaterial(seg.color);
+
+              elements.push(
+                <mesh
+                  key={`end-front-panel-${i}-seg-${segIdx}`}
+                  position={[xPos, segCenterY, panelCenterZ]}
+                  rotation={[0, Math.PI / 2, 0]}
+                  material={segMat}
+                  onPointerDown={placementMode ? (e) => handleWallClick('end_front', span, e) : undefined}
+                >
+                  {isEndWallTrapezoid
+                    ? <primitive object={createTrapezoidalGeometry(panelWidth, segHeight, endWallProfileType, wallWaveAxis, true)} attach="geometry" />
+                    : <boxGeometry args={[panelWidth, segHeight, sandwichThicknessM]} />
+                  }
+                </mesh>
+              );
+            });
+          }
+        }
+
+        // Gable triangle above wallHeight
+        const triangleShape = new THREE.Shape();
+        triangleShape.moveTo(-span / 2, 0);
+        triangleShape.lineTo(span / 2, 0);
+        triangleShape.lineTo(0, gableTriangleHeight);
+        triangleShape.closePath();
+        const triangleGeo = new THREE.ShapeGeometry(triangleShape);
+
+        elements.push(
+          <mesh
+            key="end-front-gable-triangle"
+            position={[xPos, wallHeight, span / 2]}
+            rotation={[0, Math.PI / 2, 0]}
+            material={endWallMat}
+            geometry={triangleGeo}
+          />
+        );
+
+        return elements;
+      })()}
+
+      {/* End wall panels - back (X = hallLength + endColumnOuterOffset + endWallThicknessOffset) */}
+      {(() => {
+        const xPos = hallLength + endColumnOuterOffset + endWallThicknessOffset;
+        const endWallProfileType: 'T18' | 'T35' = 'T18';
+        const panelHeightM = cladding.panelWidth / 1000;
+        const numLayers = Math.floor(wallHeight / panelHeightM);
+        const elements: React.ReactNode[] = [];
+
+        // Rectangular panels between columns
+        for (let i = 0; i < endColZPositions.length - 1; i++) {
+          const zLeft = endColZPositions[i];
+          const zRight = endColZPositions[i + 1];
+          const panelWidth = (zRight - zLeft) - 0.020; // 20mm dilation
+          const panelCenterZ = (zLeft + zRight) / 2;
+
+          // Check if this panel span contains a gate
+          const hasGate = endBackGates.some((gate) => {
+            const centerZ = gate.positionX;
+            return centerZ > zLeft && centerZ < zRight;
+          });
+          if (hasGate) continue;
+
+          if (endStripes.length === 0) {
+            elements.push(
+              <mesh
+                key={`end-back-panel-${i}`}
+                position={[xPos, wallHeight / 2, panelCenterZ]}
+                rotation={[0, -Math.PI / 2, 0]}
+                material={endWallMat}
+                onPointerDown={placementMode ? (e) => handleWallClick('end_back', span, e) : undefined}
+              >
+                {isEndWallTrapezoid
+                  ? <primitive object={createTrapezoidalGeometry(panelWidth, wallHeight, endWallProfileType, wallWaveAxis, true)} attach="geometry" />
+                  : <boxGeometry args={[panelWidth, wallHeight, sandwichThicknessM]} />
+                }
+              </mesh>
+            );
+          } else {
+            // Color stripe segments per panel
+            const layerColors: string[] = [];
+            for (let layer = 1; layer <= numLayers; layer++) {
+              const stripe = endStripes.find(s => layer >= s.layerStart && layer <= s.layerEnd);
+              layerColors.push(stripe ? stripe.color : cladding.endWallColor);
+            }
+
+            const segments: ColorSegment[] = [];
+            if (numLayers > 0) {
+              let currentColor = layerColors[0];
+              let segStartLayer = 1;
+              for (let li = 1; li < layerColors.length; li++) {
+                if (layerColors[li] !== currentColor) {
+                  segments.push({ startLayer: segStartLayer, endLayer: li, color: currentColor });
+                  currentColor = layerColors[li];
+                  segStartLayer = li + 1;
+                }
+              }
+              segments.push({ startLayer: segStartLayer, endLayer: numLayers, color: currentColor });
+            }
+
+            const coveredHeight = numLayers * panelHeightM;
+            const remainder = wallHeight - coveredHeight;
+
+            segments.forEach((seg, segIdx) => {
+              let segHeight = (seg.endLayer - seg.startLayer + 1) * panelHeightM;
+              const segBottomY = (seg.startLayer - 1) * panelHeightM;
+              if (segIdx === segments.length - 1 && remainder > 0.0001) {
+                segHeight += remainder;
+              }
+              const segCenterY = segBottomY + segHeight / 2;
+              const segMat = seg.color === cladding.endWallColor ? endWallMat : makeCladdingMaterial(seg.color);
+
+              elements.push(
+                <mesh
+                  key={`end-back-panel-${i}-seg-${segIdx}`}
+                  position={[xPos, segCenterY, panelCenterZ]}
+                  rotation={[0, -Math.PI / 2, 0]}
+                  material={segMat}
+                  onPointerDown={placementMode ? (e) => handleWallClick('end_back', span, e) : undefined}
+                >
+                  {isEndWallTrapezoid
+                    ? <primitive object={createTrapezoidalGeometry(panelWidth, segHeight, endWallProfileType, wallWaveAxis, true)} attach="geometry" />
+                    : <boxGeometry args={[panelWidth, segHeight, sandwichThicknessM]} />
+                  }
+                </mesh>
+              );
+            });
+          }
+        }
+
+        // Gable triangle above wallHeight
+        const triangleShape = new THREE.Shape();
+        triangleShape.moveTo(-span / 2, 0);
+        triangleShape.lineTo(span / 2, 0);
+        triangleShape.lineTo(0, gableTriangleHeight);
+        triangleShape.closePath();
+        const triangleGeo = new THREE.ShapeGeometry(triangleShape);
+
+        elements.push(
+          <mesh
+            key="end-back-gable-triangle"
+            position={[xPos, wallHeight, span / 2]}
+            rotation={[0, -Math.PI / 2, 0]}
+            material={endWallMat}
+            geometry={triangleGeo}
+          />
+        );
+
+        return elements;
+      })()}
 
 
 
