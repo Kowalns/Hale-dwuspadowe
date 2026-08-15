@@ -152,7 +152,7 @@ function TrussFrame({
     webs.push({ start: bottomNL[0], end: topNL[1] });
 
     // Then pairs meeting at top nodes (under purlins)
-    for (let i = 0; i < numPanels; i++) {
+    for (let i = 1; i < numPanels; i++) {
       // Bottom midpoint between top[i] and top[i+1]
       const midZ = (topNL[i].z + topNL[i + 1].z) / 2;
       const midYTop = (topNL[i].y + topNL[i + 1].y) / 2;
@@ -170,7 +170,7 @@ function TrussFrame({
     webs.push({ start: bottomNR[0], end: topNR[1] });
 
     // Then pairs meeting at top nodes (under purlins)
-    for (let i = 0; i < numPanels; i++) {
+    for (let i = 1; i < numPanels; i++) {
       const midZ = (topNR[i].z + topNR[i + 1].z) / 2;
       const midYTop = (topNR[i].y + topNR[i + 1].y) / 2;
       const midYBottom = midYTop - trussHeight;
