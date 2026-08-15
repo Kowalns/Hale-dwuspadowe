@@ -186,8 +186,9 @@ export const Cladding = React.memo(function Cladding({
   const isSideWallTrapezoid = cladding.sideWallType === 'trapezoid';
   const isEndWallTrapezoid = cladding.endWallType === 'trapezoid';
 
-  // Determine trapezoidal parameters for roof
-  const isRoofTrapezoid = cladding.roofType === 'T18' || cladding.roofType === 'T35';
+  // Determine trapezoidal parameters for roof (temporarily unused - flat roof for positioning fix)
+  const _isRoofTrapezoid = cladding.roofType === 'T18' || cladding.roofType === 'T35';
+  void _isRoofTrapezoid;
 
   // Wall thickness offset: shift walls outward by their thickness to avoid column collision
   const sideWallThicknessOffset = isSideWallTrapezoid
@@ -218,31 +219,17 @@ export const Cladding = React.memo(function Cladding({
   // That means the wave pattern repeats along X. So waveAxis = 'x'.
   const roofWidth = hallLength + 2 * (endColumnOuterOffset + 2 * endWallThicknessOffset);
   const roofSlopeLengthWithOverhang = roofSlopeLength + eaveOverhangM;
+  const roofThickness = 0.02; // 20mm flat roof panel for now
   const roofGeometry = useMemo(() => {
-    if (isRoofTrapezoid) {
-      const profileType = cladding.roofType === 'T35' ? 'T35' : 'T18';
-      // Ribs run along slope (Y direction), wave repeats along X (building length direction)
-      return createTrapezoidalGeometry(roofWidth, roofSlopeLengthWithOverhang, profileType, 'x');
-    }
-    // Sandwich roof: BoxGeometry with 100mm thickness
-    return new THREE.BoxGeometry(roofWidth, roofSlopeLengthWithOverhang, 0.1);
-  }, [roofWidth, roofSlopeLengthWithOverhang, isRoofTrapezoid, cladding.roofType]);
+    return new THREE.BoxGeometry(roofWidth, roofSlopeLengthWithOverhang, roofThickness);
+  }, [roofWidth, roofSlopeLengthWithOverhang]);
 
-  const roofGeometryRight = useMemo(() => {
-    if (isRoofTrapezoid) {
-      const profileType = cladding.roofType === 'T35' ? 'T35' : 'T18';
-      return createTrapezoidalGeometry(roofWidth, roofSlopeLengthWithOverhang, profileType, 'x');
-    }
-    return new THREE.BoxGeometry(roofWidth, roofSlopeLengthWithOverhang, 0.1);
-  }, [roofWidth, roofSlopeLengthWithOverhang, isRoofTrapezoid, cladding.roofType]);
+  const roofGeometryRight = roofGeometry; // same geometry for both slopes
 
   // Dispose geometries
   useEffect(() => {
     return () => { roofGeometry.dispose(); };
   }, [roofGeometry]);
-  useEffect(() => {
-    return () => { roofGeometryRight.dispose(); };
-  }, [roofGeometryRight]);
 
   // Materials
   const sideWallMat = useMemo(() => {
@@ -1159,10 +1146,12 @@ export const Cladding = React.memo(function Cladding({
       {/* Roof - left slope (Z=0 side going up to ridge) */}
       {/* Roof panels extend beyond side walls by eaveOverhang */}
       {(() => {
-        const roofAmpOffset = isRoofTrapezoid ? getTrapezoidalParams(cladding.roofType === 'T35' ? 'T35' : 'T18').height * 3 : 0;
-        // Roof center Y: bottom edge must be at wallHeight (eave level), so center = wallHeight + half slope rise
-        const roofCenterY = wallHeight + (roofSlopeLengthWithOverhang / 2) * Math.sin(roofAngleRad) + roofAmpOffset;
-        // Z positions: left slope center, right slope center
+        // Roof center Y: bottom surface of roof box at eave must align with wallHeight (purlin tops)
+        // After rotation by (PI/2 - angle) around X:
+        // bottomEdge Y = centerY - (slopeLength/2) * sin(angle) - (thickness/2) * cos(angle)
+        // Set bottomEdge Y = wallHeight:
+        const roofCenterY = wallHeight + (roofSlopeLengthWithOverhang / 2) * Math.sin(roofAngleRad) + (roofThickness / 2) * Math.cos(roofAngleRad);
+        // Z positions: center of each slope
         const leftRoofCenterZ = (span / 2) - (roofSlopeLengthWithOverhang / 2) * Math.cos(roofAngleRad);
         const rightRoofCenterZ = (span / 2) + (roofSlopeLengthWithOverhang / 2) * Math.cos(roofAngleRad);
         return (
