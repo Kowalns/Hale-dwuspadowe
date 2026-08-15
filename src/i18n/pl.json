@@ -184,6 +184,7 @@
       "horizontal": "Poziomo",
       "vertical": "Pionowo"
     },
+    "eaveOverhang": "Długość okapu (mm)",
     "stripeWall": {
       "side": "Sciana boczna",
       "end": "Sciana szczytowa"

@@ -204,6 +204,26 @@ export function CladdingPanel({
         </div>
       </div>
 
+      {/* Eave overhang */}
+      <div className="space-y-1">
+        <label className="text-xs text-text-secondary font-sans">{t('cladding.eaveOverhang')}</label>
+        <div className="flex items-center gap-2">
+          <input
+            type="number"
+            min={0}
+            max={1000}
+            step={50}
+            value={cladding.eaveOverhang ?? 300}
+            onChange={(e) => {
+              const v = Number(e.target.value);
+              if (v >= 0 && v <= 1000) update('eaveOverhang', v);
+            }}
+            className="w-24 px-2 py-1 text-xs font-sans text-text-primary bg-white border border-border rounded focus:outline-none focus:ring-1 focus:ring-accent-blue"
+          />
+          <span className="text-xs text-text-secondary font-sans">mm</span>
+        </div>
+      </div>
+
       {/* Color stripes - only for horizontal orientation */}
       {cladding.panelOrientation === 'horizontal' && (
         <div className="space-y-2">

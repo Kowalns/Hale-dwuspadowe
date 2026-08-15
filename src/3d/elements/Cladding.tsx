@@ -33,23 +33,59 @@ function makeCladdingMaterial(ralCode: string): THREE.MeshStandardMaterial {
 }
 
 /**
- * Creates a PlaneGeometry with sinusoidal vertex displacement for trapezoidal profiles.
- * Waves run along the localWaveAxis ('x' for walls = vertical ribs, 'y' for roof = ribs along slope).
+ * Trapezoidal profile height function.
+ * Profile: flat valley at bottom -> slope up -> flat plateau at top -> slope down -> next valley.
+ */
+function trapezoidHeight(x: number, period: number, plateauWidth: number, valleyWidth: number, height: number): number {
+  const p = ((x % period) + period) % period;
+  const slopeWidth = (period - plateauWidth - valleyWidth) / 2;
+
+  if (p < valleyWidth / 2) return 0;
+  if (p < valleyWidth / 2 + slopeWidth) {
+    const t = (p - valleyWidth / 2) / slopeWidth;
+    return t * height;
+  }
+  if (p < valleyWidth / 2 + slopeWidth + plateauWidth) return height;
+  if (p < valleyWidth / 2 + slopeWidth + plateauWidth + slopeWidth) {
+    const t = (p - valleyWidth / 2 - slopeWidth - plateauWidth) / slopeWidth;
+    return (1 - t) * height;
+  }
+  return 0;
+}
+
+/**
+ * Profile parameters for trapezoidal sheets (in meters).
+ * T18: height 18mm, plateau 70mm, valley 188mm, period ~290mm
+ * T35: height 35mm, plateau 126mm, valley 210mm, period ~381mm
+ */
+function getTrapezoidalParams(type: 'T18' | 'T35') {
+  if (type === 'T35') {
+    return { height: 0.035, plateau: 0.126, valley: 0.210, period: 0.381 };
+  }
+  // T18
+  return { height: 0.018, plateau: 0.070, valley: 0.188, period: 0.290 };
+}
+
+/**
+ * Creates a PlaneGeometry with trapezoidal vertex displacement.
+ * Waves run along the waveAxis ('x' for walls = vertical ribs, 'y' for roof along slope).
  * Displacement is applied along the Z normal of the plane.
  */
 function createTrapezoidalGeometry(
   width: number,
   height: number,
-  amplitude: number,
-  period: number,
+  profileType: 'T18' | 'T35',
   waveAxis: 'x' | 'y',
 ): THREE.PlaneGeometry {
-  // Scale segments based on wave period to avoid under-sampling on long walls.
-  // At least 4 segments per wave cycle ensures smooth sinusoidal appearance.
-  // Capped to avoid excessive memory usage.
-  const segmentsW = Math.min(Math.ceil(width / period) * 4, 800);
-  const segmentsH = Math.min(Math.ceil(height / period) * 4, 400);
-  const geo = new THREE.PlaneGeometry(width, height, segmentsW, segmentsH);
+  const { height: amp, plateau, valley, period } = getTrapezoidalParams(profileType);
+
+  // Scale segments: 4 vertices per wave period along wave axis
+  const waveExtent = waveAxis === 'x' ? width : height;
+
+  const segW = Math.min(Math.ceil(width * 1000 / (period * 1000)) * 4, 800);
+  const segH = Math.min(Math.ceil(height * 1000 / (period * 1000)) * 4, 400);
+
+  const geo = new THREE.PlaneGeometry(width, height, segW, segH);
   const pos = geo.attributes.position;
 
   for (let i = 0; i < pos.count; i++) {
@@ -57,7 +93,7 @@ function createTrapezoidalGeometry(
     const y = pos.getY(i);
     // Determine the coordinate along which the wave varies
     const coord = waveAxis === 'x' ? x : y;
-    const displacement = amplitude * Math.sin((2 * Math.PI * coord) / period);
+    const displacement = trapezoidHeight(coord + waveExtent / 2, period, plateau, valley, amp);
     pos.setZ(i, displacement);
   }
 
@@ -125,9 +161,9 @@ function ColorStripePatches({
 
 /**
  * Cladding component rendering walls and roof panels with RAL colors.
- * Walls are PlaneGeometry, roof is two tilted planes matching roof slope.
- * Trapezoidal profiles get sinusoidal vertex displacement.
- * Color stripes are offset patches on top of the main wall surface.
+ * Trapezoidal profiles use proper trapezoidal waveform (not sinusoidal).
+ * Sandwich panels use BoxGeometry with 100mm thickness.
+ * Roof panels have ribs running along slope (waveAxis = 'x' on the plane, which corresponds to building length axis).
  */
 export const Cladding = React.memo(function Cladding({
   params,
@@ -150,41 +186,51 @@ export const Cladding = React.memo(function Cladding({
   const gableTriangleHeight = ridgeHeight - wallHeight;
   const roofSlopeLength = (span / 2) / Math.cos(roofAngleRad);
 
-  // Determine trapezoidal parameters for walls
-  const isWallTrapezoid = cladding.sideWallType === 'trapezoid';
-  // For side walls, use T18 profile (18mm amplitude, 100mm period) as default trapezoidal
-  const wallAmplitude = isWallTrapezoid ? 0.018 : 0;
-  const wallPeriod = isWallTrapezoid ? 0.100 : 1;
+  // Eave overhang in meters
+  const eaveOverhangM = (cladding.eaveOverhang ?? 300) / 1000;
+
+  // Determine if walls are trapezoidal or sandwich
+  const isSideWallTrapezoid = cladding.sideWallType === 'trapezoid';
+  const isEndWallTrapezoid = cladding.endWallType === 'trapezoid';
 
   // Determine trapezoidal parameters for roof
   const isRoofTrapezoid = cladding.roofType === 'T18' || cladding.roofType === 'T35';
-  const roofAmplitude = cladding.roofType === 'T35' ? 0.035 : cladding.roofType === 'T18' ? 0.018 : 0;
-  const roofPeriod = cladding.roofType === 'T35' ? 0.150 : cladding.roofType === 'T18' ? 0.100 : 1;
 
-  // Wall geometries with optional sinusoidal displacement
+  // Wall geometries
   const sideWallGeometry = useMemo(() => {
-    if (isWallTrapezoid) {
-      return createTrapezoidalGeometry(hallLength, wallHeight, wallAmplitude, wallPeriod, 'x');
+    if (isSideWallTrapezoid) {
+      // Ribs run vertically on walls -> wave along X (horizontal axis of the plane)
+      return createTrapezoidalGeometry(hallLength, wallHeight, 'T18', 'x');
     }
-    return new THREE.PlaneGeometry(hallLength, wallHeight);
-  }, [hallLength, wallHeight, isWallTrapezoid, wallAmplitude, wallPeriod]);
+    // Sandwich: BoxGeometry with 100mm thickness
+    return new THREE.BoxGeometry(hallLength, wallHeight, 0.1);
+  }, [hallLength, wallHeight, isSideWallTrapezoid]);
 
   const endWallGeometry = useMemo(() => {
-    if (cladding.endWallType === 'trapezoid') {
-      return createTrapezoidalGeometry(span, wallHeight, wallAmplitude, wallPeriod, 'x');
+    if (isEndWallTrapezoid) {
+      return createTrapezoidalGeometry(span, wallHeight, 'T18', 'x');
     }
-    return new THREE.PlaneGeometry(span, wallHeight);
-  }, [span, wallHeight, cladding.endWallType, wallAmplitude, wallPeriod]);
+    // Sandwich: BoxGeometry with 100mm thickness
+    return new THREE.BoxGeometry(span, wallHeight, 0.1);
+  }, [span, wallHeight, isEndWallTrapezoid]);
 
-  // Roof geometry with optional sinusoidal displacement along slope
+  // Roof geometry: ribs run along the slope (from ridge to eave).
+  // The plane is (hallLength + 2*eaveOverhangM) x roofSlopeLength.
+  // On the plane, X = along building length, Y = along slope.
+  // Ribs along slope means wave varies along X (perpendicular to slope direction),
+  // so each rib stripe runs along Y (the slope direction).
+  // Actually: "garby wzdluz spadku" means ridges go from ridge to eave = along Y on the plane.
+  // That means the wave pattern repeats along X. So waveAxis = 'x'.
+  const roofWidth = hallLength + 2 * eaveOverhangM;
   const roofGeometry = useMemo(() => {
     if (isRoofTrapezoid) {
-      // hallLength is width (along building), roofSlopeLength is height (along slope)
-      // Waves run along slope = vary along Y axis of the plane (roofSlopeLength dimension)
-      return createTrapezoidalGeometry(hallLength, roofSlopeLength, roofAmplitude, roofPeriod, 'y');
+      const profileType = cladding.roofType === 'T35' ? 'T35' : 'T18';
+      // Ribs run along slope (Y direction), wave repeats along X (building length direction)
+      return createTrapezoidalGeometry(roofWidth, roofSlopeLength, profileType, 'x');
     }
-    return new THREE.PlaneGeometry(hallLength, roofSlopeLength);
-  }, [hallLength, roofSlopeLength, isRoofTrapezoid, roofAmplitude, roofPeriod]);
+    // Sandwich roof: BoxGeometry with 100mm thickness
+    return new THREE.BoxGeometry(roofWidth, roofSlopeLength, 0.1);
+  }, [roofWidth, roofSlopeLength, isRoofTrapezoid, cladding.roofType]);
 
   // Dispose geometries
   useEffect(() => {
@@ -414,6 +460,7 @@ export const Cladding = React.memo(function Cladding({
       )}
 
       {/* Roof - left slope (Z=0 side going up to ridge) */}
+      {/* Roof panels extend beyond side walls by eaveOverhang */}
       <mesh
         position={[
           hallLength / 2,

@@ -20,6 +20,7 @@ export interface CladdingParameters {
   panelOrientation: PanelOrientation;
   panelWidth: number; // mm, default 1000
   colorStripes: ColorStripe[];
+  eaveOverhang?: number; // mm, domyślnie 300
 }
 
 export type OpeningType = 'sliding_gate' | 'sectional_gate' | 'door' | 'window';

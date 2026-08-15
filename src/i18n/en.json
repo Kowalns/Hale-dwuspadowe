@@ -184,6 +184,7 @@
       "horizontal": "Horizontal",
       "vertical": "Vertical"
     },
+    "eaveOverhang": "Eave overhang (mm)",
     "stripeWall": {
       "side": "Side wall",
       "end": "End wall"
