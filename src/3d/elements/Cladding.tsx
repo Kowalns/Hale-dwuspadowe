@@ -12,6 +12,7 @@ interface CladdingProps {
   columnOuterFlangeOffset: number;
   endColumnOuterOffset: number;
   columnSpacing: number;
+  numberOfFrames: number;
   placementMode?: boolean;
   openings?: Opening[];
   onPlaceOpening?: (opening: Opening) => void;
@@ -175,6 +176,7 @@ export const Cladding = React.memo(function Cladding({
   columnOuterFlangeOffset,
   endColumnOuterOffset,
   columnSpacing,
+  numberOfFrames,
   placementMode,
   openings,
   onPlaceOpening,
@@ -217,14 +219,9 @@ export const Cladding = React.memo(function Cladding({
   const sideWallHeight = wallHeight - 0.05;
   const sideWallLength = hallLength - 2 * (endColumnOuterOffset + endWallThicknessOffset) - 0.02;
 
-  const sideWallGeometry = useMemo(() => {
-    if (isSideWallTrapezoid) {
-      return createTrapezoidalGeometry(sideWallLength, sideWallHeight, 'T18', wallWaveAxis, true);
-    }
-    // Sandwich: BoxGeometry with configurable thickness
-    const thickness = (cladding.sandwichThickness ?? 100) / 1000;
-    return new THREE.BoxGeometry(sideWallLength, sideWallHeight, thickness);
-  }, [sideWallLength, sideWallHeight, isSideWallTrapezoid, wallWaveAxis, cladding.sandwichThickness]);
+  const sandwichThicknessM = (cladding.sandwichThickness ?? 100) / 1000;
+  const sideWallProfileType: 'T18' | 'T35' = 'T18';
+  const numberOfBays = numberOfFrames - 1;
 
   const endWallWidth = span + 2 * (columnOuterFlangeOffset + 2 * sideWallThicknessOffset);
 
@@ -258,9 +255,6 @@ export const Cladding = React.memo(function Cladding({
 
   // Dispose geometries
   useEffect(() => {
-    return () => { sideWallGeometry.dispose(); };
-  }, [sideWallGeometry]);
-  useEffect(() => {
     return () => { endWallGeometry.dispose(); };
   }, [endWallGeometry]);
   useEffect(() => {
@@ -268,7 +262,14 @@ export const Cladding = React.memo(function Cladding({
   }, [roofGeometry]);
 
   // Materials
-  const sideWallMat = useMemo(() => makeCladdingMaterial(cladding.sideWallColor), [cladding.sideWallColor]);
+  const sideWallMat = useMemo(() => {
+    const mat = makeCladdingMaterial(cladding.sideWallColor);
+    if (!isSideWallTrapezoid) {
+      mat.roughness = 0.5;
+      mat.metalness = 0.1;
+    }
+    return mat;
+  }, [cladding.sideWallColor, isSideWallTrapezoid]);
   const endWallMat = useMemo(() => makeCladdingMaterial(cladding.endWallColor), [cladding.endWallColor]);
   const roofMat = useMemo(() => makeCladdingMaterial(cladding.roofColor), [cladding.roofColor]);
 
@@ -372,22 +373,54 @@ export const Cladding = React.memo(function Cladding({
 
   return (
     <group name="cladding">
-      {/* Side wall Z=-offset (left, Z=0 side) */}
-      <mesh
-        position={[hallLength / 2, sideWallHeight / 2, -(columnOuterFlangeOffset + sideWallThicknessOffset)]}
-        geometry={sideWallGeometry}
-        material={sideWallMat}
-        onPointerDown={placementMode ? (e) => handleWallClick('side_left', sideWallLength, e) : undefined}
-      />
+      {/* Side wall panels - left (Z=0 side) */}
+      {Array.from({ length: numberOfBays }).map((_, bayIndex) => {
+        const bayStart = bayIndex * columnSpacing;
+        const bayEnd = (bayIndex + 1) * columnSpacing;
+        let panelWidth = columnSpacing - 0.020;
+        let panelCenterX = (bayStart + bayEnd) / 2;
+        if (bayIndex === 0) { panelWidth -= 0.010; panelCenterX += 0.005; }
+        if (bayIndex === numberOfBays - 1) { panelWidth -= 0.010; panelCenterX -= 0.005; }
 
-      {/* Side wall Z=span+offset (right, Z=span side) */}
-      <mesh
-        position={[hallLength / 2, sideWallHeight / 2, span + columnOuterFlangeOffset + sideWallThicknessOffset]}
-        rotation={[0, Math.PI, 0]}
-        geometry={sideWallGeometry}
-        material={sideWallMat}
-        onPointerDown={placementMode ? (e) => handleWallClick('side_right', sideWallLength, e) : undefined}
-      />
+        return (
+          <mesh
+            key={`side-left-${bayIndex}`}
+            position={[panelCenterX, sideWallHeight / 2, -(columnOuterFlangeOffset + sideWallThicknessOffset)]}
+            material={sideWallMat}
+            onPointerDown={placementMode ? (e) => handleWallClick('side_left', sideWallLength, e) : undefined}
+          >
+            {isSideWallTrapezoid
+              ? <primitive object={createTrapezoidalGeometry(panelWidth, sideWallHeight, sideWallProfileType, wallWaveAxis, true)} attach="geometry" />
+              : <boxGeometry args={[panelWidth, sideWallHeight, sandwichThicknessM]} />
+            }
+          </mesh>
+        );
+      })}
+
+      {/* Side wall panels - right (Z=span side) */}
+      {Array.from({ length: numberOfBays }).map((_, bayIndex) => {
+        const bayStart = bayIndex * columnSpacing;
+        const bayEnd = (bayIndex + 1) * columnSpacing;
+        let panelWidth = columnSpacing - 0.020;
+        let panelCenterX = (bayStart + bayEnd) / 2;
+        if (bayIndex === 0) { panelWidth -= 0.010; panelCenterX += 0.005; }
+        if (bayIndex === numberOfBays - 1) { panelWidth -= 0.010; panelCenterX -= 0.005; }
+
+        return (
+          <mesh
+            key={`side-right-${bayIndex}`}
+            position={[panelCenterX, sideWallHeight / 2, span + columnOuterFlangeOffset + sideWallThicknessOffset]}
+            rotation={[0, Math.PI, 0]}
+            material={sideWallMat}
+            onPointerDown={placementMode ? (e) => handleWallClick('side_right', sideWallLength, e) : undefined}
+          >
+            {isSideWallTrapezoid
+              ? <primitive object={createTrapezoidalGeometry(panelWidth, sideWallHeight, sideWallProfileType, wallWaveAxis, true)} attach="geometry" />
+              : <boxGeometry args={[panelWidth, sideWallHeight, sandwichThicknessM]} />
+            }
+          </mesh>
+        );
+      })}
 
       {/* Side wall color stripes - front */}
       {cladding.panelOrientation === 'horizontal' && sideStripes.length > 0 && (

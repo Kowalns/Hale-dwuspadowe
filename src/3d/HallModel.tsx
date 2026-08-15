@@ -296,6 +296,7 @@ export const HallModel = React.memo(function HallModel({ params, results, claddi
           columnOuterFlangeOffset={columnOuterFlangeOffset}
           endColumnOuterOffset={endColumnOuterOffset}
           columnSpacing={columnSpacing}
+          numberOfFrames={numberOfFrames}
           placementMode={placementMode}
           openings={openings}
           onPlaceOpening={onPlaceOpening}
