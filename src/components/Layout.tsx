@@ -19,6 +19,7 @@ export const DEFAULT_CLADDING: CladdingParameters = {
   panelWidth: 1000,
   colorStripes: [],
   eaveOverhang: 300,
+  wallOrientation: 'vertical',
 };
 
 export function Layout() {

@@ -9,6 +9,8 @@ export interface ColorStripe {
   color: string; // RAL code
 }
 
+export type WallOrientation = 'horizontal' | 'vertical';
+
 export interface CladdingParameters {
   sideWallType: CladdingWallType;
   endWallType: CladdingWallType;
@@ -21,6 +23,7 @@ export interface CladdingParameters {
   panelWidth: number; // mm, default 1000
   colorStripes: ColorStripe[];
   eaveOverhang?: number; // mm, domyślnie 300
+  wallOrientation?: WallOrientation; // orientation of sheet ribs on walls
 }
 
 export type OpeningType = 'sliding_gate' | 'sectional_gate' | 'door' | 'window';
