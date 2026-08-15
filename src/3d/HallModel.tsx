@@ -71,7 +71,7 @@ export const HallModel = React.memo(function HallModel({ params, results, claddi
 
   // Purlin base Y: center of purlin at eave level
   // wallHeight is defined as distance to top of purlins, so center = wallHeight - h/2
-  const purlinBaseY = wallHeight - purlinHeightM / 2;
+  const purlinBaseY = wallHeight - purlinHeightM / 2 - 0.03;
 
   // Offset the model so it's roughly centered for better camera viewing
   const offsetX = -hallLength / 2;
