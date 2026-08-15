@@ -1,7 +1,7 @@
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Grid } from '@react-three/drei'
 import { HallModel } from './HallModel'
-import type { HallParameters, CalculationResults, CladdingParameters, Opening, OpeningType } from '../types'
+import type { HallParameters, CalculationResults, CladdingParameters, Opening, OpeningType, SkylightParameters } from '../types'
 
 interface SceneProps {
   params: HallParameters;
@@ -15,9 +15,10 @@ interface SceneProps {
   openingWidth?: number;
   openingHeight?: number;
   sillHeight?: number;
+  skylight?: SkylightParameters;
 }
 
-function SceneContent({ params, results, cladding, showCladding, openings, placementMode, onPlaceOpening, selectedOpeningType, openingWidth, openingHeight, sillHeight }: SceneProps) {
+function SceneContent({ params, results, cladding, showCladding, openings, placementMode, onPlaceOpening, selectedOpeningType, openingWidth, openingHeight, sillHeight, skylight }: SceneProps) {
   return (
     <>
       {/* Lighting */}
@@ -63,6 +64,7 @@ function SceneContent({ params, results, cladding, showCladding, openings, place
         openingWidth={openingWidth}
         openingHeight={openingHeight}
         sillHeight={sillHeight}
+        skylight={skylight}
       />
 
       {/* Camera controls */}
@@ -79,7 +81,7 @@ function SceneContent({ params, results, cladding, showCladding, openings, place
   )
 }
 
-export function Scene({ params, results, cladding, showCladding, openings, placementMode, onPlaceOpening, selectedOpeningType, openingWidth, openingHeight, sillHeight }: SceneProps) {
+export function Scene({ params, results, cladding, showCladding, openings, placementMode, onPlaceOpening, selectedOpeningType, openingWidth, openingHeight, sillHeight, skylight }: SceneProps) {
   return (
     <Canvas
       shadows
@@ -100,6 +102,7 @@ export function Scene({ params, results, cladding, showCladding, openings, place
         openingWidth={openingWidth}
         openingHeight={openingHeight}
         sillHeight={sillHeight}
+        skylight={skylight}
       />
     </Canvas>
   )

@@ -17,8 +17,9 @@ import { TrussColumnHead } from './elements/TrussColumnHead';
 import { ColumnCaps } from './elements/ColumnCaps';
 import { Cladding } from './elements/Cladding';
 import { Openings } from './elements/Openings';
+import { Skylight } from './elements/Skylight';
 import { getEffectiveRafterTop } from '../utils/geometry';
-import type { HallParameters, CalculationResults, CladdingParameters, Opening, OpeningType } from '../types';
+import type { HallParameters, CalculationResults, CladdingParameters, Opening, OpeningType, SkylightParameters } from '../types';
 
 interface HallModelProps {
   params: HallParameters;
@@ -32,6 +33,7 @@ interface HallModelProps {
   openingWidth?: number;
   openingHeight?: number;
   sillHeight?: number;
+  skylight?: SkylightParameters;
 }
 
 /**
@@ -40,7 +42,7 @@ interface HallModelProps {
  * Origin is at bottom-left corner of building (X=0, Y=0, Z=0).
  * X = along building length, Y = up, Z = across building width (span)
  */
-export const HallModel = React.memo(function HallModel({ params, results, cladding, showCladding, openings, placementMode, onPlaceOpening, selectedOpeningType, openingWidth, openingHeight, sillHeight }: HallModelProps) {
+export const HallModel = React.memo(function HallModel({ params, results, cladding, showCladding, openings, placementMode, onPlaceOpening, selectedOpeningType, openingWidth, openingHeight, sillHeight, skylight }: HallModelProps) {
   const { span, length: hallLength, wallHeight, roofAngle } = params;
   const purlinMounting = params.purlinMounting ?? 'on-top';
   const {
@@ -290,6 +292,16 @@ export const HallModel = React.memo(function HallModel({ params, results, claddi
       {/* Openings (gates, doors, windows) */}
       {openings && openings.length > 0 && (
         <Openings params={params} openings={openings} />
+      )}
+
+      {/* Ridge skylight */}
+      {skylight && skylight.enabled && (
+        <Skylight
+          skylight={skylight}
+          hallLength={hallLength}
+          ridgeHeight={effectiveRidgeHeight}
+          span={span}
+        />
       )}
     </group>
   );

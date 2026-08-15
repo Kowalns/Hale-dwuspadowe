@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { HallParameters, CalculationResults, CoveringType, SteelGrade, TerrainCategory, SnowExposure, ProfileOverrides, RafterType, PurlinMounting, CladdingParameters, Opening, OpeningType } from '../types';
+import type { HallParameters, CalculationResults, CoveringType, SteelGrade, TerrainCategory, SnowExposure, ProfileOverrides, RafterType, PurlinMounting, CladdingParameters, Opening, OpeningType, SkylightParameters } from '../types';
 import { ResultsPanel } from './ResultsPanel';
 import { CladdingPanel } from './CladdingPanel';
 import { OpeningsPanel } from './OpeningsPanel';
+import { SkylightPanel } from './SkylightPanel';
 
 const DEFAULT_PARAMS: HallParameters = {
   span: 18,
@@ -90,9 +91,12 @@ interface FormPanelProps {
   onOpeningHeightChange?: (h: number) => void;
   sillHeight?: number;
   onSillHeightChange?: (h: number) => void;
+  skylight?: SkylightParameters;
+  onSkylightChange?: (skylight: SkylightParameters) => void;
+  hallLength?: number;
 }
 
-export function FormPanel({ params, onParamsChange, results, profileOverrides, onProfileOverridesChange, rafterType, onRafterTypeChange, customTrussHeight, onCustomTrussHeightChange, cladding, onCladdingChange, showCladding, onShowCladdingChange, openings, onRemoveOpening, placementMode, onPlacementModeChange, selectedOpeningType, onSelectedOpeningTypeChange, openingWidth, onOpeningWidthChange, openingHeight, onOpeningHeightChange, sillHeight, onSillHeightChange }: FormPanelProps) {
+export function FormPanel({ params, onParamsChange, results, profileOverrides, onProfileOverridesChange, rafterType, onRafterTypeChange, customTrussHeight, onCustomTrussHeightChange, cladding, onCladdingChange, showCladding, onShowCladdingChange, openings, onRemoveOpening, placementMode, onPlacementModeChange, selectedOpeningType, onSelectedOpeningTypeChange, openingWidth, onOpeningWidthChange, openingHeight, onOpeningHeightChange, sillHeight, onSillHeightChange, skylight, onSkylightChange, hallLength }: FormPanelProps) {
   const { t } = useTranslation();
   const [wizardMode, setWizardMode] = useState(true);
   const [wizardStep, setWizardStep] = useState(0);
@@ -497,6 +501,16 @@ export function FormPanel({ params, onParamsChange, results, profileOverrides, o
                 />
               </>
             )}
+            {skylight && onSkylightChange && (
+              <>
+                <div className="my-3 border-t border-border" />
+                <SkylightPanel
+                  skylight={skylight}
+                  onSkylightChange={onSkylightChange}
+                  hallLength={hallLength ?? params.length}
+                />
+              </>
+            )}
           </>
         ) : (
           <>
@@ -534,6 +548,16 @@ export function FormPanel({ params, onParamsChange, results, profileOverrides, o
                   onOpeningHeightChange={onOpeningHeightChange}
                   sillHeight={sillHeight ?? 0.9}
                   onSillHeightChange={onSillHeightChange}
+                />
+              </>
+            )}
+            {skylight && onSkylightChange && (
+              <>
+                <div className="my-3 border-t border-border" />
+                <SkylightPanel
+                  skylight={skylight}
+                  onSkylightChange={onSkylightChange}
+                  hallLength={hallLength ?? params.length}
                 />
               </>
             )}

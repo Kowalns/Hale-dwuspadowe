@@ -217,5 +217,11 @@
     "delete": "Usun",
     "collisionWarning": "Kolizja z istniejacym otworem",
     "outOfBounds": "Otwor nie miesci sie w scianie"
+  },
+  "skylight": {
+    "title": "Swietlik kalenicowy",
+    "enable": "Wlacz swietlik",
+    "length": "Dlugosc swietlika",
+    "width": "Szerokosc swietlika"
   }
 }

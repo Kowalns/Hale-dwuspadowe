@@ -217,5 +217,11 @@
     "delete": "Delete",
     "collisionWarning": "Collision with existing opening",
     "outOfBounds": "Opening does not fit within wall"
+  },
+  "skylight": {
+    "title": "Ridge skylight",
+    "enable": "Enable skylight",
+    "length": "Skylight length",
+    "width": "Skylight width"
   }
 }

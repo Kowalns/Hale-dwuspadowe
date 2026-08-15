@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { FormPanel, DEFAULT_PARAMS } from './FormPanel';
 import { Scene } from '../3d/Scene';
 import { useHallCalculations } from '../hooks/useHallCalculations';
-import type { HallParameters, ProfileOverrides, RafterType, CladdingParameters, Opening, OpeningType } from '../types';
+import type { HallParameters, ProfileOverrides, RafterType, CladdingParameters, Opening, OpeningType, SkylightParameters } from '../types';
 
 export const DEFAULT_CLADDING: CladdingParameters = {
   sideWallType: 'sandwich',
@@ -30,6 +30,7 @@ export function Layout() {
   const [openingWidth, setOpeningWidth] = useState(4);
   const [openingHeight, setOpeningHeight] = useState(4);
   const [sillHeight, setSillHeight] = useState(0.9);
+  const [skylight, setSkylight] = useState<SkylightParameters>({ enabled: false, length: 6, width: 1.5 });
 
   const addOpening = useCallback((opening: Opening) => {
     setOpenings((prev) => [...prev, opening]);
@@ -71,6 +72,9 @@ export function Layout() {
           onOpeningHeightChange={setOpeningHeight}
           sillHeight={sillHeight}
           onSillHeightChange={setSillHeight}
+          skylight={skylight}
+          onSkylightChange={setSkylight}
+          hallLength={params.length}
         />
       </aside>
       {/* Right panel - 3D Canvas ~65% */}
@@ -87,6 +91,7 @@ export function Layout() {
           openingWidth={openingWidth}
           openingHeight={openingHeight}
           sillHeight={sillHeight}
+          skylight={skylight}
         />
       </section>
     </main>

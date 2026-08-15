@@ -36,6 +36,12 @@ export interface Opening {
   sillHeight: number; // height of bottom edge from ground (meters)
 }
 
+export interface SkylightParameters {
+  enabled: boolean;
+  length: number; // meters (along X axis)
+  width: number; // meters (across ridge, along Z axis)
+}
+
 export type SteelGrade = 'S235' | 'S355';
 export type CoveringType = 'sheet' | 'sandwich';
 export type TerrainCategory = 1 | 2 | 3 | 4;
