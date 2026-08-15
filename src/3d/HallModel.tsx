@@ -285,6 +285,7 @@ export const HallModel = React.memo(function HallModel({ params, results, claddi
           showCladding={showCladding ?? true}
           columnOuterFlangeOffset={columnOuterFlangeOffset}
           columnSpacing={columnSpacing}
+          purlinHeightM={purlinHeightM}
           placementMode={placementMode}
           openings={openings}
           onPlaceOpening={onPlaceOpening}

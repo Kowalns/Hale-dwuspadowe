@@ -11,6 +11,7 @@ interface CladdingProps {
   showCladding: boolean;
   columnOuterFlangeOffset: number;
   columnSpacing: number;
+  purlinHeightM: number;
   placementMode?: boolean;
   openings?: Opening[];
   onPlaceOpening?: (opening: Opening) => void;
@@ -63,7 +64,7 @@ function getTrapezoidalParams(type: 'T18' | 'T35') {
     return { height: 0.035, plateau: 0.126, valley: 0.210, period: 0.381 };
   }
   // T18
-  return { height: 0.018, plateau: 0.070, valley: 0.188, period: 0.290 };
+  return { height: 0.018, plateau: 0.033, valley: 0.188, period: 0.290 };
 }
 
 /**
@@ -172,6 +173,7 @@ export const Cladding = React.memo(function Cladding({
   showCladding,
   columnOuterFlangeOffset,
   columnSpacing,
+  purlinHeightM,
   placementMode,
   openings,
   onPlaceOpening,
@@ -197,53 +199,56 @@ export const Cladding = React.memo(function Cladding({
   // Determine trapezoidal parameters for roof
   const isRoofTrapezoid = cladding.roofType === 'T18' || cladding.roofType === 'T35';
 
-  // Wall thickness offset: shift walls outward by half their thickness to avoid column collision
+  // Wall thickness offset: shift walls outward by their thickness to avoid column collision
   const sideWallThicknessOffset = isSideWallTrapezoid
-    ? getTrapezoidalParams((cladding.sideWallType as string) === 'T35' ? 'T35' : 'T18').height / 2
-    : 0.05; // half of 100mm sandwich
+    ? getTrapezoidalParams((cladding.sideWallType as string) === 'T35' ? 'T35' : 'T18').height
+    : (cladding.sandwichThickness ?? 100) / 1000 / 2;
   const endWallThicknessOffset = isEndWallTrapezoid
-    ? getTrapezoidalParams((cladding.endWallType as string) === 'T35' ? 'T35' : 'T18').height / 2
-    : 0.05;
+    ? getTrapezoidalParams((cladding.endWallType as string) === 'T35' ? 'T35' : 'T18').height
+    : (cladding.sandwichThickness ?? 100) / 1000 / 2;
 
   // Wall geometries
-  // wallOrientation determines the direction of ribs:
+  // panelOrientation determines the direction of ribs:
   // 'horizontal' -> ribs run horizontally -> wave repeats along Y -> waveAxis = 'y'
   // 'vertical' -> ribs run vertically -> wave repeats along X -> waveAxis = 'x'
-  const wallWaveAxis = cladding.wallOrientation === 'horizontal' ? 'y' : 'x';
+  const wallWaveAxis = cladding.panelOrientation === 'horizontal' ? 'y' : 'x';
 
   const sideWallGeometry = useMemo(() => {
     if (isSideWallTrapezoid) {
       return createTrapezoidalGeometry(hallLength, wallHeight, 'T18', wallWaveAxis);
     }
-    // Sandwich: BoxGeometry with 100mm thickness
-    return new THREE.BoxGeometry(hallLength, wallHeight, 0.1);
-  }, [hallLength, wallHeight, isSideWallTrapezoid, wallWaveAxis]);
+    // Sandwich: BoxGeometry with configurable thickness
+    const thickness = (cladding.sandwichThickness ?? 100) / 1000;
+    return new THREE.BoxGeometry(hallLength, wallHeight, thickness);
+  }, [hallLength, wallHeight, isSideWallTrapezoid, wallWaveAxis, cladding.sandwichThickness]);
 
   const endWallGeometry = useMemo(() => {
     if (isEndWallTrapezoid) {
       return createTrapezoidalGeometry(span, wallHeight, 'T18', wallWaveAxis);
     }
-    // Sandwich: BoxGeometry with 100mm thickness
-    return new THREE.BoxGeometry(span, wallHeight, 0.1);
-  }, [span, wallHeight, isEndWallTrapezoid, wallWaveAxis]);
+    // Sandwich: BoxGeometry with configurable thickness
+    const thickness = (cladding.sandwichThickness ?? 100) / 1000;
+    return new THREE.BoxGeometry(span, wallHeight, thickness);
+  }, [span, wallHeight, isEndWallTrapezoid, wallWaveAxis, cladding.sandwichThickness]);
 
   // Roof geometry: ribs run along the slope (from ridge to eave).
-  // The plane is (hallLength + 2*eaveOverhangM) x roofSlopeLength.
+  // The plane is hallLength x roofSlopeLengthWithOverhang.
   // On the plane, X = along building length, Y = along slope.
   // Ribs along slope means wave varies along X (perpendicular to slope direction),
   // so each rib stripe runs along Y (the slope direction).
   // Actually: "garby wzdluz spadku" means ridges go from ridge to eave = along Y on the plane.
   // That means the wave pattern repeats along X. So waveAxis = 'x'.
-  const roofWidth = hallLength + 2 * eaveOverhangM;
+  const roofWidth = hallLength;
+  const roofSlopeLengthWithOverhang = roofSlopeLength + eaveOverhangM;
   const roofGeometry = useMemo(() => {
     if (isRoofTrapezoid) {
       const profileType = cladding.roofType === 'T35' ? 'T35' : 'T18';
       // Ribs run along slope (Y direction), wave repeats along X (building length direction)
-      return createTrapezoidalGeometry(roofWidth, roofSlopeLength, profileType, 'x');
+      return createTrapezoidalGeometry(roofWidth, roofSlopeLengthWithOverhang, profileType, 'x');
     }
     // Sandwich roof: BoxGeometry with 100mm thickness
-    return new THREE.BoxGeometry(roofWidth, roofSlopeLength, 0.1);
-  }, [roofWidth, roofSlopeLength, isRoofTrapezoid, cladding.roofType]);
+    return new THREE.BoxGeometry(roofWidth, roofSlopeLengthWithOverhang, 0.1);
+  }, [roofWidth, roofSlopeLengthWithOverhang, isRoofTrapezoid, cladding.roofType]);
 
   // Dispose geometries
   useEffect(() => {
@@ -477,7 +482,7 @@ export const Cladding = React.memo(function Cladding({
       <mesh
         position={[
           hallLength / 2,
-          wallHeight + gableTriangleHeight / 2,
+          wallHeight + gableTriangleHeight / 2 + purlinHeightM,
           span / 4,
         ]}
         rotation={[Math.PI / 2 - roofAngleRad, 0, 0]}
@@ -489,7 +494,7 @@ export const Cladding = React.memo(function Cladding({
       <mesh
         position={[
           hallLength / 2,
-          wallHeight + gableTriangleHeight / 2,
+          wallHeight + gableTriangleHeight / 2 + purlinHeightM,
           (3 * span) / 4,
         ]}
         rotation={[-(Math.PI / 2 - roofAngleRad), 0, 0]}

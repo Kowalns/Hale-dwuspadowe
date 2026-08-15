@@ -185,6 +185,7 @@
       "vertical": "Vertical"
     },
     "eaveOverhang": "Eave overhang (mm)",
+    "sandwichThickness": "Panel thickness (mm)",
     "stripeWall": {
       "side": "Side wall",
       "end": "End wall"

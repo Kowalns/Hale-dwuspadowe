@@ -185,6 +185,7 @@
       "vertical": "Pionowo"
     },
     "eaveOverhang": "Długość okapu (mm)",
+    "sandwichThickness": "Grubość płyty (mm)",
     "stripeWall": {
       "side": "Sciana boczna",
       "end": "Sciana szczytowa"

@@ -224,6 +224,22 @@ export function CladdingPanel({
         </div>
       </div>
 
+      {/* Sandwich thickness */}
+      {(cladding.sideWallType === 'sandwich' || cladding.endWallType === 'sandwich') && (
+        <div className="space-y-1">
+          <label className="text-xs text-text-secondary font-sans">{t('cladding.sandwichThickness')}</label>
+          <select
+            value={cladding.sandwichThickness ?? 100}
+            onChange={(e) => update('sandwichThickness', Number(e.target.value))}
+            className="w-full px-2 py-1.5 text-xs font-sans text-text-primary bg-white border border-border rounded focus:outline-none focus:ring-1 focus:ring-accent-blue"
+          >
+            {[60, 80, 100, 120, 150].map((v) => (
+              <option key={v} value={v}>{v} mm</option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {/* Color stripes - only for horizontal orientation */}
       {cladding.panelOrientation === 'horizontal' && (
         <div className="space-y-2">
