@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { ThreeEvent } from '@react-three/fiber';
 import { getRALHex } from '../../data/colors';
 import { checkCollision, fitsInWall } from './Openings';
-import type { HallParameters, CladdingParameters, ColorStripe, Opening, OpeningType, WallIdentifier } from '../../types';
+import type { HallParameters, CladdingParameters, Opening, OpeningType, WallIdentifier } from '../../types';
 
 interface CladdingProps {
   params: HallParameters;
@@ -166,74 +166,7 @@ function createTrapezoidalGeometry(
   return geo;
 }
 
-/**
- * Renders color stripe patches on a wall surface.
- * Uses the same profile geometry as the underlying wall (trapezoidal or sandwich box).
- */
-function ColorStripePatches({
-  stripes,
-  wallWidth,
-  wallHeight,
-  panelWidth,
-  position,
-  rotation,
-  isTrapezoid,
-  profileType,
-  waveAxis,
-  sandwichThickness,
-}: {
-  stripes: ColorStripe[];
-  wallWidth: number;
-  wallHeight: number;
-  panelWidth: number;
-  position: [number, number, number];
-  rotation: [number, number, number];
-  isTrapezoid: boolean;
-  profileType: 'T18' | 'T35';
-  waveAxis: 'x' | 'y';
-  sandwichThickness: number;
-}) {
-  const panelHeightM = panelWidth / 1000; // convert mm to m
-  const maxLayers = Math.floor(wallHeight / panelHeightM);
-
-  const patches = useMemo(() => {
-    return stripes.map((stripe) => {
-      const startLayer = Math.max(1, stripe.layerStart);
-      const endLayer = Math.min(maxLayers, stripe.layerEnd);
-      if (startLayer > endLayer) return null;
-
-      const yStart = (startLayer - 1) * panelHeightM;
-      const patchHeight = (endLayer - startLayer + 1) * panelHeightM;
-      const yCenter = yStart + patchHeight / 2;
-
-      return {
-        key: `${stripe.wallType}-${startLayer}-${endLayer}-${stripe.color}`,
-        yCenter,
-        patchHeight,
-        color: stripe.color,
-      };
-    }).filter(Boolean) as Array<{ key: string; yCenter: number; patchHeight: number; color: string }>;
-  }, [stripes, maxLayers, panelHeightM]);
-
-  return (
-    <group position={position} rotation={rotation}>
-      {patches.map((patch) => (
-        <mesh key={patch.key} position={[0, patch.yCenter - wallHeight / 2, 0.01]}>
-          {isTrapezoid
-            ? <primitive object={createTrapezoidalGeometry(wallWidth, patch.patchHeight, profileType, waveAxis, true)} attach="geometry" />
-            : <boxGeometry args={[wallWidth, patch.patchHeight, sandwichThickness]} />
-          }
-          <meshStandardMaterial
-            color={getRALHex(patch.color)}
-            opacity={1.0}
-            side={THREE.DoubleSide}
-            depthWrite={true}
-          />
-        </mesh>
-      ))}
-    </group>
-  );
-}
+interface ColorSegment { startLayer: number; endLayer: number; color: string; }
 
 /**
  * Cladding component rendering walls and roof panels with RAL colors.
@@ -289,7 +222,6 @@ export const Cladding = React.memo(function Cladding({
   const wallWaveAxis = cladding.panelOrientation === 'horizontal' ? 'y' : 'x';
 
   const sideWallHeight = wallHeight - 0.05;
-  const sideWallLength = hallLength - 2 * (endColumnOuterOffset + endWallThicknessOffset) - 0.02;
 
   const sandwichThicknessM = (cladding.sandwichThickness ?? 100) / 1000;
   const sideWallProfileType: 'T18' | 'T35' = 'T18';
@@ -357,10 +289,7 @@ export const Cladding = React.memo(function Cladding({
     () => cladding.colorStripes.filter((s) => s.wallType === 'side'),
     [cladding.colorStripes]
   );
-  const endStripes = useMemo(
-    () => cladding.colorStripes.filter((s) => s.wallType === 'end'),
-    [cladding.colorStripes]
-  );
+
 
   // Determine which bays have gates and store gate info for cutout rendering
   const sideLeftGatesByBay = useMemo(() => {
@@ -519,10 +448,8 @@ export const Cladding = React.memo(function Cladding({
       {Array.from({ length: numberOfBays }).map((_, bayIndex) => {
         const bayStart = bayIndex * columnSpacing;
         const bayEnd = (bayIndex + 1) * columnSpacing;
-        let panelWidth = columnSpacing - 0.020;
-        let panelCenterX = (bayStart + bayEnd) / 2;
-        if (bayIndex === 0) { panelWidth -= 0.010; panelCenterX += 0.005; }
-        if (bayIndex === numberOfBays - 1) { panelWidth -= 0.010; panelCenterX -= 0.005; }
+        const panelWidth = columnSpacing - 0.020;
+        const panelCenterX = (bayStart + bayEnd) / 2;
 
         const gate = sideLeftGatesByBay.get(bayIndex);
         if (gate) {
@@ -593,18 +520,55 @@ export const Cladding = React.memo(function Cladding({
           return <React.Fragment key={`side-left-${bayIndex}`}>{fragments}</React.Fragment>;
         }
 
-        return (
-          <mesh
-            key={`side-left-${bayIndex}`}
-            position={[panelCenterX, sideWallHeight / 2, -(columnOuterFlangeOffset + sideWallThicknessOffset)]}
-            material={sideWallMat}
-            onPointerDown={placementMode ? (e) => handleSideWallClick('side_left', bayIndex, e) : undefined}
-          >
-            {isSideWallTrapezoid
-              ? <primitive object={createTrapezoidalGeometry(panelWidth, sideWallHeight, sideWallProfileType, wallWaveAxis, true)} attach="geometry" />
-              : <boxGeometry args={[panelWidth, sideWallHeight, sandwichThicknessM]} />
+        // Compute color segments for this bay panel
+        const panelHeightM = cladding.panelWidth / 1000;
+        const numLayers = Math.floor(sideWallHeight / panelHeightM);
+
+        const layerColors: string[] = [];
+        for (let layer = 1; layer <= numLayers; layer++) {
+          const stripe = sideStripes.find(s => layer >= s.layerStart && layer <= s.layerEnd);
+          layerColors.push(stripe ? stripe.color : cladding.sideWallColor);
+        }
+
+        const segments: ColorSegment[] = [];
+        if (numLayers > 0) {
+          let currentColor = layerColors[0];
+          let segStartLayer = 1;
+          for (let i = 1; i < layerColors.length; i++) {
+            if (layerColors[i] !== currentColor) {
+              segments.push({ startLayer: segStartLayer, endLayer: i, color: currentColor });
+              currentColor = layerColors[i];
+              segStartLayer = i + 1;
             }
-          </mesh>
+          }
+          segments.push({ startLayer: segStartLayer, endLayer: numLayers, color: currentColor });
+        }
+
+        const zPosition = -(columnOuterFlangeOffset + sideWallThicknessOffset);
+
+        return (
+          <React.Fragment key={`side-left-${bayIndex}`}>
+            {segments.map((seg, segIdx) => {
+              const segHeight = (seg.endLayer - seg.startLayer + 1) * panelHeightM;
+              const segBottomY = (seg.startLayer - 1) * panelHeightM;
+              const segCenterY = segBottomY + segHeight / 2;
+              const segMat = seg.color === cladding.sideWallColor ? sideWallMat : makeCladdingMaterial(seg.color);
+
+              return (
+                <mesh
+                  key={`side-left-${bayIndex}-seg-${segIdx}`}
+                  position={[panelCenterX, segCenterY, zPosition]}
+                  material={segMat}
+                  onPointerDown={placementMode ? (e) => handleSideWallClick('side_left', bayIndex, e) : undefined}
+                >
+                  {isSideWallTrapezoid
+                    ? <primitive object={createTrapezoidalGeometry(panelWidth, segHeight, sideWallProfileType, wallWaveAxis, true)} attach="geometry" />
+                    : <boxGeometry args={[panelWidth, segHeight, sandwichThicknessM]} />
+                  }
+                </mesh>
+              );
+            })}
+          </React.Fragment>
         );
       })}
 
@@ -612,10 +576,8 @@ export const Cladding = React.memo(function Cladding({
       {Array.from({ length: numberOfBays }).map((_, bayIndex) => {
         const bayStart = bayIndex * columnSpacing;
         const bayEnd = (bayIndex + 1) * columnSpacing;
-        let panelWidth = columnSpacing - 0.020;
-        let panelCenterX = (bayStart + bayEnd) / 2;
-        if (bayIndex === 0) { panelWidth -= 0.010; panelCenterX += 0.005; }
-        if (bayIndex === numberOfBays - 1) { panelWidth -= 0.010; panelCenterX -= 0.005; }
+        const panelWidth = columnSpacing - 0.020;
+        const panelCenterX = (bayStart + bayEnd) / 2;
 
         const gate = sideRightGatesByBay.get(bayIndex);
         if (gate) {
@@ -698,53 +660,60 @@ export const Cladding = React.memo(function Cladding({
           return <React.Fragment key={`side-right-${bayIndex}`}>{fragments}</React.Fragment>;
         }
 
-        return (
-          <mesh
-            key={`side-right-${bayIndex}`}
-            position={[panelCenterX, sideWallHeight / 2, span + columnOuterFlangeOffset + sideWallThicknessOffset]}
-            rotation={[0, Math.PI, 0]}
-            material={sideWallMat}
-            onPointerDown={placementMode ? (e) => handleSideWallClick('side_right', bayIndex, e) : undefined}
-          >
-            {isSideWallTrapezoid
-              ? <primitive object={createTrapezoidalGeometry(panelWidth, sideWallHeight, sideWallProfileType, wallWaveAxis, true)} attach="geometry" />
-              : <boxGeometry args={[panelWidth, sideWallHeight, sandwichThicknessM]} />
+        // Compute color segments for this bay panel
+        const panelHeightM = cladding.panelWidth / 1000;
+        const numLayers = Math.floor(sideWallHeight / panelHeightM);
+
+        const layerColors: string[] = [];
+        for (let layer = 1; layer <= numLayers; layer++) {
+          const stripe = sideStripes.find(s => layer >= s.layerStart && layer <= s.layerEnd);
+          layerColors.push(stripe ? stripe.color : cladding.sideWallColor);
+        }
+
+        const segments: ColorSegment[] = [];
+        if (numLayers > 0) {
+          let currentColor = layerColors[0];
+          let segStartLayer = 1;
+          for (let i = 1; i < layerColors.length; i++) {
+            if (layerColors[i] !== currentColor) {
+              segments.push({ startLayer: segStartLayer, endLayer: i, color: currentColor });
+              currentColor = layerColors[i];
+              segStartLayer = i + 1;
             }
-          </mesh>
+          }
+          segments.push({ startLayer: segStartLayer, endLayer: numLayers, color: currentColor });
+        }
+
+        const zPosition = span + columnOuterFlangeOffset + sideWallThicknessOffset;
+
+        return (
+          <React.Fragment key={`side-right-${bayIndex}`}>
+            {segments.map((seg, segIdx) => {
+              const segHeight = (seg.endLayer - seg.startLayer + 1) * panelHeightM;
+              const segBottomY = (seg.startLayer - 1) * panelHeightM;
+              const segCenterY = segBottomY + segHeight / 2;
+              const segMat = seg.color === cladding.sideWallColor ? sideWallMat : makeCladdingMaterial(seg.color);
+
+              return (
+                <mesh
+                  key={`side-right-${bayIndex}-seg-${segIdx}`}
+                  position={[panelCenterX, segCenterY, zPosition]}
+                  rotation={[0, Math.PI, 0]}
+                  material={segMat}
+                  onPointerDown={placementMode ? (e) => handleSideWallClick('side_right', bayIndex, e) : undefined}
+                >
+                  {isSideWallTrapezoid
+                    ? <primitive object={createTrapezoidalGeometry(panelWidth, segHeight, sideWallProfileType, wallWaveAxis, true)} attach="geometry" />
+                    : <boxGeometry args={[panelWidth, segHeight, sandwichThicknessM]} />
+                  }
+                </mesh>
+              );
+            })}
+          </React.Fragment>
         );
       })}
 
-      {/* Side wall color stripes - front */}
-      {cladding.panelOrientation === 'horizontal' && sideStripes.length > 0 && (
-        <ColorStripePatches
-          stripes={sideStripes}
-          wallWidth={sideWallLength}
-          wallHeight={sideWallHeight}
-          panelWidth={cladding.panelWidth}
-          position={[hallLength / 2, sideWallHeight / 2, -(columnOuterFlangeOffset + sideWallThicknessOffset) + 0.005]}
-          rotation={[0, 0, 0]}
-          isTrapezoid={isSideWallTrapezoid}
-          profileType={sideWallProfileType}
-          waveAxis={wallWaveAxis}
-          sandwichThickness={sandwichThicknessM}
-        />
-      )}
 
-      {/* Side wall color stripes - back */}
-      {cladding.panelOrientation === 'horizontal' && sideStripes.length > 0 && (
-        <ColorStripePatches
-          stripes={sideStripes}
-          wallWidth={sideWallLength}
-          wallHeight={sideWallHeight}
-          panelWidth={cladding.panelWidth}
-          position={[hallLength / 2, sideWallHeight / 2, span + columnOuterFlangeOffset + sideWallThicknessOffset - 0.005]}
-          rotation={[0, Math.PI, 0]}
-          isTrapezoid={isSideWallTrapezoid}
-          profileType={sideWallProfileType}
-          waveAxis={wallWaveAxis}
-          sandwichThickness={sandwichThicknessM}
-        />
-      )}
 
       {/* End wall X=-offset (front gable) - full pentagon */}
       <mesh
@@ -764,37 +733,7 @@ export const Cladding = React.memo(function Cladding({
         onPointerDown={placementMode ? (e) => handleWallClick('end_back', span, e) : undefined}
       />
 
-      {/* End wall color stripes - X=-offset */}
-      {cladding.panelOrientation === 'horizontal' && endStripes.length > 0 && (
-        <ColorStripePatches
-          stripes={endStripes}
-          wallWidth={span}
-          wallHeight={wallHeight}
-          panelWidth={cladding.panelWidth}
-          position={[-endWallThicknessOffset, wallHeight / 2, span / 2]}
-          rotation={[0, Math.PI / 2, 0]}
-          isTrapezoid={isEndWallTrapezoid}
-          profileType={'T18'}
-          waveAxis={wallWaveAxis}
-          sandwichThickness={sandwichThicknessM}
-        />
-      )}
 
-      {/* End wall color stripes - X=hallLength+offset */}
-      {cladding.panelOrientation === 'horizontal' && endStripes.length > 0 && (
-        <ColorStripePatches
-          stripes={endStripes}
-          wallWidth={span}
-          wallHeight={wallHeight}
-          panelWidth={cladding.panelWidth}
-          position={[hallLength + endWallThicknessOffset, wallHeight / 2, span / 2]}
-          rotation={[0, -Math.PI / 2, 0]}
-          isTrapezoid={isEndWallTrapezoid}
-          profileType={'T18'}
-          waveAxis={wallWaveAxis}
-          sandwichThickness={sandwichThicknessM}
-        />
-      )}
 
       {/* Roof - left slope (Z=0 side going up to ridge) */}
       {/* Roof panels extend beyond side walls by eaveOverhang */}
