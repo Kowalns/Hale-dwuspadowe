@@ -2,7 +2,6 @@ import { useMemo, Suspense } from 'react'
 import { Canvas, useLoader } from '@react-three/fiber'
 import { OrbitControls, Environment, ContactShadows } from '@react-three/drei'
 import { EffectComposer, SSAO, Bloom, Vignette } from '@react-three/postprocessing'
-import { BlendFunction } from 'postprocessing'
 import * as THREE from 'three'
 import { HallModel } from './HallModel'
 import type { HallParameters, CalculationResults, CladdingParameters, Opening, OpeningType, SkylightParameters } from '../types'
@@ -95,11 +94,20 @@ function SceneContent(props: SceneProps) {
 
       <EffectComposer multisampling={4}>
         <SSAO
-          radius={0.4}
-          intensity={30}
+          samples={31}
+          rings={4}
+          worldDistanceThreshold={1.0}
+          worldDistanceFalloff={0.0}
+          worldProximityThreshold={0.5}
+          worldProximityFalloff={0.1}
+          distanceThreshold={1.0}
+          distanceFalloff={0.0}
+          rangeThreshold={0.5}
+          rangeFalloff={0.1}
           luminanceInfluence={0.6}
-          color={new THREE.Color(0, 0, 0)}
-          bias={0.025}
+          radius={20}
+          bias={0.5}
+          intensity={30}
         />
         <Bloom
           intensity={0.15}
@@ -107,7 +115,7 @@ function SceneContent(props: SceneProps) {
           luminanceSmoothing={0.9}
           mipmapBlur
         />
-        <Vignette offset={0.3} darkness={0.4} blendFunction={BlendFunction.NORMAL} />
+        <Vignette offset={0.3} darkness={0.4} />
       </EffectComposer>
     </>
   )
