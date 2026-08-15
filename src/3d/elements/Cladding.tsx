@@ -865,8 +865,8 @@ export const Cladding = React.memo(function Cladding({
           const centerZ = span / 2;
           const distLeft = Math.abs(zLeft - centerZ);
           const distRight = Math.abs(zRight - centerZ);
-          const hLeft = Math.max(0, (span / 2 - distLeft)) * Math.tan(roofAngleRad) - 0.05;
-          const hRight = Math.max(0, (span / 2 - distRight)) * Math.tan(roofAngleRad) - 0.05;
+          const hLeft = Math.max(0, (span / 2 - distLeft)) * Math.tan(roofAngleRad) - 0.10;
+          const hRight = Math.max(0, (span / 2 - distRight)) * Math.tan(roofAngleRad) - 0.10;
           const avgH = (hLeft + hRight) / 2;
 
           if (avgH < 0.01) continue; // skip negligible panels
@@ -1060,8 +1060,8 @@ export const Cladding = React.memo(function Cladding({
           const centerZ = span / 2;
           const distLeft = Math.abs(zLeft - centerZ);
           const distRight = Math.abs(zRight - centerZ);
-          const hLeft = Math.max(0, (span / 2 - distLeft)) * Math.tan(roofAngleRad) - 0.05;
-          const hRight = Math.max(0, (span / 2 - distRight)) * Math.tan(roofAngleRad) - 0.05;
+          const hLeft = Math.max(0, (span / 2 - distLeft)) * Math.tan(roofAngleRad) - 0.10;
+          const hRight = Math.max(0, (span / 2 - distRight)) * Math.tan(roofAngleRad) - 0.10;
           const avgH = (hLeft + hRight) / 2;
 
           if (avgH < 0.01) continue; // skip negligible panels
