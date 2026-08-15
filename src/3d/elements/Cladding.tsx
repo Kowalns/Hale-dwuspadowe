@@ -351,6 +351,55 @@ export const Cladding = React.memo(function Cladding({
   );
 
   /**
+   * Handle side wall click for opening placement.
+   * Side walls are per-bay panels, so localPoint is relative to the panel, not the full wall.
+   * This function simply centers the opening in the clicked bay without coordinate conversion.
+   */
+  const handleSideWallClick = (wall: WallIdentifier, bayIndex: number, event: ThreeEvent<PointerEvent>) => {
+    if (!placementMode || !onPlaceOpening || !selectedOpeningType) return;
+    event.stopPropagation();
+
+    const w = openingWidth ?? 1;
+    const h = openingHeight ?? 1;
+
+    if (w > columnSpacing) return;
+
+    const bayStart = bayIndex * columnSpacing;
+    const bayEnd = (bayIndex + 1) * columnSpacing;
+    const posX = (bayStart + bayEnd) / 2;
+
+    let finalPosY: number;
+    let finalSillHeight: number;
+    if (selectedOpeningType === 'window') {
+      finalSillHeight = sillHeight ?? 0.9;
+      finalPosY = finalSillHeight + h / 2;
+    } else {
+      finalSillHeight = 0;
+      finalPosY = h / 2;
+    }
+    finalPosY = Math.round(finalPosY * 10) / 10;
+
+    const newOpening: Opening = {
+      id: `opening-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      type: selectedOpeningType,
+      width: w,
+      height: h,
+      wall,
+      positionX: posX,
+      positionY: finalPosY,
+      sillHeight: finalSillHeight,
+    };
+
+    if (!fitsInWall(newOpening, params)) return;
+    if (openings) {
+      for (const existing of openings) {
+        if (checkCollision(newOpening, existing)) return;
+      }
+    }
+    onPlaceOpening(newOpening);
+  };
+
+  /**
    * Handle wall click for opening placement.
    * Computes local coordinates, snaps to 100mm grid, validates bounds + collision.
    * On side walls, gates are centered within the clicked bay.
@@ -443,7 +492,7 @@ export const Cladding = React.memo(function Cladding({
             key={`side-left-${bayIndex}`}
             position={[panelCenterX, sideWallHeight / 2, -(columnOuterFlangeOffset + sideWallThicknessOffset)]}
             material={sideWallMat}
-            onPointerDown={placementMode ? (e) => handleWallClick('side_left', sideWallLength, e) : undefined}
+            onPointerDown={placementMode ? (e) => handleSideWallClick('side_left', bayIndex, e) : undefined}
           >
             {isSideWallTrapezoid
               ? <primitive object={createTrapezoidalGeometry(panelWidth, sideWallHeight, sideWallProfileType, wallWaveAxis, true)} attach="geometry" />
@@ -468,7 +517,7 @@ export const Cladding = React.memo(function Cladding({
             position={[panelCenterX, sideWallHeight / 2, span + columnOuterFlangeOffset + sideWallThicknessOffset]}
             rotation={[0, Math.PI, 0]}
             material={sideWallMat}
-            onPointerDown={placementMode ? (e) => handleWallClick('side_right', sideWallLength, e) : undefined}
+            onPointerDown={placementMode ? (e) => handleSideWallClick('side_right', bayIndex, e) : undefined}
           >
             {isSideWallTrapezoid
               ? <primitive object={createTrapezoidalGeometry(panelWidth, sideWallHeight, sideWallProfileType, wallWaveAxis, true)} attach="geometry" />
