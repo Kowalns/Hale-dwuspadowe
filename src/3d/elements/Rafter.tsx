@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
 import { useIBeamGeometry } from '../profiles/IBeamGeometry';
 import { rafterMaterial } from '../materials';
-import { calculateRoofSlopeLength } from '../../utils/geometry';
 import type { SteelProfile } from '../../types';
 
 interface RafterProps {
@@ -36,9 +35,9 @@ export const Rafter = React.memo(function Rafter({
   const tw = (profile.tw ?? 7) / 1000;
   const tf = (profile.tf ?? 11) / 1000;
 
-  // Effective span for slope length calculation (reduced by offset on both sides)
-  const effectiveSpan = span - 2 * columnFlangeOffset;
-  const slopeLength = calculateRoofSlopeLength(effectiveSpan, roofAngle);
+  const ridgePlateGap = 0.015; // 15mm gap for ridge plate
+  const effectiveHalfSpanZ = span / 2 - columnFlangeOffset - ridgePlateGap;
+  const slopeLength = effectiveHalfSpanZ / Math.cos((roofAngle * Math.PI) / 180);
   const geometry = useIBeamGeometry({ h, b, tw, tf, length: slopeLength });
 
   const roofAngleRad = (roofAngle * Math.PI) / 180;
