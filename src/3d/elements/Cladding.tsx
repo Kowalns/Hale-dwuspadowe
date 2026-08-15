@@ -228,10 +228,21 @@ export const Cladding = React.memo(function Cladding({
     return new THREE.BoxGeometry(roofWidth, roofSlopeLengthWithOverhang, 0.1);
   }, [roofWidth, roofSlopeLengthWithOverhang, isRoofTrapezoid, cladding.roofType]);
 
+  const roofGeometryRight = useMemo(() => {
+    if (isRoofTrapezoid) {
+      const profileType = cladding.roofType === 'T35' ? 'T35' : 'T18';
+      return createTrapezoidalGeometry(roofWidth, roofSlopeLengthWithOverhang, profileType, 'x', true); // invert=true
+    }
+    return new THREE.BoxGeometry(roofWidth, roofSlopeLengthWithOverhang, 0.1);
+  }, [roofWidth, roofSlopeLengthWithOverhang, isRoofTrapezoid, cladding.roofType]);
+
   // Dispose geometries
   useEffect(() => {
     return () => { roofGeometry.dispose(); };
   }, [roofGeometry]);
+  useEffect(() => {
+    return () => { roofGeometryRight.dispose(); };
+  }, [roofGeometryRight]);
 
   // Materials
   const sideWallMat = useMemo(() => {
@@ -1147,28 +1158,35 @@ export const Cladding = React.memo(function Cladding({
 
       {/* Roof - left slope (Z=0 side going up to ridge) */}
       {/* Roof panels extend beyond side walls by eaveOverhang */}
-      <mesh
-        position={[
-          hallLength / 2,
-          wallHeight + gableTriangleHeight / 2 + 0.003 - eaveOverhangM * Math.sin(roofAngleRad) / 2,
-          span / 4 - eaveOverhangM * Math.cos(roofAngleRad) / 2,
-        ]}
-        rotation={[Math.PI / 2 - roofAngleRad, 0, 0]}
-        geometry={roofGeometry}
-        material={roofMat}
-      />
+      {(() => {
+        const roofAmpOffset = isRoofTrapezoid ? getTrapezoidalParams(cladding.roofType === 'T35' ? 'T35' : 'T18').height / 2 : 0;
+        return (
+          <>
+            <mesh
+              position={[
+                hallLength / 2,
+                wallHeight + gableTriangleHeight / 2 + 0.003 + roofAmpOffset - eaveOverhangM * Math.sin(roofAngleRad) / 2,
+                span / 4 - eaveOverhangM * Math.cos(roofAngleRad) / 2,
+              ]}
+              rotation={[Math.PI / 2 - roofAngleRad, 0, 0]}
+              geometry={roofGeometry}
+              material={roofMat}
+            />
 
-      {/* Roof - right slope (Z=span side going up to ridge) */}
-      <mesh
-        position={[
-          hallLength / 2,
-          wallHeight + gableTriangleHeight / 2 + 0.003 - eaveOverhangM * Math.sin(roofAngleRad) / 2,
-          (3 * span) / 4 + eaveOverhangM * Math.cos(roofAngleRad) / 2,
-        ]}
-        rotation={[-(Math.PI / 2 - roofAngleRad), 0, 0]}
-        geometry={roofGeometry}
-        material={roofMat}
-      />
+            {/* Roof - right slope (Z=span side going up to ridge) */}
+            <mesh
+              position={[
+                hallLength / 2,
+                wallHeight + gableTriangleHeight / 2 + 0.003 + roofAmpOffset - eaveOverhangM * Math.sin(roofAngleRad) / 2,
+                (3 * span) / 4 + eaveOverhangM * Math.cos(roofAngleRad) / 2,
+              ]}
+              rotation={[-(Math.PI / 2 - roofAngleRad), 0, 0]}
+              geometry={roofGeometryRight}
+              material={roofMat}
+            />
+          </>
+        );
+      })()}
 
       {/* Microlining overlay on sandwich side walls (V-groove texture) */}
       {!isSideWallTrapezoid && Array.from({ length: numberOfBays }).map((_, bayIndex) => {
