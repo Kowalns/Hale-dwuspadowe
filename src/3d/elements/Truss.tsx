@@ -148,8 +148,8 @@ function TrussFrame({
     const webs: Array<{ start: THREE.Vector3; end: THREE.Vector3 }> = [];
 
     // Left slope web members
-    // First diagonal: from bottom start UP to first top node (under first purlin)
-    webs.push({ start: bottomNL[0], end: topNL[0] });
+    // First diagonal: from bottom start UP to second top node
+    webs.push({ start: bottomNL[0], end: topNL[1] });
 
     // Then pairs meeting at top nodes (under purlins)
     for (let i = 0; i < numPanels; i++) {
@@ -166,8 +166,8 @@ function TrussFrame({
     }
 
     // Right slope web members
-    // First diagonal: from bottom start UP to first top node
-    webs.push({ start: bottomNR[0], end: topNR[0] });
+    // First diagonal: from bottom start UP to second top node
+    webs.push({ start: bottomNR[0], end: topNR[1] });
 
     // Then pairs meeting at top nodes (under purlins)
     for (let i = 0; i < numPanels; i++) {
