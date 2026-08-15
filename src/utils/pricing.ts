@@ -193,7 +193,7 @@ export function calculatePricing(input: PricingInput): PricingResult {
       name: 'pricing.categories.steel',
       quantity: Math.round(totalSteelQty),
       unit: 'kg',
-      unitPrice: pricing.steelMain,
+      unitPrice: totalSteelQty > 0 ? Math.round((steelCost / totalSteelQty) * 100) / 100 : pricing.steelMain,
       total: steelCost,
     },
     {

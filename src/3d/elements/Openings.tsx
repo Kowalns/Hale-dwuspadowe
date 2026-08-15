@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import * as THREE from 'three';
 import type { HallParameters, Opening, WallIdentifier } from '../../types';
 
@@ -26,8 +26,10 @@ function getOpeningTransform(
       };
     case 'side_right':
       // Z=span face, looking from +Z
+      // positionX is stored in local wall coords (already mirrored by worldToLocal
+      // since the mesh has rotation=[0, PI, 0])
       return {
-        position: [hallLength - opening.positionX, opening.positionY, span + wallOffset],
+        position: [opening.positionX, opening.positionY, span + wallOffset],
         rotation: [0, Math.PI, 0],
       };
     case 'end_front':
@@ -46,25 +48,9 @@ function getOpeningTransform(
 }
 
 /**
- * Dark cutout material for opening visualization.
- */
-const cutoutMaterial = new THREE.MeshStandardMaterial({
-  color: '#1a1a2e',
-  transparent: true,
-  opacity: 0.92,
-  side: THREE.DoubleSide,
-  depthWrite: false,
-});
-
-const detailMaterial = new THREE.MeshStandardMaterial({
-  color: '#444466',
-  side: THREE.DoubleSide,
-});
-
-/**
  * Renders a single opening with type-specific decorations.
  */
-function OpeningMesh({ opening, params }: { opening: Opening; params: HallParameters }) {
+function OpeningMesh({ opening, params, cutoutMat, detailMat }: { opening: Opening; params: HallParameters; cutoutMat: THREE.MeshStandardMaterial; detailMat: THREE.MeshStandardMaterial }) {
   const { position, rotation } = useMemo(
     () => getOpeningTransform(opening, params),
     [opening, params]
@@ -75,15 +61,15 @@ function OpeningMesh({ opening, params }: { opening: Opening; params: HallParame
   return (
     <group position={position} rotation={rotation}>
       {/* Dark rectangle (cutout) */}
-      <mesh material={cutoutMaterial}>
+      <mesh material={cutoutMat}>
         <planeGeometry args={[width, height]} />
       </mesh>
 
       {/* Type-specific decorations */}
-      {type === 'sliding_gate' && <SlidingGateDetail width={width} height={height} />}
-      {type === 'sectional_gate' && <SectionalGateDetail width={width} height={height} />}
-      {type === 'door' && <DoorDetail width={width} height={height} />}
-      {type === 'window' && <WindowDetail width={width} height={height} />}
+      {type === 'sliding_gate' && <SlidingGateDetail width={width} height={height} material={detailMat} />}
+      {type === 'sectional_gate' && <SectionalGateDetail width={width} height={height} material={detailMat} />}
+      {type === 'door' && <DoorDetail width={width} height={height} material={detailMat} />}
+      {type === 'window' && <WindowDetail width={width} height={height} material={detailMat} />}
     </group>
   );
 }
@@ -91,13 +77,13 @@ function OpeningMesh({ opening, params }: { opening: Opening; params: HallParame
 /**
  * Sliding gate: rail at the top.
  */
-function SlidingGateDetail({ width, height }: { width: number; height: number }) {
+function SlidingGateDetail({ width, height, material }: { width: number; height: number; material: THREE.MeshStandardMaterial }) {
   const railHeight = 0.06;
   const railDepth = 0.04;
   return (
     <mesh
       position={[0, height / 2 + railHeight / 2, railDepth / 2]}
-      material={detailMaterial}
+      material={material}
     >
       <boxGeometry args={[width * 1.15, railHeight, railDepth]} />
     </mesh>
@@ -107,7 +93,7 @@ function SlidingGateDetail({ width, height }: { width: number; height: number })
 /**
  * Sectional (panel) gate: horizontal segment lines.
  */
-function SectionalGateDetail({ width, height }: { width: number; height: number }) {
+function SectionalGateDetail({ width, height, material }: { width: number; height: number; material: THREE.MeshStandardMaterial }) {
   const segmentCount = Math.max(3, Math.round(height / 0.5));
   const segmentSpacing = height / segmentCount;
   const lineThickness = 0.02;
@@ -123,7 +109,7 @@ function SectionalGateDetail({ width, height }: { width: number; height: number 
   return (
     <>
       {lines.map((y, idx) => (
-        <mesh key={idx} position={[0, y, 0.005]} material={detailMaterial}>
+        <mesh key={idx} position={[0, y, 0.005]} material={material}>
           <boxGeometry args={[width - 0.04, lineThickness, 0.01]} />
         </mesh>
       ))}
@@ -134,26 +120,26 @@ function SectionalGateDetail({ width, height }: { width: number; height: number 
 /**
  * Door: frame border (4 thin boxes).
  */
-function DoorDetail({ width, height }: { width: number; height: number }) {
+function DoorDetail({ width, height, material }: { width: number; height: number; material: THREE.MeshStandardMaterial }) {
   const frameWidth = 0.05;
   const frameDepth = 0.02;
 
   return (
     <>
       {/* Top frame */}
-      <mesh position={[0, height / 2 - frameWidth / 2, frameDepth / 2]} material={detailMaterial}>
+      <mesh position={[0, height / 2 - frameWidth / 2, frameDepth / 2]} material={material}>
         <boxGeometry args={[width, frameWidth, frameDepth]} />
       </mesh>
       {/* Bottom frame */}
-      <mesh position={[0, -height / 2 + frameWidth / 2, frameDepth / 2]} material={detailMaterial}>
+      <mesh position={[0, -height / 2 + frameWidth / 2, frameDepth / 2]} material={material}>
         <boxGeometry args={[width, frameWidth, frameDepth]} />
       </mesh>
       {/* Left frame */}
-      <mesh position={[-width / 2 + frameWidth / 2, 0, frameDepth / 2]} material={detailMaterial}>
+      <mesh position={[-width / 2 + frameWidth / 2, 0, frameDepth / 2]} material={material}>
         <boxGeometry args={[frameWidth, height, frameDepth]} />
       </mesh>
       {/* Right frame */}
-      <mesh position={[width / 2 - frameWidth / 2, 0, frameDepth / 2]} material={detailMaterial}>
+      <mesh position={[width / 2 - frameWidth / 2, 0, frameDepth / 2]} material={material}>
         <boxGeometry args={[frameWidth, height, frameDepth]} />
       </mesh>
     </>
@@ -163,22 +149,22 @@ function DoorDetail({ width, height }: { width: number; height: number }) {
 /**
  * Window: cross dividers (horizontal + vertical center lines).
  */
-function WindowDetail({ width, height }: { width: number; height: number }) {
+function WindowDetail({ width, height, material }: { width: number; height: number; material: THREE.MeshStandardMaterial }) {
   const barWidth = 0.03;
   const barDepth = 0.015;
 
   return (
     <>
       {/* Horizontal center bar */}
-      <mesh position={[0, 0, barDepth / 2]} material={detailMaterial}>
+      <mesh position={[0, 0, barDepth / 2]} material={material}>
         <boxGeometry args={[width - 0.02, barWidth, barDepth]} />
       </mesh>
       {/* Vertical center bar */}
-      <mesh position={[0, 0, barDepth / 2]} material={detailMaterial}>
+      <mesh position={[0, 0, barDepth / 2]} material={material}>
         <boxGeometry args={[barWidth, height - 0.02, barDepth]} />
       </mesh>
       {/* Frame */}
-      <DoorDetail width={width} height={height} />
+      <DoorDetail width={width} height={height} material={material} />
     </>
   );
 }
@@ -235,14 +221,44 @@ export function fitsInWall(opening: Opening, params: HallParameters): boolean {
 
 /**
  * Openings component rendering all openings from the array.
+ * Materials are created inside the component and disposed on unmount.
  */
 export const Openings = React.memo(function Openings({ params, openings }: OpeningsProps) {
+  const cutoutMat = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        color: '#1a1a2e',
+        transparent: true,
+        opacity: 0.92,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+      }),
+    []
+  );
+
+  const detailMat = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        color: '#444466',
+        side: THREE.DoubleSide,
+      }),
+    []
+  );
+
+  // Dispose materials on unmount
+  useEffect(() => {
+    return () => {
+      cutoutMat.dispose();
+      detailMat.dispose();
+    };
+  }, [cutoutMat, detailMat]);
+
   if (openings.length === 0) return null;
 
   return (
     <group name="openings">
       {openings.map((opening) => (
-        <OpeningMesh key={opening.id} opening={opening} params={params} />
+        <OpeningMesh key={opening.id} opening={opening} params={params} cutoutMat={cutoutMat} detailMat={detailMat} />
       ))}
     </group>
   );

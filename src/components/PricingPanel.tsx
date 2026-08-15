@@ -68,30 +68,42 @@ export function PricingPanel({ pricing, onPricingChange, pricingResult }: Pricin
                     </td>
                     <td className="py-1.5 text-center text-text-secondary">{cat.unit}</td>
                     <td className="py-1.5 text-right">
-                      <input
-                        type="number"
-                        value={cat.unitPrice}
-                        onChange={(e) => {
-                          const val = Number(e.target.value);
-                          // Map category index to pricing key
-                          const keyMap: (keyof PricingData | null)[] = [
-                            'steelMain',
-                            null, // cladding - averaged, not directly editable here
-                            null, // openings - averaged
-                            'skylightPerM',
-                            'flashingsPerSqm',
-                            'gutterPerM',
-                            'installDayRate',
-                          ];
-                          const key = keyMap[idx];
-                          if (key && val >= 0) {
-                            updatePricing(key, val);
-                          }
-                        }}
-                        step="0.01"
-                        min="0"
-                        className="w-20 px-1 py-0.5 text-right text-xs font-sans text-text-primary bg-white border border-border rounded focus:outline-none focus:ring-1 focus:ring-accent-blue"
-                      />
+                      {(() => {
+                        // Map category index to pricing key
+                        const keyMap: (keyof PricingData | null)[] = [
+                          null, // steel - blended rate (main + purlins), edit in detailed section
+                          null, // cladding - averaged, edit in detailed section
+                          null, // openings - averaged, edit in detailed section
+                          'skylightPerM',
+                          'flashingsPerSqm',
+                          'gutterPerM',
+                          'installDayRate',
+                        ];
+                        const key = keyMap[idx];
+                        if (key) {
+                          return (
+                            <input
+                              type="number"
+                              value={cat.unitPrice}
+                              onChange={(e) => {
+                                const val = Number(e.target.value);
+                                if (val >= 0) {
+                                  updatePricing(key, val);
+                                }
+                              }}
+                              step="0.01"
+                              min="0"
+                              className="w-20 px-1 py-0.5 text-right text-xs font-sans text-text-primary bg-white border border-border rounded focus:outline-none focus:ring-1 focus:ring-accent-blue"
+                            />
+                          );
+                        }
+                        // Non-editable averaged/blended prices - display as read-only
+                        return (
+                          <span className="inline-block w-20 px-1 py-0.5 text-right text-xs font-sans text-text-secondary">
+                            {cat.unitPrice.toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="py-1.5 text-right text-text-primary font-medium">
                       {formatCurrency(cat.total)} zl

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import * as THREE from 'three';
 import { ThreeEvent } from '@react-three/fiber';
 import { getRALHex } from '../../data/colors';
@@ -117,6 +117,17 @@ export const Cladding = React.memo(function Cladding({
   const sideWallMat = useMemo(() => makeCladdingMaterial(cladding.sideWallColor), [cladding.sideWallColor]);
   const endWallMat = useMemo(() => makeCladdingMaterial(cladding.endWallColor), [cladding.endWallColor]);
   const roofMat = useMemo(() => makeCladdingMaterial(cladding.roofColor), [cladding.roofColor]);
+
+  // Dispose materials on color change or unmount
+  useEffect(() => {
+    return () => { sideWallMat.dispose(); };
+  }, [sideWallMat]);
+  useEffect(() => {
+    return () => { endWallMat.dispose(); };
+  }, [endWallMat]);
+  useEffect(() => {
+    return () => { roofMat.dispose(); };
+  }, [roofMat]);
 
   // Side wall stripes
   const sideStripes = useMemo(
