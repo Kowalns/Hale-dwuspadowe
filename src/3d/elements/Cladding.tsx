@@ -214,14 +214,17 @@ export const Cladding = React.memo(function Cladding({
   // 'vertical' -> ribs run vertically -> wave repeats along X -> waveAxis = 'x'
   const wallWaveAxis = cladding.panelOrientation === 'horizontal' ? 'y' : 'x';
 
+  const sideWallHeight = wallHeight - 0.05;
+  const sideWallLength = hallLength - 2 * (endColumnOuterOffset + endWallThicknessOffset) - 0.02;
+
   const sideWallGeometry = useMemo(() => {
     if (isSideWallTrapezoid) {
-      return createTrapezoidalGeometry(hallLength, wallHeight, 'T18', wallWaveAxis, true);
+      return createTrapezoidalGeometry(sideWallLength, sideWallHeight, 'T18', wallWaveAxis, true);
     }
     // Sandwich: BoxGeometry with configurable thickness
     const thickness = (cladding.sandwichThickness ?? 100) / 1000;
-    return new THREE.BoxGeometry(hallLength, wallHeight, thickness);
-  }, [hallLength, wallHeight, isSideWallTrapezoid, wallWaveAxis, cladding.sandwichThickness]);
+    return new THREE.BoxGeometry(sideWallLength, sideWallHeight, thickness);
+  }, [sideWallLength, sideWallHeight, isSideWallTrapezoid, wallWaveAxis, cladding.sandwichThickness]);
 
   const endWallWidth = span + 2 * (columnOuterFlangeOffset + 2 * sideWallThicknessOffset);
 
@@ -241,7 +244,7 @@ export const Cladding = React.memo(function Cladding({
   // so each rib stripe runs along Y (the slope direction).
   // Actually: "garby wzdluz spadku" means ridges go from ridge to eave = along Y on the plane.
   // That means the wave pattern repeats along X. So waveAxis = 'x'.
-  const roofWidth = hallLength + 2 * (endColumnOuterOffset + endWallThicknessOffset);
+  const roofWidth = hallLength + 2 * (endColumnOuterOffset + 2 * endWallThicknessOffset);
   const roofSlopeLengthWithOverhang = roofSlopeLength + eaveOverhangM;
   const roofGeometry = useMemo(() => {
     if (isRoofTrapezoid) {
@@ -371,26 +374,26 @@ export const Cladding = React.memo(function Cladding({
     <group name="cladding">
       {/* Side wall Z=-offset (left, Z=0 side) */}
       <mesh
-        position={[hallLength / 2, wallHeight / 2, -(columnOuterFlangeOffset + sideWallThicknessOffset)]}
+        position={[hallLength / 2, sideWallHeight / 2, -(columnOuterFlangeOffset + sideWallThicknessOffset)]}
         geometry={sideWallGeometry}
         material={sideWallMat}
-        onPointerDown={placementMode ? (e) => handleWallClick('side_left', hallLength, e) : undefined}
+        onPointerDown={placementMode ? (e) => handleWallClick('side_left', sideWallLength, e) : undefined}
       />
 
       {/* Side wall Z=span+offset (right, Z=span side) */}
       <mesh
-        position={[hallLength / 2, wallHeight / 2, span + columnOuterFlangeOffset + sideWallThicknessOffset]}
+        position={[hallLength / 2, sideWallHeight / 2, span + columnOuterFlangeOffset + sideWallThicknessOffset]}
         rotation={[0, Math.PI, 0]}
         geometry={sideWallGeometry}
         material={sideWallMat}
-        onPointerDown={placementMode ? (e) => handleWallClick('side_right', hallLength, e) : undefined}
+        onPointerDown={placementMode ? (e) => handleWallClick('side_right', sideWallLength, e) : undefined}
       />
 
       {/* Side wall color stripes - front */}
       {cladding.panelOrientation === 'horizontal' && sideStripes.length > 0 && (
         <ColorStripePatches
           stripes={sideStripes}
-          wallWidth={hallLength}
+          wallWidth={sideWallLength}
           wallHeight={wallHeight}
           panelWidth={cladding.panelWidth}
           position={[hallLength / 2, wallHeight / 2, -(columnOuterFlangeOffset + sideWallThicknessOffset)]}
@@ -402,7 +405,7 @@ export const Cladding = React.memo(function Cladding({
       {cladding.panelOrientation === 'horizontal' && sideStripes.length > 0 && (
         <ColorStripePatches
           stripes={sideStripes}
-          wallWidth={hallLength}
+          wallWidth={sideWallLength}
           wallHeight={wallHeight}
           panelWidth={cladding.panelWidth}
           position={[hallLength / 2, wallHeight / 2, span + columnOuterFlangeOffset + sideWallThicknessOffset]}
