@@ -69,6 +69,66 @@ function getTrapezoidalParams(type: 'T18' | 'T35') {
 }
 
 /**
+ * Creates a pentagon (5-point) geometry covering the full end wall from floor to ridge.
+ * Uses ShapeGeometry with trapezoidal displacement for profiled sheets,
+ * or ExtrudeGeometry with thickness for sandwich panels.
+ */
+function createPentagonGeometry(
+  width: number,
+  wallHeight: number,
+  ridgeHeight: number,
+  profileType: 'T18' | 'T35' | null,
+  waveAxis: 'x' | 'y',
+  invert: boolean,
+  thickness: number
+): THREE.BufferGeometry {
+  if (profileType) {
+    // Trapezoidal: ShapeGeometry with displacement
+    const shape = new THREE.Shape();
+    shape.moveTo(-width / 2, 0);
+    shape.lineTo(width / 2, 0);
+    shape.lineTo(width / 2, wallHeight);
+    shape.lineTo(0, ridgeHeight);
+    shape.lineTo(-width / 2, wallHeight);
+    shape.closePath();
+
+    // Need enough segments for displacement
+    const { height: amp, plateau, valley, period } = getTrapezoidalParams(profileType);
+    const extent = waveAxis === 'x' ? width : ridgeHeight;
+    const waveCount = Math.ceil(extent / period);
+    const segments = Math.min(waveCount * 10, 500);
+
+    const geo = new THREE.ShapeGeometry(shape, segments);
+    const pos = geo.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      const coord = waveAxis === 'x' ? pos.getX(i) : pos.getY(i);
+      const displacement = trapezoidHeight(coord + extent / 2, period, plateau, valley, amp);
+      pos.setZ(i, invert ? -displacement : displacement);
+    }
+    pos.needsUpdate = true;
+    geo.computeVertexNormals();
+    return geo;
+  } else {
+    // Sandwich: ExtrudeGeometry with thickness
+    const shape = new THREE.Shape();
+    shape.moveTo(-width / 2, 0);
+    shape.lineTo(width / 2, 0);
+    shape.lineTo(width / 2, wallHeight);
+    shape.lineTo(0, ridgeHeight);
+    shape.lineTo(-width / 2, wallHeight);
+    shape.closePath();
+
+    const geo = new THREE.ExtrudeGeometry(shape, {
+      depth: thickness,
+      bevelEnabled: false,
+    });
+    geo.translate(0, 0, -thickness / 2);
+    geo.computeVertexNormals();
+    return geo;
+  }
+}
+
+/**
  * Creates a PlaneGeometry with trapezoidal vertex displacement.
  * Waves run along the waveAxis ('x' for walls = vertical ribs, 'y' for roof along slope).
  * Displacement is applied along the Z normal of the plane.
@@ -225,14 +285,10 @@ export const Cladding = React.memo(function Cladding({
 
   const endWallWidth = span + 2 * (columnOuterFlangeOffset + 2 * sideWallThicknessOffset);
 
-  const endWallGeometry = useMemo(() => {
-    if (isEndWallTrapezoid) {
-      return createTrapezoidalGeometry(endWallWidth, wallHeight, 'T18', wallWaveAxis, true);
-    }
-    // Sandwich: BoxGeometry with configurable thickness
-    const thickness = (cladding.sandwichThickness ?? 100) / 1000;
-    return new THREE.BoxGeometry(endWallWidth, wallHeight, thickness);
-  }, [endWallWidth, wallHeight, isEndWallTrapezoid, wallWaveAxis, cladding.sandwichThickness]);
+  const endWallFullGeometry = useMemo(() => {
+    const profileType: 'T18' | 'T35' | null = isEndWallTrapezoid ? 'T18' : null;
+    return createPentagonGeometry(endWallWidth, wallHeight, ridgeHeight, profileType, wallWaveAxis, true, sandwichThicknessM);
+  }, [endWallWidth, wallHeight, ridgeHeight, isEndWallTrapezoid, wallWaveAxis, sandwichThicknessM]);
 
   // Roof geometry: ribs run along the slope (from ridge to eave).
   // The plane is hallLength x roofSlopeLengthWithOverhang.
@@ -255,8 +311,8 @@ export const Cladding = React.memo(function Cladding({
 
   // Dispose geometries
   useEffect(() => {
-    return () => { endWallGeometry.dispose(); };
-  }, [endWallGeometry]);
+    return () => { endWallFullGeometry.dispose(); };
+  }, [endWallFullGeometry]);
   useEffect(() => {
     return () => { roofGeometry.dispose(); };
   }, [roofGeometry]);
@@ -446,41 +502,23 @@ export const Cladding = React.memo(function Cladding({
         />
       )}
 
-      {/* End wall X=-offset (front gable) - rectangular part */}
+      {/* End wall X=-offset (front gable) - full pentagon */}
       <mesh
-        position={[-(endColumnOuterOffset + endWallThicknessOffset), wallHeight / 2, span / 2]}
+        position={[-(endColumnOuterOffset + endWallThicknessOffset), 0, span / 2]}
         rotation={[0, Math.PI / 2, 0]}
-        geometry={endWallGeometry}
+        geometry={endWallFullGeometry}
         material={endWallMat}
         onPointerDown={placementMode ? (e) => handleWallClick('end_front', span, e) : undefined}
       />
 
-      {/* End wall X=-offset - gable triangle */}
+      {/* End wall X=hallLength+offset (back gable) - full pentagon */}
       <mesh
-        position={[-(endColumnOuterOffset + endWallThicknessOffset), wallHeight + gableTriangleHeight / 2, span / 2]}
-        rotation={[0, Math.PI / 2, 0]}
-        material={endWallMat}
-      >
-        <GableTriangleGeometry width={endWallWidth} height={gableTriangleHeight} />
-      </mesh>
-
-      {/* End wall X=hallLength+offset (back gable) - rectangular part */}
-      <mesh
-        position={[hallLength + endColumnOuterOffset + endWallThicknessOffset, wallHeight / 2, span / 2]}
+        position={[hallLength + endColumnOuterOffset + endWallThicknessOffset, 0, span / 2]}
         rotation={[0, -Math.PI / 2, 0]}
-        geometry={endWallGeometry}
+        geometry={endWallFullGeometry}
         material={endWallMat}
         onPointerDown={placementMode ? (e) => handleWallClick('end_back', span, e) : undefined}
       />
-
-      {/* End wall X=hallLength+offset - gable triangle */}
-      <mesh
-        position={[hallLength + endColumnOuterOffset + endWallThicknessOffset, wallHeight + gableTriangleHeight / 2, span / 2]}
-        rotation={[0, -Math.PI / 2, 0]}
-        material={endWallMat}
-      >
-        <GableTriangleGeometry width={endWallWidth} height={gableTriangleHeight} />
-      </mesh>
 
       {/* End wall color stripes - X=-offset */}
       {cladding.panelOrientation === 'horizontal' && endStripes.length > 0 && (
@@ -534,18 +572,3 @@ export const Cladding = React.memo(function Cladding({
   );
 });
 
-/**
- * Custom gable triangle geometry component (isoceles triangle).
- */
-function GableTriangleGeometry({ width, height }: { width: number; height: number }) {
-  const geometry = useMemo(() => {
-    const shape = new THREE.Shape();
-    shape.moveTo(-width / 2, -height / 2);
-    shape.lineTo(width / 2, -height / 2);
-    shape.lineTo(0, height / 2);
-    shape.closePath();
-    return new THREE.ShapeGeometry(shape);
-  }, [width, height]);
-
-  return <primitive object={geometry} attach="geometry" />;
-}
