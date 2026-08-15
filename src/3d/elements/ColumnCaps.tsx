@@ -51,13 +51,13 @@ export const ColumnCaps = React.memo(function ColumnCaps({
       {framePositions.map((x, i) => (
         <React.Fragment key={i}>
           {/* Left side: pivot at inner edge (Z=columnFlangeOffset), plate extends toward Z=0 (outside) */}
-          <group position={[x, wallHeight, columnFlangeOffset]} rotation={[roofAngleRad, 0, 0]}>
+          <group position={[x, wallHeight, columnFlangeOffset]} rotation={[-roofAngleRad, 0, 0]}>
             <mesh material={plateMaterial} position={[0, -plateThickness / 2, -profileH / 2]} castShadow receiveShadow>
               <boxGeometry args={[profileB, plateThickness, profileH]} />
             </mesh>
           </group>
           {/* Right side: pivot at inner edge (Z=span-columnFlangeOffset), plate extends toward Z=span (outside) */}
-          <group position={[x, wallHeight, span - columnFlangeOffset]} rotation={[-roofAngleRad, 0, 0]}>
+          <group position={[x, wallHeight, span - columnFlangeOffset]} rotation={[roofAngleRad, 0, 0]}>
             <mesh material={plateMaterial} position={[0, -plateThickness / 2, profileH / 2]} castShadow receiveShadow>
               <boxGeometry args={[profileB, plateThickness, profileH]} />
             </mesh>
