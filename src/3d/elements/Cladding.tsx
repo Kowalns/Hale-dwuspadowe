@@ -452,13 +452,13 @@ export const Cladding = React.memo(function Cladding({
         let panelCenterX = (bayStart + bayEnd) / 2;
 
         if (bayIndex === 0) {
-          const leftEdge = 0.010;
+          const leftEdge = -(endColumnOuterOffset + endWallThicknessOffset) + 0.010;
           const rightEdge = columnSpacing - 0.010;
           panelWidth = rightEdge - leftEdge;
           panelCenterX = (leftEdge + rightEdge) / 2;
         } else if (bayIndex === numberOfBays - 1) {
           const leftEdge = (numberOfBays - 1) * columnSpacing + 0.010;
-          const rightEdge = hallLength - 0.010;
+          const rightEdge = hallLength + endColumnOuterOffset + endWallThicknessOffset - 0.010;
           panelWidth = rightEdge - leftEdge;
           panelCenterX = (leftEdge + rightEdge) / 2;
         }
@@ -620,13 +620,13 @@ export const Cladding = React.memo(function Cladding({
         let panelCenterX = (bayStart + bayEnd) / 2;
 
         if (bayIndex === 0) {
-          const leftEdge = 0.010;
+          const leftEdge = -(endColumnOuterOffset + endWallThicknessOffset) + 0.010;
           const rightEdge = columnSpacing - 0.010;
           panelWidth = rightEdge - leftEdge;
           panelCenterX = (leftEdge + rightEdge) / 2;
         } else if (bayIndex === numberOfBays - 1) {
           const leftEdge = (numberOfBays - 1) * columnSpacing + 0.010;
-          const rightEdge = hallLength - 0.010;
+          const rightEdge = hallLength + endColumnOuterOffset + endWallThicknessOffset - 0.010;
           panelWidth = rightEdge - leftEdge;
           panelCenterX = (leftEdge + rightEdge) / 2;
         }
