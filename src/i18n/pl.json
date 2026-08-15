@@ -187,5 +187,35 @@
       "side": "Sciana boczna",
       "end": "Sciana szczytowa"
     }
+  },
+  "openings": {
+    "title": "Otwory",
+    "placementMode": "Tryb rozmieszczania",
+    "placementModeHint": "Kliknij na sciane w modelu 3D",
+    "type": "Typ otworu",
+    "types": {
+      "sliding_gate": "Brama przesuwna",
+      "sectional_gate": "Brama segmentowa",
+      "door": "Drzwi",
+      "window": "Okno"
+    },
+    "width": "Szerokosc",
+    "height": "Wysokosc",
+    "sillHeight": "Wysokosc osadzenia",
+    "presets": "Predefiniowane wymiary",
+    "custom": "Niestandardowe",
+    "wall": "Sciana",
+    "walls": {
+      "side_left": "Boczna lewa (Z=0)",
+      "side_right": "Boczna prawa (Z=span)",
+      "end_front": "Szczytowa przednia (X=0)",
+      "end_back": "Szczytowa tylna (X=L)"
+    },
+    "position": "Pozycja",
+    "list": "Lista otworow",
+    "noOpenings": "Brak otworow",
+    "delete": "Usun",
+    "collisionWarning": "Kolizja z istniejacym otworem",
+    "outOfBounds": "Otwor nie miesci sie w scianie"
   }
 }

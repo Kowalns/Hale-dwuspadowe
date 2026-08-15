@@ -1,16 +1,23 @@
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Grid } from '@react-three/drei'
 import { HallModel } from './HallModel'
-import type { HallParameters, CalculationResults, CladdingParameters } from '../types'
+import type { HallParameters, CalculationResults, CladdingParameters, Opening, OpeningType } from '../types'
 
 interface SceneProps {
   params: HallParameters;
   results: CalculationResults;
   cladding?: CladdingParameters;
   showCladding?: boolean;
+  openings?: Opening[];
+  placementMode?: boolean;
+  onPlaceOpening?: (opening: Opening) => void;
+  selectedOpeningType?: OpeningType;
+  openingWidth?: number;
+  openingHeight?: number;
+  sillHeight?: number;
 }
 
-function SceneContent({ params, results, cladding, showCladding }: SceneProps) {
+function SceneContent({ params, results, cladding, showCladding, openings, placementMode, onPlaceOpening, selectedOpeningType, openingWidth, openingHeight, sillHeight }: SceneProps) {
   return (
     <>
       {/* Lighting */}
@@ -44,7 +51,19 @@ function SceneContent({ params, results, cladding, showCladding }: SceneProps) {
       />
 
       {/* 3D Hall Model */}
-      <HallModel params={params} results={results} cladding={cladding} showCladding={showCladding} />
+      <HallModel
+        params={params}
+        results={results}
+        cladding={cladding}
+        showCladding={showCladding}
+        openings={openings}
+        placementMode={placementMode}
+        onPlaceOpening={onPlaceOpening}
+        selectedOpeningType={selectedOpeningType}
+        openingWidth={openingWidth}
+        openingHeight={openingHeight}
+        sillHeight={sillHeight}
+      />
 
       {/* Camera controls */}
       <OrbitControls
@@ -60,7 +79,7 @@ function SceneContent({ params, results, cladding, showCladding }: SceneProps) {
   )
 }
 
-export function Scene({ params, results, cladding, showCladding }: SceneProps) {
+export function Scene({ params, results, cladding, showCladding, openings, placementMode, onPlaceOpening, selectedOpeningType, openingWidth, openingHeight, sillHeight }: SceneProps) {
   return (
     <Canvas
       shadows
@@ -69,7 +88,19 @@ export function Scene({ params, results, cladding, showCladding }: SceneProps) {
       className="w-full h-full"
     >
       <color attach="background" args={['#f0f4f8']} />
-      <SceneContent params={params} results={results} cladding={cladding} showCladding={showCladding} />
+      <SceneContent
+        params={params}
+        results={results}
+        cladding={cladding}
+        showCladding={showCladding}
+        openings={openings}
+        placementMode={placementMode}
+        onPlaceOpening={onPlaceOpening}
+        selectedOpeningType={selectedOpeningType}
+        openingWidth={openingWidth}
+        openingHeight={openingHeight}
+        sillHeight={sillHeight}
+      />
     </Canvas>
   )
 }

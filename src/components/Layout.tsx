@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { FormPanel, DEFAULT_PARAMS } from './FormPanel';
 import { Scene } from '../3d/Scene';
 import { useHallCalculations } from '../hooks/useHallCalculations';
-import type { HallParameters, ProfileOverrides, RafterType, CladdingParameters } from '../types';
+import type { HallParameters, ProfileOverrides, RafterType, CladdingParameters, Opening, OpeningType } from '../types';
 
 export const DEFAULT_CLADDING: CladdingParameters = {
   sideWallType: 'sandwich',
@@ -24,6 +24,20 @@ export function Layout() {
   const [customTrussHeight, setCustomTrussHeight] = useState<number | null>(null);
   const [cladding, setCladding] = useState<CladdingParameters>(DEFAULT_CLADDING);
   const [showCladding, setShowCladding] = useState(true);
+  const [openings, setOpenings] = useState<Opening[]>([]);
+  const [placementMode, setPlacementMode] = useState(false);
+  const [selectedOpeningType, setSelectedOpeningType] = useState<OpeningType>('sliding_gate');
+  const [openingWidth, setOpeningWidth] = useState(4);
+  const [openingHeight, setOpeningHeight] = useState(4);
+  const [sillHeight, setSillHeight] = useState(0.9);
+
+  const addOpening = useCallback((opening: Opening) => {
+    setOpenings((prev) => [...prev, opening]);
+  }, []);
+
+  const removeOpening = useCallback((id: string) => {
+    setOpenings((prev) => prev.filter((o) => o.id !== id));
+  }, []);
 
   const results = useHallCalculations(params, profileOverrides, rafterType, customTrussHeight);
 
@@ -45,6 +59,18 @@ export function Layout() {
           onCladdingChange={setCladding}
           showCladding={showCladding}
           onShowCladdingChange={setShowCladding}
+          openings={openings}
+          onRemoveOpening={removeOpening}
+          placementMode={placementMode}
+          onPlacementModeChange={setPlacementMode}
+          selectedOpeningType={selectedOpeningType}
+          onSelectedOpeningTypeChange={setSelectedOpeningType}
+          openingWidth={openingWidth}
+          onOpeningWidthChange={setOpeningWidth}
+          openingHeight={openingHeight}
+          onOpeningHeightChange={setOpeningHeight}
+          sillHeight={sillHeight}
+          onSillHeightChange={setSillHeight}
         />
       </aside>
       {/* Right panel - 3D Canvas ~65% */}
@@ -54,6 +80,13 @@ export function Layout() {
           results={results}
           cladding={cladding}
           showCladding={showCladding}
+          openings={openings}
+          placementMode={placementMode}
+          onPlaceOpening={addOpening}
+          selectedOpeningType={selectedOpeningType}
+          openingWidth={openingWidth}
+          openingHeight={openingHeight}
+          sillHeight={sillHeight}
         />
       </section>
     </main>

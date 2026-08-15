@@ -1,12 +1,21 @@
 import React, { useMemo } from 'react';
 import * as THREE from 'three';
+import { ThreeEvent } from '@react-three/fiber';
 import { getRALHex } from '../../data/colors';
-import type { HallParameters, CladdingParameters, ColorStripe } from '../../types';
+import { checkCollision, fitsInWall } from './Openings';
+import type { HallParameters, CladdingParameters, ColorStripe, Opening, OpeningType, WallIdentifier } from '../../types';
 
 interface CladdingProps {
   params: HallParameters;
   cladding: CladdingParameters;
   showCladding: boolean;
+  placementMode?: boolean;
+  openings?: Opening[];
+  onPlaceOpening?: (opening: Opening) => void;
+  selectedOpeningType?: OpeningType;
+  openingWidth?: number;
+  openingHeight?: number;
+  sillHeight?: number;
 }
 
 /**
@@ -89,6 +98,13 @@ export const Cladding = React.memo(function Cladding({
   params,
   cladding,
   showCladding,
+  placementMode,
+  openings,
+  onPlaceOpening,
+  selectedOpeningType,
+  openingWidth,
+  openingHeight,
+  sillHeight,
 }: CladdingProps) {
   const { span, length: hallLength, wallHeight, roofAngle } = params;
 
@@ -112,6 +128,75 @@ export const Cladding = React.memo(function Cladding({
     [cladding.colorStripes]
   );
 
+  /**
+   * Handle wall click for opening placement.
+   * Computes local coordinates, snaps to 100mm grid, validates bounds + collision.
+   */
+  const handleWallClick = (wall: WallIdentifier, wallWidth: number, event: ThreeEvent<PointerEvent>) => {
+    if (!placementMode || !onPlaceOpening || !selectedOpeningType) return;
+    event.stopPropagation();
+
+    const w = openingWidth ?? 1;
+    const h = openingHeight ?? 1;
+
+    // Get the local point on the plane geometry
+    // PlaneGeometry has center at origin, so localPoint.x ranges from -wallWidth/2 to wallWidth/2
+    // and localPoint.y ranges from -wallHeight/2 to wallHeight/2
+    const localPoint = event.point.clone();
+    const mesh = event.object as THREE.Mesh;
+    mesh.worldToLocal(localPoint);
+
+    // Convert from plane-local to wall-local coordinates
+    // Plane center is at (0,0) of the plane, so:
+    // positionX (along wall) = localPoint.x + wallWidth/2
+    // positionY (from ground) = localPoint.y + wallHeight/2
+    let posX = localPoint.x + wallWidth / 2;
+    let posY = localPoint.y + wallHeight / 2;
+
+    // Snap to 100mm grid
+    posX = Math.round(posX * 10) / 10;
+    posY = Math.round(posY * 10) / 10;
+
+    // For gates and doors, bottom should be at ground level
+    // For windows, bottom should be at sill height
+    let finalPosY: number;
+    let finalSillHeight: number;
+    if (selectedOpeningType === 'window') {
+      finalSillHeight = sillHeight ?? 0.9;
+      finalPosY = finalSillHeight + h / 2;
+    } else {
+      // Gates and doors sit on the ground
+      finalSillHeight = 0;
+      finalPosY = h / 2;
+    }
+
+    // Snap Y to grid too
+    finalPosY = Math.round(finalPosY * 10) / 10;
+
+    const newOpening: Opening = {
+      id: `opening-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      type: selectedOpeningType,
+      width: w,
+      height: h,
+      wall,
+      positionX: posX,
+      positionY: finalPosY,
+      sillHeight: finalSillHeight,
+    };
+
+    // Check bounds
+    if (!fitsInWall(newOpening, params)) return;
+
+    // Check collision with existing openings
+    if (openings) {
+      for (const existing of openings) {
+        if (checkCollision(newOpening, existing)) return;
+      }
+    }
+
+    onPlaceOpening(newOpening);
+  };
+
   if (!showCladding) return null;
 
   return (
@@ -120,6 +205,7 @@ export const Cladding = React.memo(function Cladding({
       <mesh
         position={[hallLength / 2, wallHeight / 2, 0]}
         material={sideWallMat}
+        onPointerDown={placementMode ? (e) => handleWallClick('side_left', hallLength, e) : undefined}
       >
         <planeGeometry args={[hallLength, wallHeight]} />
       </mesh>
@@ -129,6 +215,7 @@ export const Cladding = React.memo(function Cladding({
         position={[hallLength / 2, wallHeight / 2, span]}
         rotation={[0, Math.PI, 0]}
         material={sideWallMat}
+        onPointerDown={placementMode ? (e) => handleWallClick('side_right', hallLength, e) : undefined}
       >
         <planeGeometry args={[hallLength, wallHeight]} />
       </mesh>
@@ -162,6 +249,7 @@ export const Cladding = React.memo(function Cladding({
         position={[0, wallHeight / 2, span / 2]}
         rotation={[0, Math.PI / 2, 0]}
         material={endWallMat}
+        onPointerDown={placementMode ? (e) => handleWallClick('end_front', span, e) : undefined}
       >
         <planeGeometry args={[span, wallHeight]} />
       </mesh>
@@ -186,6 +274,7 @@ export const Cladding = React.memo(function Cladding({
         position={[hallLength, wallHeight / 2, span / 2]}
         rotation={[0, -Math.PI / 2, 0]}
         material={endWallMat}
+        onPointerDown={placementMode ? (e) => handleWallClick('end_back', span, e) : undefined}
       >
         <planeGeometry args={[span, wallHeight]} />
       </mesh>

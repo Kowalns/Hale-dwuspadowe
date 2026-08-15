@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { HallParameters, CalculationResults, CoveringType, SteelGrade, TerrainCategory, SnowExposure, ProfileOverrides, RafterType, PurlinMounting, CladdingParameters } from '../types';
+import type { HallParameters, CalculationResults, CoveringType, SteelGrade, TerrainCategory, SnowExposure, ProfileOverrides, RafterType, PurlinMounting, CladdingParameters, Opening, OpeningType } from '../types';
 import { ResultsPanel } from './ResultsPanel';
 import { CladdingPanel } from './CladdingPanel';
+import { OpeningsPanel } from './OpeningsPanel';
 
 const DEFAULT_PARAMS: HallParameters = {
   span: 18,
@@ -77,9 +78,21 @@ interface FormPanelProps {
   onCladdingChange?: (cladding: CladdingParameters) => void;
   showCladding?: boolean;
   onShowCladdingChange?: (show: boolean) => void;
+  openings?: Opening[];
+  onRemoveOpening?: (id: string) => void;
+  placementMode?: boolean;
+  onPlacementModeChange?: (mode: boolean) => void;
+  selectedOpeningType?: OpeningType;
+  onSelectedOpeningTypeChange?: (type: OpeningType) => void;
+  openingWidth?: number;
+  onOpeningWidthChange?: (w: number) => void;
+  openingHeight?: number;
+  onOpeningHeightChange?: (h: number) => void;
+  sillHeight?: number;
+  onSillHeightChange?: (h: number) => void;
 }
 
-export function FormPanel({ params, onParamsChange, results, profileOverrides, onProfileOverridesChange, rafterType, onRafterTypeChange, customTrussHeight, onCustomTrussHeightChange, cladding, onCladdingChange, showCladding, onShowCladdingChange }: FormPanelProps) {
+export function FormPanel({ params, onParamsChange, results, profileOverrides, onProfileOverridesChange, rafterType, onRafterTypeChange, customTrussHeight, onCustomTrussHeightChange, cladding, onCladdingChange, showCladding, onShowCladdingChange, openings, onRemoveOpening, placementMode, onPlacementModeChange, selectedOpeningType, onSelectedOpeningTypeChange, openingWidth, onOpeningWidthChange, openingHeight, onOpeningHeightChange, sillHeight, onSillHeightChange }: FormPanelProps) {
   const { t } = useTranslation();
   const [wizardMode, setWizardMode] = useState(true);
   const [wizardStep, setWizardStep] = useState(0);
@@ -465,6 +478,25 @@ export function FormPanel({ params, onParamsChange, results, profileOverrides, o
                 />
               </>
             )}
+            {openings && onRemoveOpening && onPlacementModeChange && onSelectedOpeningTypeChange && onOpeningWidthChange && onOpeningHeightChange && onSillHeightChange && (
+              <>
+                <div className="my-3 border-t border-border" />
+                <OpeningsPanel
+                  openings={openings}
+                  onRemoveOpening={onRemoveOpening}
+                  placementMode={placementMode ?? false}
+                  onPlacementModeChange={onPlacementModeChange}
+                  selectedOpeningType={selectedOpeningType ?? 'sliding_gate'}
+                  onSelectedOpeningTypeChange={onSelectedOpeningTypeChange}
+                  openingWidth={openingWidth ?? 4}
+                  onOpeningWidthChange={onOpeningWidthChange}
+                  openingHeight={openingHeight ?? 4}
+                  onOpeningHeightChange={onOpeningHeightChange}
+                  sillHeight={sillHeight ?? 0.9}
+                  onSillHeightChange={onSillHeightChange}
+                />
+              </>
+            )}
           </>
         ) : (
           <>
@@ -483,6 +515,25 @@ export function FormPanel({ params, onParamsChange, results, profileOverrides, o
                   onCladdingChange={onCladdingChange}
                   showCladding={showCladding ?? true}
                   onShowCladdingChange={onShowCladdingChange ?? (() => {})}
+                />
+              </>
+            )}
+            {openings && onRemoveOpening && onPlacementModeChange && onSelectedOpeningTypeChange && onOpeningWidthChange && onOpeningHeightChange && onSillHeightChange && (
+              <>
+                <div className="my-3 border-t border-border" />
+                <OpeningsPanel
+                  openings={openings}
+                  onRemoveOpening={onRemoveOpening}
+                  placementMode={placementMode ?? false}
+                  onPlacementModeChange={onPlacementModeChange}
+                  selectedOpeningType={selectedOpeningType ?? 'sliding_gate'}
+                  onSelectedOpeningTypeChange={onSelectedOpeningTypeChange}
+                  openingWidth={openingWidth ?? 4}
+                  onOpeningWidthChange={onOpeningWidthChange}
+                  openingHeight={openingHeight ?? 4}
+                  onOpeningHeightChange={onOpeningHeightChange}
+                  sillHeight={sillHeight ?? 0.9}
+                  onSillHeightChange={onSillHeightChange}
                 />
               </>
             )}

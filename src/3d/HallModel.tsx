@@ -16,14 +16,22 @@ import { IntermediateColumns } from './elements/IntermediateColumns';
 import { TrussColumnHead } from './elements/TrussColumnHead';
 import { ColumnCaps } from './elements/ColumnCaps';
 import { Cladding } from './elements/Cladding';
+import { Openings } from './elements/Openings';
 import { getEffectiveRafterTop } from '../utils/geometry';
-import type { HallParameters, CalculationResults, CladdingParameters } from '../types';
+import type { HallParameters, CalculationResults, CladdingParameters, Opening, OpeningType } from '../types';
 
 interface HallModelProps {
   params: HallParameters;
   results: CalculationResults;
   cladding?: CladdingParameters;
   showCladding?: boolean;
+  openings?: Opening[];
+  placementMode?: boolean;
+  onPlaceOpening?: (opening: Opening) => void;
+  selectedOpeningType?: OpeningType;
+  openingWidth?: number;
+  openingHeight?: number;
+  sillHeight?: number;
 }
 
 /**
@@ -32,7 +40,7 @@ interface HallModelProps {
  * Origin is at bottom-left corner of building (X=0, Y=0, Z=0).
  * X = along building length, Y = up, Z = across building width (span)
  */
-export const HallModel = React.memo(function HallModel({ params, results, cladding, showCladding }: HallModelProps) {
+export const HallModel = React.memo(function HallModel({ params, results, cladding, showCladding, openings, placementMode, onPlaceOpening, selectedOpeningType, openingWidth, openingHeight, sillHeight }: HallModelProps) {
   const { span, length: hallLength, wallHeight, roofAngle } = params;
   const purlinMounting = params.purlinMounting ?? 'on-top';
   const {
@@ -269,7 +277,19 @@ export const HallModel = React.memo(function HallModel({ params, results, claddi
           params={params}
           cladding={cladding}
           showCladding={showCladding ?? true}
+          placementMode={placementMode}
+          openings={openings}
+          onPlaceOpening={onPlaceOpening}
+          selectedOpeningType={selectedOpeningType}
+          openingWidth={openingWidth}
+          openingHeight={openingHeight}
+          sillHeight={sillHeight}
         />
+      )}
+
+      {/* Openings (gates, doors, windows) */}
+      {openings && openings.length > 0 && (
+        <Openings params={params} openings={openings} />
       )}
     </group>
   );

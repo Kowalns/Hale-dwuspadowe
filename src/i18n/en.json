@@ -187,5 +187,35 @@
       "side": "Side wall",
       "end": "End wall"
     }
+  },
+  "openings": {
+    "title": "Openings",
+    "placementMode": "Placement mode",
+    "placementModeHint": "Click on a wall in the 3D model",
+    "type": "Opening type",
+    "types": {
+      "sliding_gate": "Sliding gate",
+      "sectional_gate": "Sectional gate",
+      "door": "Door",
+      "window": "Window"
+    },
+    "width": "Width",
+    "height": "Height",
+    "sillHeight": "Sill height",
+    "presets": "Presets",
+    "custom": "Custom",
+    "wall": "Wall",
+    "walls": {
+      "side_left": "Left side (Z=0)",
+      "side_right": "Right side (Z=span)",
+      "end_front": "Front end (X=0)",
+      "end_back": "Back end (X=L)"
+    },
+    "position": "Position",
+    "list": "Openings list",
+    "noOpenings": "No openings",
+    "delete": "Delete",
+    "collisionWarning": "Collision with existing opening",
+    "outOfBounds": "Opening does not fit within wall"
   }
 }

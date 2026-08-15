@@ -22,6 +22,20 @@ export interface CladdingParameters {
   colorStripes: ColorStripe[];
 }
 
+export type OpeningType = 'sliding_gate' | 'sectional_gate' | 'door' | 'window';
+export type WallIdentifier = 'side_left' | 'side_right' | 'end_front' | 'end_back';
+
+export interface Opening {
+  id: string;
+  type: OpeningType;
+  width: number; // meters
+  height: number; // meters
+  wall: WallIdentifier;
+  positionX: number; // local horizontal position along wall (meters from left edge)
+  positionY: number; // vertical center of opening from ground (meters)
+  sillHeight: number; // height of bottom edge from ground (meters)
+}
+
 export type SteelGrade = 'S235' | 'S355';
 export type CoveringType = 'sheet' | 'sandwich';
 export type TerrainCategory = 1 | 2 | 3 | 4;
