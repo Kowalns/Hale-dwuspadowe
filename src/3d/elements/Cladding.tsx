@@ -1358,96 +1358,67 @@ export const Cladding = React.memo(function Cladding({
           const panelWidth = (zRight - zLeft) - 0.020; // 20mm dilation
           const panelCenterZ = (zLeft + zRight) / 2;
 
-          // Compute sheet widths for this end wall panel
-          const endSheetWidths = computeSheetSizes(panelWidth, endWallSheetModuleWidth);
-          const endPanelLeftEdge = panelCenterZ - panelWidth / 2;
-          const endSheetPositions: { z: number; width: number }[] = [];
-          let cz = endPanelLeftEdge;
-          for (let si = 0; si < endSheetWidths.length; si++) {
-            endSheetPositions.push({ z: cz + endSheetWidths[si] / 2, width: endSheetWidths[si] });
-            cz += endSheetWidths[si] + (si < endSheetWidths.length - 1 ? sheetGapWidth : 0);
-          }
-
-          if (endStripes.length === 0) {
-            // Render individual sheets for this panel section
-            endSheetPositions.forEach((sheet, sheetIdx) => {
-              const selected = isSheetSelected('end_front', i, sheetIdx);
-              elements.push(
-                <SheetMesh
-                  key={`end-front-panel-${i}-sheet-${sheetIdx}`}
-                  sheetWidth={sheet.width}
-                  sheetHeight={wallHeight}
-                  position={[xPos, wallHeight / 2, sheet.z]}
-                  rotation={[0, Math.PI / 2, 0]}
-                  isTrapezoid={isEndWallTrapezoid}
-                  profileType={endWallProfileType}
-                  waveAxis={wallWaveAxis}
-                  sandwichThickness={sandwichThicknessM}
-                  baseMaterial={endWallMat}
-                  selected={selected}
-                  onPointerDown={placementMode
-                    ? (e) => handleWallClick('end_front', span, e)
-                    : (e) => handleSheetClick('end_front', i, sheetIdx, wallHeight, sheet.width, cladding.endWallColor, isEndWallTrapezoid ? undefined : (cladding.sandwichThickness ?? 100), endWallSheetModuleWidth * 1000, e)
-                  }
-                />
-              );
-            });
-            // Gap lines between sheets
-            endSheetPositions.slice(0, -1).forEach((sheet, gapIdx) => {
-              elements.push(
-                <mesh
-                  key={`end-front-panel-${i}-gap-${gapIdx}`}
-                  position={[xPos, wallHeight / 2, sheet.z + sheet.width / 2 + sheetGapWidth / 2]}
-                  rotation={[0, Math.PI / 2, 0]}
-                  material={sheetGapMaterial}
-                >
-                  <boxGeometry args={[sheetGapWidth, wallHeight, 0.015]} />
-                </mesh>
-              );
-            });
-          } else {
-            // Color stripe segments per panel
-            const layerColors: string[] = [];
-            for (let layer = 1; layer <= numLayers; layer++) {
-              const stripe = endStripes.find(s => layer >= s.layerStart && layer <= s.layerEnd);
-              layerColors.push(stripe ? stripe.color : cladding.endWallColor);
+          if (isHorizontalLayout) {
+            // Horizontal layout: sheets are horizontal strips (full panelWidth, divided along Y)
+            const endSheetHeights = computeSheetSizes(wallHeight, endWallSheetModuleWidth);
+            const endSheetYPositions: { y: number; height: number }[] = [];
+            let cy = 0;
+            for (let si = 0; si < endSheetHeights.length; si++) {
+              endSheetYPositions.push({ y: cy + endSheetHeights[si] / 2, height: endSheetHeights[si] });
+              cy += endSheetHeights[si] + (si < endSheetHeights.length - 1 ? sheetGapWidth : 0);
             }
 
-            const segments: ColorSegment[] = [];
-            if (numLayers > 0) {
-              let currentColor = layerColors[0];
-              let segStartLayer = 1;
-              for (let li = 1; li < layerColors.length; li++) {
-                if (layerColors[li] !== currentColor) {
-                  segments.push({ startLayer: segStartLayer, endLayer: li, color: currentColor });
-                  currentColor = layerColors[li];
-                  segStartLayer = li + 1;
-                }
-              }
-              segments.push({ startLayer: segStartLayer, endLayer: numLayers, color: currentColor });
-            }
-
-            const coveredHeight = numLayers * panelHeightM;
-            const remainder = wallHeight - coveredHeight;
-
-            segments.forEach((seg, segIdx) => {
-              let segHeight = (seg.endLayer - seg.startLayer + 1) * panelHeightM;
-              const segBottomY = (seg.startLayer - 1) * panelHeightM;
-              if (segIdx === segments.length - 1 && remainder > 0.0001) {
-                segHeight += remainder;
-              }
-              const segCenterY = segBottomY + segHeight / 2;
-              const segMat = seg.color === cladding.endWallColor ? endWallMat : makeCladdingMaterial(seg.color);
-
-              // Render individual sheets for this segment
-              endSheetPositions.forEach((sheet, sheetIdx) => {
+            if (endStripes.length === 0) {
+              endSheetYPositions.forEach((sheet, sheetIdx) => {
                 const selected = isSheetSelected('end_front', i, sheetIdx);
                 elements.push(
                   <SheetMesh
-                    key={`end-front-panel-${i}-seg-${segIdx}-sheet-${sheetIdx}`}
-                    sheetWidth={sheet.width}
-                    sheetHeight={segHeight}
-                    position={[xPos, segCenterY, sheet.z]}
+                    key={`end-front-panel-${i}-sheet-${sheetIdx}`}
+                    sheetWidth={panelWidth}
+                    sheetHeight={sheet.height}
+                    position={[xPos, sheet.y, panelCenterZ]}
+                    rotation={[0, Math.PI / 2, 0]}
+                    isTrapezoid={isEndWallTrapezoid}
+                    profileType={endWallProfileType}
+                    waveAxis={wallWaveAxis}
+                    sandwichThickness={sandwichThicknessM}
+                    baseMaterial={endWallMat}
+                    selected={selected}
+                    onPointerDown={placementMode
+                      ? (e) => handleWallClick('end_front', span, e)
+                      : (e) => handleSheetClick('end_front', i, sheetIdx, sheet.height, panelWidth, cladding.endWallColor, isEndWallTrapezoid ? undefined : (cladding.sandwichThickness ?? 100), endWallSheetModuleWidth * 1000, e)
+                    }
+                  />
+                );
+              });
+              // Gap lines between horizontal sheets
+              endSheetYPositions.slice(0, -1).forEach((sheet, gapIdx) => {
+                elements.push(
+                  <mesh
+                    key={`end-front-panel-${i}-gap-${gapIdx}`}
+                    position={[xPos, sheet.y + sheet.height / 2 + sheetGapWidth / 2, panelCenterZ]}
+                    rotation={[0, Math.PI / 2, 0]}
+                    material={sheetGapMaterial}
+                  >
+                    <boxGeometry args={[panelWidth, sheetGapWidth, 0.015]} />
+                  </mesh>
+                );
+              });
+            } else {
+              // With color stripes: determine color per horizontal sheet
+              endSheetYPositions.forEach((sheet, sheetIdx) => {
+                const sheetCenterY = sheet.y;
+                const layerAtCenter = Math.floor(sheetCenterY / panelHeightM) + 1;
+                const stripe = endStripes.find(s => layerAtCenter >= s.layerStart && layerAtCenter <= s.layerEnd);
+                const sheetColor = stripe ? stripe.color : cladding.endWallColor;
+                const segMat = sheetColor === cladding.endWallColor ? endWallMat : makeCladdingMaterial(sheetColor);
+                const selected = isSheetSelected('end_front', i, sheetIdx);
+                elements.push(
+                  <SheetMesh
+                    key={`end-front-panel-${i}-sheet-${sheetIdx}`}
+                    sheetWidth={panelWidth}
+                    sheetHeight={sheet.height}
+                    position={[xPos, sheet.y, panelCenterZ]}
                     rotation={[0, Math.PI / 2, 0]}
                     isTrapezoid={isEndWallTrapezoid}
                     profileType={endWallProfileType}
@@ -1457,25 +1428,146 @@ export const Cladding = React.memo(function Cladding({
                     selected={selected}
                     onPointerDown={placementMode
                       ? (e) => handleWallClick('end_front', span, e)
-                      : (e) => handleSheetClick('end_front', i, sheetIdx, segHeight, sheet.width, seg.color, isEndWallTrapezoid ? undefined : (cladding.sandwichThickness ?? 100), endWallSheetModuleWidth * 1000, e)
+                      : (e) => handleSheetClick('end_front', i, sheetIdx, sheet.height, panelWidth, sheetColor, isEndWallTrapezoid ? undefined : (cladding.sandwichThickness ?? 100), endWallSheetModuleWidth * 1000, e)
                     }
                   />
                 );
               });
-              // Gap lines between sheets in this segment
-              endSheetPositions.slice(0, -1).forEach((sheet, gapIdx) => {
+              // Gap lines between horizontal sheets
+              endSheetYPositions.slice(0, -1).forEach((sheet, gapIdx) => {
                 elements.push(
                   <mesh
-                    key={`end-front-panel-${i}-seg-${segIdx}-gap-${gapIdx}`}
-                    position={[xPos, segCenterY, sheet.z + sheet.width / 2 + sheetGapWidth / 2]}
+                    key={`end-front-panel-${i}-gap-${gapIdx}`}
+                    position={[xPos, sheet.y + sheet.height / 2 + sheetGapWidth / 2, panelCenterZ]}
                     rotation={[0, Math.PI / 2, 0]}
                     material={sheetGapMaterial}
                   >
-                    <boxGeometry args={[sheetGapWidth, segHeight, 0.015]} />
+                    <boxGeometry args={[panelWidth, sheetGapWidth, 0.015]} />
                   </mesh>
                 );
               });
-            });
+            }
+          } else {
+            // Vertical layout: sheets are vertical strips (divided along X/Z, full height)
+            // Compute sheet widths for this end wall panel
+            const endSheetWidths = computeSheetSizes(panelWidth, endWallSheetModuleWidth);
+            const endPanelLeftEdge = panelCenterZ - panelWidth / 2;
+            const endSheetPositions: { z: number; width: number }[] = [];
+            let cz = endPanelLeftEdge;
+            for (let si = 0; si < endSheetWidths.length; si++) {
+              endSheetPositions.push({ z: cz + endSheetWidths[si] / 2, width: endSheetWidths[si] });
+              cz += endSheetWidths[si] + (si < endSheetWidths.length - 1 ? sheetGapWidth : 0);
+            }
+
+            if (endStripes.length === 0) {
+              // Render individual sheets for this panel section
+              endSheetPositions.forEach((sheet, sheetIdx) => {
+                const selected = isSheetSelected('end_front', i, sheetIdx);
+                elements.push(
+                  <SheetMesh
+                    key={`end-front-panel-${i}-sheet-${sheetIdx}`}
+                    sheetWidth={sheet.width}
+                    sheetHeight={wallHeight}
+                    position={[xPos, wallHeight / 2, sheet.z]}
+                    rotation={[0, Math.PI / 2, 0]}
+                    isTrapezoid={isEndWallTrapezoid}
+                    profileType={endWallProfileType}
+                    waveAxis={wallWaveAxis}
+                    sandwichThickness={sandwichThicknessM}
+                    baseMaterial={endWallMat}
+                    selected={selected}
+                    onPointerDown={placementMode
+                      ? (e) => handleWallClick('end_front', span, e)
+                      : (e) => handleSheetClick('end_front', i, sheetIdx, wallHeight, sheet.width, cladding.endWallColor, isEndWallTrapezoid ? undefined : (cladding.sandwichThickness ?? 100), endWallSheetModuleWidth * 1000, e)
+                    }
+                  />
+                );
+              });
+              // Gap lines between sheets
+              endSheetPositions.slice(0, -1).forEach((sheet, gapIdx) => {
+                elements.push(
+                  <mesh
+                    key={`end-front-panel-${i}-gap-${gapIdx}`}
+                    position={[xPos, wallHeight / 2, sheet.z + sheet.width / 2 + sheetGapWidth / 2]}
+                    rotation={[0, Math.PI / 2, 0]}
+                    material={sheetGapMaterial}
+                  >
+                    <boxGeometry args={[sheetGapWidth, wallHeight, 0.015]} />
+                  </mesh>
+                );
+              });
+            } else {
+              // Color stripe segments per panel
+              const layerColors: string[] = [];
+              for (let layer = 1; layer <= numLayers; layer++) {
+                const stripe = endStripes.find(s => layer >= s.layerStart && layer <= s.layerEnd);
+                layerColors.push(stripe ? stripe.color : cladding.endWallColor);
+              }
+
+              const segments: ColorSegment[] = [];
+              if (numLayers > 0) {
+                let currentColor = layerColors[0];
+                let segStartLayer = 1;
+                for (let li = 1; li < layerColors.length; li++) {
+                  if (layerColors[li] !== currentColor) {
+                    segments.push({ startLayer: segStartLayer, endLayer: li, color: currentColor });
+                    currentColor = layerColors[li];
+                    segStartLayer = li + 1;
+                  }
+                }
+                segments.push({ startLayer: segStartLayer, endLayer: numLayers, color: currentColor });
+              }
+
+              const coveredHeight = numLayers * panelHeightM;
+              const remainder = wallHeight - coveredHeight;
+
+              segments.forEach((seg, segIdx) => {
+                let segHeight = (seg.endLayer - seg.startLayer + 1) * panelHeightM;
+                const segBottomY = (seg.startLayer - 1) * panelHeightM;
+                if (segIdx === segments.length - 1 && remainder > 0.0001) {
+                  segHeight += remainder;
+                }
+                const segCenterY = segBottomY + segHeight / 2;
+                const segMat = seg.color === cladding.endWallColor ? endWallMat : makeCladdingMaterial(seg.color);
+
+                // Render individual sheets for this segment
+                endSheetPositions.forEach((sheet, sheetIdx) => {
+                  const selected = isSheetSelected('end_front', i, sheetIdx);
+                  elements.push(
+                    <SheetMesh
+                      key={`end-front-panel-${i}-seg-${segIdx}-sheet-${sheetIdx}`}
+                      sheetWidth={sheet.width}
+                      sheetHeight={segHeight}
+                      position={[xPos, segCenterY, sheet.z]}
+                      rotation={[0, Math.PI / 2, 0]}
+                      isTrapezoid={isEndWallTrapezoid}
+                      profileType={endWallProfileType}
+                      waveAxis={wallWaveAxis}
+                      sandwichThickness={sandwichThicknessM}
+                      baseMaterial={segMat}
+                      selected={selected}
+                      onPointerDown={placementMode
+                        ? (e) => handleWallClick('end_front', span, e)
+                        : (e) => handleSheetClick('end_front', i, sheetIdx, segHeight, sheet.width, seg.color, isEndWallTrapezoid ? undefined : (cladding.sandwichThickness ?? 100), endWallSheetModuleWidth * 1000, e)
+                      }
+                    />
+                  );
+                });
+                // Gap lines between sheets in this segment
+                endSheetPositions.slice(0, -1).forEach((sheet, gapIdx) => {
+                  elements.push(
+                    <mesh
+                      key={`end-front-panel-${i}-seg-${segIdx}-gap-${gapIdx}`}
+                      position={[xPos, segCenterY, sheet.z + sheet.width / 2 + sheetGapWidth / 2]}
+                      rotation={[0, Math.PI / 2, 0]}
+                      material={sheetGapMaterial}
+                    >
+                      <boxGeometry args={[sheetGapWidth, segHeight, 0.015]} />
+                    </mesh>
+                  );
+                });
+              });
+            }
           }
         }
 
@@ -1523,7 +1615,24 @@ export const Cladding = React.memo(function Cladding({
               rotation={[0, Math.PI / 2, 0]}
               geometry={gableGeo}
               material={endWallMat}
-              onPointerDown={placementMode ? (e) => handleWallClick('end_front', span, e) : undefined}
+              onPointerDown={placementMode
+                ? (e) => handleWallClick('end_front', span, e)
+                : (e) => {
+                    if (!onSelectSheet) return;
+                    e.stopPropagation();
+                    const maxH = Math.max(hLeft, hRight);
+                    onSelectSheet({
+                      wall: 'end_front',
+                      bayIndex: i,
+                      sheetIndex: 0,
+                      width: panelWidth,
+                      length: maxH * 1000,
+                      color: cladding.endWallColor,
+                      thickness: isEndWallTrapezoid ? undefined : (cladding.sandwichThickness ?? 100),
+                      module: endWallSheetModuleWidth * 1000,
+                    });
+                  }
+              }
             />
           );
         }
@@ -1570,96 +1679,67 @@ export const Cladding = React.memo(function Cladding({
           const panelWidth = (zRight - zLeft) - 0.020; // 20mm dilation
           const panelCenterZ = (zLeft + zRight) / 2;
 
-          // Compute sheet widths for this end wall panel
-          const endSheetWidths = computeSheetSizes(panelWidth, endWallSheetModuleWidth);
-          const endPanelLeftEdge = panelCenterZ - panelWidth / 2;
-          const endSheetPositions: { z: number; width: number }[] = [];
-          let cz = endPanelLeftEdge;
-          for (let si = 0; si < endSheetWidths.length; si++) {
-            endSheetPositions.push({ z: cz + endSheetWidths[si] / 2, width: endSheetWidths[si] });
-            cz += endSheetWidths[si] + (si < endSheetWidths.length - 1 ? sheetGapWidth : 0);
-          }
-
-          if (endStripes.length === 0) {
-            // Render individual sheets for this panel section
-            endSheetPositions.forEach((sheet, sheetIdx) => {
-              const selected = isSheetSelected('end_back', i, sheetIdx);
-              elements.push(
-                <SheetMesh
-                  key={`end-back-panel-${i}-sheet-${sheetIdx}`}
-                  sheetWidth={sheet.width}
-                  sheetHeight={wallHeight}
-                  position={[xPos, wallHeight / 2, sheet.z]}
-                  rotation={[0, -Math.PI / 2, 0]}
-                  isTrapezoid={isEndWallTrapezoid}
-                  profileType={endWallProfileType}
-                  waveAxis={wallWaveAxis}
-                  sandwichThickness={sandwichThicknessM}
-                  baseMaterial={endWallMat}
-                  selected={selected}
-                  onPointerDown={placementMode
-                    ? (e) => handleWallClick('end_back', span, e)
-                    : (e) => handleSheetClick('end_back', i, sheetIdx, wallHeight, sheet.width, cladding.endWallColor, isEndWallTrapezoid ? undefined : (cladding.sandwichThickness ?? 100), endWallSheetModuleWidth * 1000, e)
-                  }
-                />
-              );
-            });
-            // Gap lines between sheets
-            endSheetPositions.slice(0, -1).forEach((sheet, gapIdx) => {
-              elements.push(
-                <mesh
-                  key={`end-back-panel-${i}-gap-${gapIdx}`}
-                  position={[xPos, wallHeight / 2, sheet.z + sheet.width / 2 + sheetGapWidth / 2]}
-                  rotation={[0, -Math.PI / 2, 0]}
-                  material={sheetGapMaterial}
-                >
-                  <boxGeometry args={[sheetGapWidth, wallHeight, 0.015]} />
-                </mesh>
-              );
-            });
-          } else {
-            // Color stripe segments per panel
-            const layerColors: string[] = [];
-            for (let layer = 1; layer <= numLayers; layer++) {
-              const stripe = endStripes.find(s => layer >= s.layerStart && layer <= s.layerEnd);
-              layerColors.push(stripe ? stripe.color : cladding.endWallColor);
+          if (isHorizontalLayout) {
+            // Horizontal layout: sheets are horizontal strips (full panelWidth, divided along Y)
+            const endSheetHeights = computeSheetSizes(wallHeight, endWallSheetModuleWidth);
+            const endSheetYPositions: { y: number; height: number }[] = [];
+            let cy = 0;
+            for (let si = 0; si < endSheetHeights.length; si++) {
+              endSheetYPositions.push({ y: cy + endSheetHeights[si] / 2, height: endSheetHeights[si] });
+              cy += endSheetHeights[si] + (si < endSheetHeights.length - 1 ? sheetGapWidth : 0);
             }
 
-            const segments: ColorSegment[] = [];
-            if (numLayers > 0) {
-              let currentColor = layerColors[0];
-              let segStartLayer = 1;
-              for (let li = 1; li < layerColors.length; li++) {
-                if (layerColors[li] !== currentColor) {
-                  segments.push({ startLayer: segStartLayer, endLayer: li, color: currentColor });
-                  currentColor = layerColors[li];
-                  segStartLayer = li + 1;
-                }
-              }
-              segments.push({ startLayer: segStartLayer, endLayer: numLayers, color: currentColor });
-            }
-
-            const coveredHeight = numLayers * panelHeightM;
-            const remainder = wallHeight - coveredHeight;
-
-            segments.forEach((seg, segIdx) => {
-              let segHeight = (seg.endLayer - seg.startLayer + 1) * panelHeightM;
-              const segBottomY = (seg.startLayer - 1) * panelHeightM;
-              if (segIdx === segments.length - 1 && remainder > 0.0001) {
-                segHeight += remainder;
-              }
-              const segCenterY = segBottomY + segHeight / 2;
-              const segMat = seg.color === cladding.endWallColor ? endWallMat : makeCladdingMaterial(seg.color);
-
-              // Render individual sheets for this segment
-              endSheetPositions.forEach((sheet, sheetIdx) => {
+            if (endStripes.length === 0) {
+              endSheetYPositions.forEach((sheet, sheetIdx) => {
                 const selected = isSheetSelected('end_back', i, sheetIdx);
                 elements.push(
                   <SheetMesh
-                    key={`end-back-panel-${i}-seg-${segIdx}-sheet-${sheetIdx}`}
-                    sheetWidth={sheet.width}
-                    sheetHeight={segHeight}
-                    position={[xPos, segCenterY, sheet.z]}
+                    key={`end-back-panel-${i}-sheet-${sheetIdx}`}
+                    sheetWidth={panelWidth}
+                    sheetHeight={sheet.height}
+                    position={[xPos, sheet.y, panelCenterZ]}
+                    rotation={[0, -Math.PI / 2, 0]}
+                    isTrapezoid={isEndWallTrapezoid}
+                    profileType={endWallProfileType}
+                    waveAxis={wallWaveAxis}
+                    sandwichThickness={sandwichThicknessM}
+                    baseMaterial={endWallMat}
+                    selected={selected}
+                    onPointerDown={placementMode
+                      ? (e) => handleWallClick('end_back', span, e)
+                      : (e) => handleSheetClick('end_back', i, sheetIdx, sheet.height, panelWidth, cladding.endWallColor, isEndWallTrapezoid ? undefined : (cladding.sandwichThickness ?? 100), endWallSheetModuleWidth * 1000, e)
+                    }
+                  />
+                );
+              });
+              // Gap lines between horizontal sheets
+              endSheetYPositions.slice(0, -1).forEach((sheet, gapIdx) => {
+                elements.push(
+                  <mesh
+                    key={`end-back-panel-${i}-gap-${gapIdx}`}
+                    position={[xPos, sheet.y + sheet.height / 2 + sheetGapWidth / 2, panelCenterZ]}
+                    rotation={[0, -Math.PI / 2, 0]}
+                    material={sheetGapMaterial}
+                  >
+                    <boxGeometry args={[panelWidth, sheetGapWidth, 0.015]} />
+                  </mesh>
+                );
+              });
+            } else {
+              // With color stripes: determine color per horizontal sheet
+              endSheetYPositions.forEach((sheet, sheetIdx) => {
+                const sheetCenterY = sheet.y;
+                const layerAtCenter = Math.floor(sheetCenterY / panelHeightM) + 1;
+                const stripe = endStripes.find(s => layerAtCenter >= s.layerStart && layerAtCenter <= s.layerEnd);
+                const sheetColor = stripe ? stripe.color : cladding.endWallColor;
+                const segMat = sheetColor === cladding.endWallColor ? endWallMat : makeCladdingMaterial(sheetColor);
+                const selected = isSheetSelected('end_back', i, sheetIdx);
+                elements.push(
+                  <SheetMesh
+                    key={`end-back-panel-${i}-sheet-${sheetIdx}`}
+                    sheetWidth={panelWidth}
+                    sheetHeight={sheet.height}
+                    position={[xPos, sheet.y, panelCenterZ]}
                     rotation={[0, -Math.PI / 2, 0]}
                     isTrapezoid={isEndWallTrapezoid}
                     profileType={endWallProfileType}
@@ -1669,25 +1749,146 @@ export const Cladding = React.memo(function Cladding({
                     selected={selected}
                     onPointerDown={placementMode
                       ? (e) => handleWallClick('end_back', span, e)
-                      : (e) => handleSheetClick('end_back', i, sheetIdx, segHeight, sheet.width, seg.color, isEndWallTrapezoid ? undefined : (cladding.sandwichThickness ?? 100), endWallSheetModuleWidth * 1000, e)
+                      : (e) => handleSheetClick('end_back', i, sheetIdx, sheet.height, panelWidth, sheetColor, isEndWallTrapezoid ? undefined : (cladding.sandwichThickness ?? 100), endWallSheetModuleWidth * 1000, e)
                     }
                   />
                 );
               });
-              // Gap lines between sheets in this segment
-              endSheetPositions.slice(0, -1).forEach((sheet, gapIdx) => {
+              // Gap lines between horizontal sheets
+              endSheetYPositions.slice(0, -1).forEach((sheet, gapIdx) => {
                 elements.push(
                   <mesh
-                    key={`end-back-panel-${i}-seg-${segIdx}-gap-${gapIdx}`}
-                    position={[xPos, segCenterY, sheet.z + sheet.width / 2 + sheetGapWidth / 2]}
+                    key={`end-back-panel-${i}-gap-${gapIdx}`}
+                    position={[xPos, sheet.y + sheet.height / 2 + sheetGapWidth / 2, panelCenterZ]}
                     rotation={[0, -Math.PI / 2, 0]}
                     material={sheetGapMaterial}
                   >
-                    <boxGeometry args={[sheetGapWidth, segHeight, 0.015]} />
+                    <boxGeometry args={[panelWidth, sheetGapWidth, 0.015]} />
                   </mesh>
                 );
               });
-            });
+            }
+          } else {
+            // Vertical layout: sheets are vertical strips (divided along X/Z, full height)
+            // Compute sheet widths for this end wall panel
+            const endSheetWidths = computeSheetSizes(panelWidth, endWallSheetModuleWidth);
+            const endPanelLeftEdge = panelCenterZ - panelWidth / 2;
+            const endSheetPositions: { z: number; width: number }[] = [];
+            let cz = endPanelLeftEdge;
+            for (let si = 0; si < endSheetWidths.length; si++) {
+              endSheetPositions.push({ z: cz + endSheetWidths[si] / 2, width: endSheetWidths[si] });
+              cz += endSheetWidths[si] + (si < endSheetWidths.length - 1 ? sheetGapWidth : 0);
+            }
+
+            if (endStripes.length === 0) {
+              // Render individual sheets for this panel section
+              endSheetPositions.forEach((sheet, sheetIdx) => {
+                const selected = isSheetSelected('end_back', i, sheetIdx);
+                elements.push(
+                  <SheetMesh
+                    key={`end-back-panel-${i}-sheet-${sheetIdx}`}
+                    sheetWidth={sheet.width}
+                    sheetHeight={wallHeight}
+                    position={[xPos, wallHeight / 2, sheet.z]}
+                    rotation={[0, -Math.PI / 2, 0]}
+                    isTrapezoid={isEndWallTrapezoid}
+                    profileType={endWallProfileType}
+                    waveAxis={wallWaveAxis}
+                    sandwichThickness={sandwichThicknessM}
+                    baseMaterial={endWallMat}
+                    selected={selected}
+                    onPointerDown={placementMode
+                      ? (e) => handleWallClick('end_back', span, e)
+                      : (e) => handleSheetClick('end_back', i, sheetIdx, wallHeight, sheet.width, cladding.endWallColor, isEndWallTrapezoid ? undefined : (cladding.sandwichThickness ?? 100), endWallSheetModuleWidth * 1000, e)
+                    }
+                  />
+                );
+              });
+              // Gap lines between sheets
+              endSheetPositions.slice(0, -1).forEach((sheet, gapIdx) => {
+                elements.push(
+                  <mesh
+                    key={`end-back-panel-${i}-gap-${gapIdx}`}
+                    position={[xPos, wallHeight / 2, sheet.z + sheet.width / 2 + sheetGapWidth / 2]}
+                    rotation={[0, -Math.PI / 2, 0]}
+                    material={sheetGapMaterial}
+                  >
+                    <boxGeometry args={[sheetGapWidth, wallHeight, 0.015]} />
+                  </mesh>
+                );
+              });
+            } else {
+              // Color stripe segments per panel
+              const layerColors: string[] = [];
+              for (let layer = 1; layer <= numLayers; layer++) {
+                const stripe = endStripes.find(s => layer >= s.layerStart && layer <= s.layerEnd);
+                layerColors.push(stripe ? stripe.color : cladding.endWallColor);
+              }
+
+              const segments: ColorSegment[] = [];
+              if (numLayers > 0) {
+                let currentColor = layerColors[0];
+                let segStartLayer = 1;
+                for (let li = 1; li < layerColors.length; li++) {
+                  if (layerColors[li] !== currentColor) {
+                    segments.push({ startLayer: segStartLayer, endLayer: li, color: currentColor });
+                    currentColor = layerColors[li];
+                    segStartLayer = li + 1;
+                  }
+                }
+                segments.push({ startLayer: segStartLayer, endLayer: numLayers, color: currentColor });
+              }
+
+              const coveredHeight = numLayers * panelHeightM;
+              const remainder = wallHeight - coveredHeight;
+
+              segments.forEach((seg, segIdx) => {
+                let segHeight = (seg.endLayer - seg.startLayer + 1) * panelHeightM;
+                const segBottomY = (seg.startLayer - 1) * panelHeightM;
+                if (segIdx === segments.length - 1 && remainder > 0.0001) {
+                  segHeight += remainder;
+                }
+                const segCenterY = segBottomY + segHeight / 2;
+                const segMat = seg.color === cladding.endWallColor ? endWallMat : makeCladdingMaterial(seg.color);
+
+                // Render individual sheets for this segment
+                endSheetPositions.forEach((sheet, sheetIdx) => {
+                  const selected = isSheetSelected('end_back', i, sheetIdx);
+                  elements.push(
+                    <SheetMesh
+                      key={`end-back-panel-${i}-seg-${segIdx}-sheet-${sheetIdx}`}
+                      sheetWidth={sheet.width}
+                      sheetHeight={segHeight}
+                      position={[xPos, segCenterY, sheet.z]}
+                      rotation={[0, -Math.PI / 2, 0]}
+                      isTrapezoid={isEndWallTrapezoid}
+                      profileType={endWallProfileType}
+                      waveAxis={wallWaveAxis}
+                      sandwichThickness={sandwichThicknessM}
+                      baseMaterial={segMat}
+                      selected={selected}
+                      onPointerDown={placementMode
+                        ? (e) => handleWallClick('end_back', span, e)
+                        : (e) => handleSheetClick('end_back', i, sheetIdx, segHeight, sheet.width, seg.color, isEndWallTrapezoid ? undefined : (cladding.sandwichThickness ?? 100), endWallSheetModuleWidth * 1000, e)
+                      }
+                    />
+                  );
+                });
+                // Gap lines between sheets in this segment
+                endSheetPositions.slice(0, -1).forEach((sheet, gapIdx) => {
+                  elements.push(
+                    <mesh
+                      key={`end-back-panel-${i}-seg-${segIdx}-gap-${gapIdx}`}
+                      position={[xPos, segCenterY, sheet.z + sheet.width / 2 + sheetGapWidth / 2]}
+                      rotation={[0, -Math.PI / 2, 0]}
+                      material={sheetGapMaterial}
+                    >
+                      <boxGeometry args={[sheetGapWidth, segHeight, 0.015]} />
+                    </mesh>
+                  );
+                });
+              });
+            }
           }
         }
 
@@ -1735,7 +1936,24 @@ export const Cladding = React.memo(function Cladding({
               rotation={[0, -Math.PI / 2, 0]}
               geometry={gableGeo}
               material={endWallMat}
-              onPointerDown={placementMode ? (e) => handleWallClick('end_back', span, e) : undefined}
+              onPointerDown={placementMode
+                ? (e) => handleWallClick('end_back', span, e)
+                : (e) => {
+                    if (!onSelectSheet) return;
+                    e.stopPropagation();
+                    const maxH = Math.max(hLeft, hRight);
+                    onSelectSheet({
+                      wall: 'end_back',
+                      bayIndex: i,
+                      sheetIndex: 0,
+                      width: panelWidth,
+                      length: maxH * 1000,
+                      color: cladding.endWallColor,
+                      thickness: isEndWallTrapezoid ? undefined : (cladding.sandwichThickness ?? 100),
+                      module: endWallSheetModuleWidth * 1000,
+                    });
+                  }
+              }
             />
           );
         }
