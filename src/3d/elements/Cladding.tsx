@@ -125,6 +125,20 @@ function createTrapezoidMeshGeometry(
   const maxH = Math.max(hLeft, hRight);
   if (maxH < 0.01) return new THREE.PlaneGeometry(panelWidth, 0.01);
 
+  // For sandwich panels (no profile): use ExtrudeGeometry with thickness
+  if (!profileType) {
+    const shape = new THREE.Shape();
+    shape.moveTo(-panelWidth / 2, 0);
+    shape.lineTo(panelWidth / 2, 0);
+    shape.lineTo(panelWidth / 2, hRight);
+    shape.lineTo(-panelWidth / 2, hLeft);
+    shape.closePath();
+    const geo = new THREE.ExtrudeGeometry(shape, { depth: 0.1, bevelEnabled: false });
+    geo.translate(0, 0, -0.05);
+    geo.computeVertexNormals();
+    return geo;
+  }
+
   const segY = Math.max(10, Math.ceil(maxH * 20));
 
   const vertices: number[] = [];
