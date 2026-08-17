@@ -404,6 +404,12 @@ export const Cladding = React.memo(function Cladding({
     return mat;
   }, [cladding.sideWallColor, isSideWallTrapezoid]);
   const endWallMat = useMemo(() => makeCladdingMaterial(cladding.endWallColor), [cladding.endWallColor]);
+  const highlightedEndWallMat = useMemo(() => {
+    const mat = makeCladdingMaterial(cladding.endWallColor);
+    mat.emissive.set('#ffffff');
+    mat.emissiveIntensity = 0.3;
+    return mat;
+  }, [cladding.endWallColor]);
   const roofMat = useMemo(() => makeCladdingMaterial(cladding.roofColor), [cladding.roofColor]);
 
   // Dispose materials on color change or unmount
@@ -413,6 +419,9 @@ export const Cladding = React.memo(function Cladding({
   useEffect(() => {
     return () => { endWallMat.dispose(); };
   }, [endWallMat]);
+  useEffect(() => {
+    return () => { highlightedEndWallMat.dispose(); };
+  }, [highlightedEndWallMat]);
   useEffect(() => {
     return () => { roofMat.dispose(); };
   }, [roofMat]);
@@ -779,8 +788,8 @@ export const Cladding = React.memo(function Cladding({
       wall,
       bayIndex,
       sheetIndex,
-      length,
-      width,
+      length: length * 1000,
+      width: width * 1000,
       color,
       thickness,
       module: moduleWidth,
@@ -1616,7 +1625,9 @@ export const Cladding = React.memo(function Cladding({
               position={[xPos, wallHeight, panelCenterZ]}
               rotation={[0, Math.PI / 2, 0]}
               geometry={gableGeo}
-              material={endWallMat}
+              material={selectedSheet?.wall === 'end_front_gable' && selectedSheet?.bayIndex === i
+                ? highlightedEndWallMat
+                : endWallMat}
               onPointerDown={placementMode
                 ? (e) => handleWallClick('end_front', span, e)
                 : (e) => {
@@ -1627,7 +1638,7 @@ export const Cladding = React.memo(function Cladding({
                       wall: 'end_front_gable',
                       bayIndex: i,
                       sheetIndex: 0,
-                      width: panelWidth,
+                      width: panelWidth * 1000,
                       length: maxH * 1000,
                       color: cladding.endWallColor,
                       thickness: isEndWallTrapezoid ? undefined : (cladding.sandwichThickness ?? 100),
@@ -1937,7 +1948,9 @@ export const Cladding = React.memo(function Cladding({
               position={[xPos, wallHeight, panelCenterZ]}
               rotation={[0, -Math.PI / 2, 0]}
               geometry={gableGeo}
-              material={endWallMat}
+              material={selectedSheet?.wall === 'end_back_gable' && selectedSheet?.bayIndex === i
+                ? highlightedEndWallMat
+                : endWallMat}
               onPointerDown={placementMode
                 ? (e) => handleWallClick('end_back', span, e)
                 : (e) => {
@@ -1948,7 +1961,7 @@ export const Cladding = React.memo(function Cladding({
                       wall: 'end_back_gable',
                       bayIndex: i,
                       sheetIndex: 0,
-                      width: panelWidth,
+                      width: panelWidth * 1000,
                       length: maxH * 1000,
                       color: cladding.endWallColor,
                       thickness: isEndWallTrapezoid ? undefined : (cladding.sandwichThickness ?? 100),

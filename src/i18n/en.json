@@ -235,6 +235,8 @@
     "module": "Module",
     "thickness": "Thickness",
     "wall": "Wall",
+    "wall.end_front_gable": "Front gable (triangle)",
+    "wall.end_back_gable": "Back gable (triangle)",
     "bay": "Bay",
     "index": "Sheet #"
   },

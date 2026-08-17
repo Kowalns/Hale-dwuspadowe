@@ -14,6 +14,8 @@ const wallLabelKeys: Record<string, string> = {
   side_right: 'openings.walls.side_right',
   end_front: 'openings.walls.end_front',
   end_back: 'openings.walls.end_back',
+  end_front_gable: 'sheet.wall.end_front_gable',
+  end_back_gable: 'sheet.wall.end_back_gable',
 };
 
 export function SheetInfoPanel({ selectedSheet, onClose }: SheetInfoPanelProps) {
@@ -52,11 +54,11 @@ export function SheetInfoPanel({ selectedSheet, onClose }: SheetInfoPanelProps) 
         <hr className="border-gray-200" />
         <div className="flex justify-between">
           <span className="text-gray-500">{t('sheet.length')}:</span>
-          <span className="font-medium">{Math.round(selectedSheet.length * 1000)} mm</span>
+          <span className="font-medium">{Math.round(selectedSheet.length)} mm</span>
         </div>
         <div className="flex justify-between">
           <span className="text-gray-500">{t('sheet.width')}:</span>
-          <span className="font-medium">{Math.round(selectedSheet.width * 1000)} mm</span>
+          <span className="font-medium">{Math.round(selectedSheet.width)} mm</span>
         </div>
         <div className="flex justify-between">
           <span className="text-gray-500">{t('sheet.module')}:</span>
