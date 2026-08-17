@@ -213,7 +213,7 @@ function createTrapezoidalGeometry(
 
   // Scale segments: 10 vertices per wave period along wave axis for proper trapezoid rendering
   const waveCount = waveAxis === 'x' ? Math.ceil(width / period) : Math.ceil(height / period);
-  const segAlongWave = Math.min(waveCount * 10, 2500); // 10 segments per wave period minimum
+  const segAlongWave = Math.min(waveCount * 20, 4000); // 20 segments per wave period for sharp trapezoids
   const segCross = Math.min(Math.ceil((waveAxis === 'x' ? height : width) * 2), 100);
   const segW = waveAxis === 'x' ? segAlongWave : segCross;
   const segH = waveAxis === 'x' ? segCross : segAlongWave;
@@ -2085,9 +2085,28 @@ export const Cladding = React.memo(function Cladding({
                       <primitive object={createTrapezoidalGeometry(sheetW, roofSlopeLengthWithOverhang, roofProfileType, 'x')} attach="geometry" />
                     </mesh>
                     {roofThicknessM > 0 && (
-                      <mesh position={[sheetX, 0, -roofThicknessM]} material={isSelected ? highlightedRoofMat : roofMat}>
-                        <planeGeometry args={[sheetW, roofSlopeLengthWithOverhang]} />
-                      </mesh>
+                      <>
+                        {/* Bottom plane */}
+                        <mesh position={[sheetX, 0, -roofThicknessM]} material={isSelected ? highlightedRoofMat : roofMat}>
+                          <planeGeometry args={[sheetW, roofSlopeLengthWithOverhang]} />
+                        </mesh>
+                        {/* Left edge */}
+                        <mesh position={[sheetX - sheetW / 2, 0, -roofThicknessM / 2]} rotation={[0, Math.PI / 2, 0]} material={isSelected ? highlightedRoofMat : roofMat}>
+                          <planeGeometry args={[roofThicknessM, roofSlopeLengthWithOverhang]} />
+                        </mesh>
+                        {/* Right edge */}
+                        <mesh position={[sheetX + sheetW / 2, 0, -roofThicknessM / 2]} rotation={[0, Math.PI / 2, 0]} material={isSelected ? highlightedRoofMat : roofMat}>
+                          <planeGeometry args={[roofThicknessM, roofSlopeLengthWithOverhang]} />
+                        </mesh>
+                        {/* Front edge (eave) */}
+                        <mesh position={[sheetX, -roofSlopeLengthWithOverhang / 2, -roofThicknessM / 2]} rotation={[Math.PI / 2, 0, 0]} material={isSelected ? highlightedRoofMat : roofMat}>
+                          <planeGeometry args={[sheetW, roofThicknessM]} />
+                        </mesh>
+                        {/* Back edge (ridge) */}
+                        <mesh position={[sheetX, roofSlopeLengthWithOverhang / 2, -roofThicknessM / 2]} rotation={[Math.PI / 2, 0, 0]} material={isSelected ? highlightedRoofMat : roofMat}>
+                          <planeGeometry args={[sheetW, roofThicknessM]} />
+                        </mesh>
+                      </>
                     )}
                   </React.Fragment>
                 );
@@ -2123,9 +2142,28 @@ export const Cladding = React.memo(function Cladding({
                       <primitive object={createTrapezoidalGeometry(sheetW, roofSlopeLengthWithOverhang, roofProfileType, 'x')} attach="geometry" />
                     </mesh>
                     {roofThicknessM > 0 && (
-                      <mesh position={[sheetX, 0, -roofThicknessM]} material={isSelected ? highlightedRoofMat : roofMat}>
-                        <planeGeometry args={[sheetW, roofSlopeLengthWithOverhang]} />
-                      </mesh>
+                      <>
+                        {/* Bottom plane */}
+                        <mesh position={[sheetX, 0, -roofThicknessM]} material={isSelected ? highlightedRoofMat : roofMat}>
+                          <planeGeometry args={[sheetW, roofSlopeLengthWithOverhang]} />
+                        </mesh>
+                        {/* Left edge */}
+                        <mesh position={[sheetX - sheetW / 2, 0, -roofThicknessM / 2]} rotation={[0, Math.PI / 2, 0]} material={isSelected ? highlightedRoofMat : roofMat}>
+                          <planeGeometry args={[roofThicknessM, roofSlopeLengthWithOverhang]} />
+                        </mesh>
+                        {/* Right edge */}
+                        <mesh position={[sheetX + sheetW / 2, 0, -roofThicknessM / 2]} rotation={[0, Math.PI / 2, 0]} material={isSelected ? highlightedRoofMat : roofMat}>
+                          <planeGeometry args={[roofThicknessM, roofSlopeLengthWithOverhang]} />
+                        </mesh>
+                        {/* Front edge (eave) */}
+                        <mesh position={[sheetX, -roofSlopeLengthWithOverhang / 2, -roofThicknessM / 2]} rotation={[Math.PI / 2, 0, 0]} material={isSelected ? highlightedRoofMat : roofMat}>
+                          <planeGeometry args={[sheetW, roofThicknessM]} />
+                        </mesh>
+                        {/* Back edge (ridge) */}
+                        <mesh position={[sheetX, roofSlopeLengthWithOverhang / 2, -roofThicknessM / 2]} rotation={[Math.PI / 2, 0, 0]} material={isSelected ? highlightedRoofMat : roofMat}>
+                          <planeGeometry args={[sheetW, roofThicknessM]} />
+                        </mesh>
+                      </>
                     )}
                   </React.Fragment>
                 );
