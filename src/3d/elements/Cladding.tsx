@@ -945,7 +945,7 @@ export const Cladding = React.memo(function Cladding({
           if (avgH < 0.01) continue; // skip negligible panels
 
           let gableGeo: THREE.BufferGeometry;
-          if (isSideWallTrapezoid) {
+          if (isEndWallTrapezoid) {
             gableGeo = createTrapezoidMeshGeometry(panelWidth, hLeft, hRight, 'T18', 'y');
           } else {
             gableGeo = createTrapezoidMeshGeometry(panelWidth, hLeft, hRight, null, 'y');
@@ -1106,7 +1106,7 @@ export const Cladding = React.memo(function Cladding({
           if (avgH < 0.01) continue; // skip negligible panels
 
           let gableGeo: THREE.BufferGeometry;
-          if (isSideWallTrapezoid) {
+          if (isEndWallTrapezoid) {
             gableGeo = createTrapezoidMeshGeometry(panelWidth, hLeft, hRight, 'T18', 'y');
           } else {
             gableGeo = createTrapezoidMeshGeometry(panelWidth, hLeft, hRight, null, 'y');
