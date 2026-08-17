@@ -106,7 +106,7 @@ function getTrapezoidalParams(type: 'T18' | 'T35' | 'ROOF_SANDWICH') {
     return { height: 0.035, plateau: 0.126, valley: 0.210, period: 0.381 };
   }
   if (type === 'ROOF_SANDWICH') {
-    return { height: 0.042, plateau: 0.100, valley: 0.200, period: 0.350 };
+    return { height: 0.042, plateau: 0.050, valley: 0.250, period: 0.350 };
   }
   // T18
   return { height: 0.018, plateau: 0.033, valley: 0.188, period: 0.290 };
