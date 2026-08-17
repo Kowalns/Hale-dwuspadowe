@@ -1615,39 +1615,64 @@ export const Cladding = React.memo(function Cladding({
 
           if (avgH < 0.01) continue; // skip negligible panels
 
-          const gableGeo = isEndWallTrapezoid
-            ? createTrapezoidMeshGeometry(panelWidth, hLeft, hRight, 'T18', 'y')
-            : createTrapezoidMeshGeometry(panelWidth, hLeft, hRight, null, 'y');
+          const maxH = Math.max(hLeft, hRight);
+          const moduleW = endWallSheetModuleWidth;
+          const numLayers = Math.ceil(maxH / moduleW);
 
-          elements.push(
-            <mesh
-              key={`end-front-gable-panel-${i}`}
-              position={[xPos, wallHeight, panelCenterZ]}
-              rotation={[0, Math.PI / 2, 0]}
-              geometry={gableGeo}
-              material={selectedSheet?.wall === 'end_front_gable' && selectedSheet?.bayIndex === i
-                ? highlightedEndWallMat
-                : endWallMat}
-              onPointerDown={placementMode
-                ? (e) => handleWallClick('end_front', span, e)
-                : (e) => {
-                    if (!onSelectSheet) return;
-                    e.stopPropagation();
-                    const maxH = Math.max(hLeft, hRight);
-                    onSelectSheet({
-                      wall: 'end_front_gable',
-                      bayIndex: i,
-                      sheetIndex: 0,
-                      width: panelWidth * 1000,
-                      length: maxH * 1000,
-                      color: cladding.endWallColor,
-                      thickness: isEndWallTrapezoid ? undefined : (cladding.sandwichThickness ?? 100),
-                      module: endWallSheetModuleWidth * 1000,
-                    });
-                  }
-              }
-            />
-          );
+          for (let layer = 0; layer < numLayers; layer++) {
+            const layerBottomY = layer * moduleW;
+            const layerTopY = Math.min((layer + 1) * moduleW, maxH);
+            const layerHeight = layerTopY - layerBottomY;
+
+            // Compute hLeft and hRight for this layer
+            const layerHLeft = Math.min(layerHeight, Math.max(0, hLeft - layerBottomY));
+            const layerHRight = Math.min(layerHeight, Math.max(0, hRight - layerBottomY));
+
+            if (layerHLeft < 0.001 && layerHRight < 0.001) continue;
+
+            const layerGeo = isEndWallTrapezoid
+              ? createTrapezoidMeshGeometry(panelWidth, layerHLeft, layerHRight, 'T18', 'y')
+              : createTrapezoidMeshGeometry(panelWidth, layerHLeft, layerHRight, null, 'y');
+
+            const isSelected = selectedSheet?.wall === 'end_front_gable' && selectedSheet?.bayIndex === i && selectedSheet?.sheetIndex === layer;
+
+            elements.push(
+              <mesh
+                key={`end-front-gable-panel-${i}-layer-${layer}`}
+                position={[xPos, wallHeight + layerBottomY, panelCenterZ]}
+                rotation={[0, Math.PI / 2, 0]}
+                geometry={layerGeo}
+                material={isSelected ? highlightedEndWallMat : endWallMat}
+                onPointerDown={placementMode
+                  ? (e) => handleWallClick('end_front', span, e)
+                  : (e) => {
+                      if (!onSelectSheet) return;
+                      e.stopPropagation();
+                      onSelectSheet({
+                        wall: 'end_front_gable',
+                        bayIndex: i,
+                        sheetIndex: layer,
+                        width: Math.round(panelWidth * 1000),
+                        length: Math.round(layerHeight * 1000),
+                        color: cladding.endWallColor,
+                        thickness: isEndWallTrapezoid ? undefined : (cladding.sandwichThickness ?? 100),
+                        module: Math.round(endWallSheetModuleWidth * 1000),
+                      });
+                    }
+                }
+              />
+            );
+
+            // 2mm gap line between layers
+            if (layer < numLayers - 1 && layerTopY < maxH) {
+              elements.push(
+                <mesh key={`end-front-gable-gap-${i}-${layer}`} position={[xPos - 0.001, wallHeight + layerTopY, panelCenterZ]}>
+                  <boxGeometry args={[0.002, panelWidth, 0.005]} />
+                  <meshStandardMaterial color="#404040" />
+                </mesh>
+              );
+            }
+          }
         }
 
         {/* Gable front joint lines above wallHeight */}
@@ -1938,39 +1963,64 @@ export const Cladding = React.memo(function Cladding({
 
           if (avgH < 0.01) continue; // skip negligible panels
 
-          const gableGeo = isEndWallTrapezoid
-            ? createTrapezoidMeshGeometry(panelWidth, hLeft, hRight, 'T18', 'y')
-            : createTrapezoidMeshGeometry(panelWidth, hLeft, hRight, null, 'y');
+          const maxH = Math.max(hLeft, hRight);
+          const moduleW = endWallSheetModuleWidth;
+          const numLayers = Math.ceil(maxH / moduleW);
 
-          elements.push(
-            <mesh
-              key={`end-back-gable-panel-${i}`}
-              position={[xPos, wallHeight, panelCenterZ]}
-              rotation={[0, -Math.PI / 2, 0]}
-              geometry={gableGeo}
-              material={selectedSheet?.wall === 'end_back_gable' && selectedSheet?.bayIndex === i
-                ? highlightedEndWallMat
-                : endWallMat}
-              onPointerDown={placementMode
-                ? (e) => handleWallClick('end_back', span, e)
-                : (e) => {
-                    if (!onSelectSheet) return;
-                    e.stopPropagation();
-                    const maxH = Math.max(hLeft, hRight);
-                    onSelectSheet({
-                      wall: 'end_back_gable',
-                      bayIndex: i,
-                      sheetIndex: 0,
-                      width: panelWidth * 1000,
-                      length: maxH * 1000,
-                      color: cladding.endWallColor,
-                      thickness: isEndWallTrapezoid ? undefined : (cladding.sandwichThickness ?? 100),
-                      module: endWallSheetModuleWidth * 1000,
-                    });
-                  }
-              }
-            />
-          );
+          for (let layer = 0; layer < numLayers; layer++) {
+            const layerBottomY = layer * moduleW;
+            const layerTopY = Math.min((layer + 1) * moduleW, maxH);
+            const layerHeight = layerTopY - layerBottomY;
+
+            // Compute hLeft and hRight for this layer
+            const layerHLeft = Math.min(layerHeight, Math.max(0, hLeft - layerBottomY));
+            const layerHRight = Math.min(layerHeight, Math.max(0, hRight - layerBottomY));
+
+            if (layerHLeft < 0.001 && layerHRight < 0.001) continue;
+
+            const layerGeo = isEndWallTrapezoid
+              ? createTrapezoidMeshGeometry(panelWidth, layerHLeft, layerHRight, 'T18', 'y')
+              : createTrapezoidMeshGeometry(panelWidth, layerHLeft, layerHRight, null, 'y');
+
+            const isSelected = selectedSheet?.wall === 'end_back_gable' && selectedSheet?.bayIndex === i && selectedSheet?.sheetIndex === layer;
+
+            elements.push(
+              <mesh
+                key={`end-back-gable-panel-${i}-layer-${layer}`}
+                position={[xPos, wallHeight + layerBottomY, panelCenterZ]}
+                rotation={[0, -Math.PI / 2, 0]}
+                geometry={layerGeo}
+                material={isSelected ? highlightedEndWallMat : endWallMat}
+                onPointerDown={placementMode
+                  ? (e) => handleWallClick('end_back', span, e)
+                  : (e) => {
+                      if (!onSelectSheet) return;
+                      e.stopPropagation();
+                      onSelectSheet({
+                        wall: 'end_back_gable',
+                        bayIndex: i,
+                        sheetIndex: layer,
+                        width: Math.round(panelWidth * 1000),
+                        length: Math.round(layerHeight * 1000),
+                        color: cladding.endWallColor,
+                        thickness: isEndWallTrapezoid ? undefined : (cladding.sandwichThickness ?? 100),
+                        module: Math.round(endWallSheetModuleWidth * 1000),
+                      });
+                    }
+                }
+              />
+            );
+
+            // 2mm gap line between layers
+            if (layer < numLayers - 1 && layerTopY < maxH) {
+              elements.push(
+                <mesh key={`end-back-gable-gap-${i}-${layer}`} position={[xPos + 0.001, wallHeight + layerTopY, panelCenterZ]}>
+                  <boxGeometry args={[0.002, panelWidth, 0.005]} />
+                  <meshStandardMaterial color="#404040" />
+                </mesh>
+              );
+            }
+          }
         }
 
         {/* Gable back joint lines above wallHeight */}
