@@ -386,7 +386,7 @@ export const Cladding = React.memo(function Cladding({
   // Roof sheet parameters
   const roofModuleWidth = cladding.roofType === 'T35' ? 1.050 
     : cladding.roofType === 'T18' ? 1.064 
-    : 1.130; // sandwich roof
+    : 1.050; // sandwich roof module = 1050mm
   const roofProfileType: 'T18' | 'T35' | 'ROOF_SANDWICH' = 
     cladding.roofType === 'T35' ? 'T35' 
     : cladding.roofType === 'T18' ? 'T18' 
@@ -2051,6 +2051,9 @@ export const Cladding = React.memo(function Cladding({
         const leftRoofCenterZ = (span / 2) - (roofSlopeLengthWithOverhang / 2) * Math.cos(roofAngleRad);
         const rightRoofCenterZ = (span / 2) + (roofSlopeLengthWithOverhang / 2) * Math.cos(roofAngleRad);
 
+        // Thickness offset for sandwich roof panels (shift in local Z so bottom edge is visible from eave)
+        const roofThicknessOffset = cladding.roofType === 'sandwich_roof' ? (cladding.roofSandwichThickness ?? 100) / 1000 / 2 : 0;
+
         return (
           <>
             {/* Left slope sheets */}
@@ -2062,7 +2065,7 @@ export const Cladding = React.memo(function Cladding({
                 return (
                   <mesh
                     key={`roof-left-${s}`}
-                    position={[sheetX, 0, 0]}
+                    position={[sheetX, 0, roofThicknessOffset]}
                     material={isSelected ? highlightedRoofMat : roofMat}
                     onPointerDown={(e) => {
                       if (placementMode) return;
@@ -2093,7 +2096,7 @@ export const Cladding = React.memo(function Cladding({
                 return (
                   <mesh
                     key={`roof-right-${s}`}
-                    position={[sheetX, 0, 0]}
+                    position={[sheetX, 0, roofThicknessOffset]}
                     material={isSelected ? highlightedRoofMat : roofMat}
                     onPointerDown={(e) => {
                       if (placementMode) return;

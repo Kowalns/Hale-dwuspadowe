@@ -20,6 +20,7 @@ export const DEFAULT_CLADDING: CladdingParameters = {
   panelWidth: 1000,
   colorStripes: [],
   eaveOverhang: 500,
+  roofSandwichThickness: 100,
 };
 
 export function Layout() {

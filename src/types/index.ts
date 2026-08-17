@@ -22,6 +22,7 @@ export interface CladdingParameters {
   colorStripes: ColorStripe[];
   eaveOverhang?: number; // mm, domyślnie 300
   sandwichThickness?: number; // mm: 60, 80, 100, 120, 150. Default 100
+  roofSandwichThickness?: number; // mm: 40, 60, 80, 100, 120, 145, 160. Default 100
 }
 
 export type OpeningType = 'sliding_gate' | 'sectional_gate' | 'door' | 'window';

@@ -233,6 +233,22 @@ export function CladdingPanel({
         onChange={(v) => update('roofColor', v)}
       />
 
+      {/* Roof sandwich thickness - shown only when roofType is sandwich_roof */}
+      {cladding.roofType === 'sandwich_roof' && (
+        <div className="space-y-1">
+          <label className="text-xs text-text-secondary font-sans">{t('cladding.roofSandwichThickness')}</label>
+          <select
+            value={cladding.roofSandwichThickness ?? 100}
+            onChange={(e) => update('roofSandwichThickness', Number(e.target.value))}
+            className="w-full px-2 py-1.5 text-xs font-sans text-text-primary bg-white border border-border rounded focus:outline-none focus:ring-1 focus:ring-accent-blue"
+          >
+            {[40, 60, 80, 100, 120, 145, 160].map((v) => (
+              <option key={v} value={v}>{v} mm</option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {/* Flashing color */}
       <RALColorSelect
         label={t('cladding.flashingColor')}

@@ -186,6 +186,7 @@
     },
     "eaveOverhang": "Eave overhang (mm)",
     "sandwichThickness": "Panel thickness (mm)",
+    "roofSandwichThickness": "Roof panel thickness (mm)",
     "stripeWall": {
       "side": "Side wall",
       "end": "End wall"

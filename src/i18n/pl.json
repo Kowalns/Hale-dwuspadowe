@@ -186,6 +186,7 @@
     },
     "eaveOverhang": "Długość okapu (mm)",
     "sandwichThickness": "Grubość płyty (mm)",
+    "roofSandwichThickness": "Grubość płyty dachowej (mm)",
     "stripeWall": {
       "side": "Sciana boczna",
       "end": "Sciana szczytowa"
