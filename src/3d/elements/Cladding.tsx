@@ -2052,7 +2052,7 @@ export const Cladding = React.memo(function Cladding({
         const rightRoofCenterZ = (span / 2) + (roofSlopeLengthWithOverhang / 2) * Math.cos(roofAngleRad);
 
         // Thickness offset for sandwich roof panels (shift in local Z so bottom edge is visible from eave)
-        const roofThicknessOffset = cladding.roofType === 'sandwich_roof' ? (cladding.roofSandwichThickness ?? 100) / 1000 / 2 : 0;
+        const roofThicknessM = cladding.roofType === 'sandwich_roof' ? (cladding.roofSandwichThickness ?? 100) / 1000 : 0;
 
         return (
           <>
@@ -2063,26 +2063,33 @@ export const Cladding = React.memo(function Cladding({
                 const sheetX = -roofWidth / 2 + s * roofModuleWidth + (sheetW + 0.002) / 2;
                 const isSelected = selectedSheet?.wall === 'roof_left' && selectedSheet?.sheetIndex === s;
                 return (
-                  <mesh
-                    key={`roof-left-${s}`}
-                    position={[sheetX, 0, roofThicknessOffset]}
-                    material={isSelected ? highlightedRoofMat : roofMat}
-                    onPointerDown={(e) => {
-                      if (placementMode) return;
-                      e.stopPropagation();
-                      onSelectSheet?.({
-                        wall: 'roof_left',
-                        bayIndex: 0,
-                        sheetIndex: s,
-                        width: Math.round(sheetW * 1000),
-                        length: Math.round(roofSlopeLengthWithOverhang * 1000),
-                        color: cladding.roofColor,
-                        module: Math.round(roofModuleWidth * 1000),
-                      });
-                    }}
-                  >
-                    <primitive object={createTrapezoidalGeometry(sheetW, roofSlopeLengthWithOverhang, roofProfileType, 'x')} attach="geometry" />
-                  </mesh>
+                  <React.Fragment key={`roof-left-${s}`}>
+                    <mesh
+                      position={[sheetX, 0, 0]}
+                      material={isSelected ? highlightedRoofMat : roofMat}
+                      onPointerDown={(e) => {
+                        if (placementMode) return;
+                        e.stopPropagation();
+                        onSelectSheet?.({
+                          wall: 'roof_left',
+                          bayIndex: 0,
+                          sheetIndex: s,
+                          width: Math.round(sheetW * 1000),
+                          length: Math.round(roofSlopeLengthWithOverhang * 1000),
+                          color: cladding.roofColor,
+                          module: Math.round(roofModuleWidth * 1000),
+                          thickness: cladding.roofType === 'sandwich_roof' ? (cladding.roofSandwichThickness ?? 100) : undefined,
+                        });
+                      }}
+                    >
+                      <primitive object={createTrapezoidalGeometry(sheetW, roofSlopeLengthWithOverhang, roofProfileType, 'x')} attach="geometry" />
+                    </mesh>
+                    {roofThicknessM > 0 && (
+                      <mesh position={[sheetX, 0, -roofThicknessM]} material={isSelected ? highlightedRoofMat : roofMat}>
+                        <planeGeometry args={[sheetW, roofSlopeLengthWithOverhang]} />
+                      </mesh>
+                    )}
+                  </React.Fragment>
                 );
               })}
             </group>
@@ -2094,26 +2101,33 @@ export const Cladding = React.memo(function Cladding({
                 const sheetX = -roofWidth / 2 + s * roofModuleWidth + (sheetW + 0.002) / 2;
                 const isSelected = selectedSheet?.wall === 'roof_right' && selectedSheet?.sheetIndex === s;
                 return (
-                  <mesh
-                    key={`roof-right-${s}`}
-                    position={[sheetX, 0, roofThicknessOffset]}
-                    material={isSelected ? highlightedRoofMat : roofMat}
-                    onPointerDown={(e) => {
-                      if (placementMode) return;
-                      e.stopPropagation();
-                      onSelectSheet?.({
-                        wall: 'roof_right',
-                        bayIndex: 0,
-                        sheetIndex: s,
-                        width: Math.round(sheetW * 1000),
-                        length: Math.round(roofSlopeLengthWithOverhang * 1000),
-                        color: cladding.roofColor,
-                        module: Math.round(roofModuleWidth * 1000),
-                      });
-                    }}
-                  >
-                    <primitive object={createTrapezoidalGeometry(sheetW, roofSlopeLengthWithOverhang, roofProfileType, 'x')} attach="geometry" />
-                  </mesh>
+                  <React.Fragment key={`roof-right-${s}`}>
+                    <mesh
+                      position={[sheetX, 0, 0]}
+                      material={isSelected ? highlightedRoofMat : roofMat}
+                      onPointerDown={(e) => {
+                        if (placementMode) return;
+                        e.stopPropagation();
+                        onSelectSheet?.({
+                          wall: 'roof_right',
+                          bayIndex: 0,
+                          sheetIndex: s,
+                          width: Math.round(sheetW * 1000),
+                          length: Math.round(roofSlopeLengthWithOverhang * 1000),
+                          color: cladding.roofColor,
+                          module: Math.round(roofModuleWidth * 1000),
+                          thickness: cladding.roofType === 'sandwich_roof' ? (cladding.roofSandwichThickness ?? 100) : undefined,
+                        });
+                      }}
+                    >
+                      <primitive object={createTrapezoidalGeometry(sheetW, roofSlopeLengthWithOverhang, roofProfileType, 'x')} attach="geometry" />
+                    </mesh>
+                    {roofThicknessM > 0 && (
+                      <mesh position={[sheetX, 0, -roofThicknessM]} material={isSelected ? highlightedRoofMat : roofMat}>
+                        <planeGeometry args={[sheetW, roofSlopeLengthWithOverhang]} />
+                      </mesh>
+                    )}
+                  </React.Fragment>
                 );
               })}
             </group>
