@@ -188,6 +188,8 @@ function createTrapezoidMeshGeometry(
   geo.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
   geo.setIndex(indices);
   geo.computeVertexNormals();
+  geo.computeBoundingSphere();
+  geo.computeBoundingBox();
   return geo;
 }
 
