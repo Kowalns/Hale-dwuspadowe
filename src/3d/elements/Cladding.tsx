@@ -1617,7 +1617,11 @@ export const Cladding = React.memo(function Cladding({
 
           const maxH = Math.max(hLeft, hRight);
           const moduleW = endWallSheetModuleWidth;
-          const numLayers = Math.ceil(maxH / moduleW);
+          let numLayers = Math.ceil(maxH / moduleW);
+          // If remainder is less than 100mm, merge it into the last full sheet
+          if (numLayers > 1 && (maxH - (numLayers - 1) * moduleW) < 0.1) {
+            numLayers = numLayers - 1;
+          }
 
           for (let layer = 0; layer < numLayers; layer++) {
             const layerBottomY = layer * moduleW;
@@ -1957,7 +1961,11 @@ export const Cladding = React.memo(function Cladding({
 
           const maxH = Math.max(hLeft, hRight);
           const moduleW = endWallSheetModuleWidth;
-          const numLayers = Math.ceil(maxH / moduleW);
+          let numLayers = Math.ceil(maxH / moduleW);
+          // If remainder is less than 100mm, merge it into the last full sheet
+          if (numLayers > 1 && (maxH - (numLayers - 1) * moduleW) < 0.1) {
+            numLayers = numLayers - 1;
+          }
 
           for (let layer = 0; layer < numLayers; layer++) {
             const layerBottomY = layer * moduleW;
