@@ -6,10 +6,24 @@ interface SheetInfoPanelProps {
   onClose: () => void;
 }
 
+/**
+ * Map raw wall identifiers to i18n keys for localized display.
+ */
+const wallLabelKeys: Record<string, string> = {
+  side_left: 'openings.walls.side_left',
+  side_right: 'openings.walls.side_right',
+  end_front: 'openings.walls.end_front',
+  end_back: 'openings.walls.end_back',
+};
+
 export function SheetInfoPanel({ selectedSheet, onClose }: SheetInfoPanelProps) {
   const { t } = useTranslation();
 
   if (!selectedSheet) return null;
+
+  const wallLabel = wallLabelKeys[selectedSheet.wall]
+    ? t(wallLabelKeys[selectedSheet.wall])
+    : selectedSheet.wall;
 
   return (
     <div className="absolute top-4 right-4 z-50 bg-white/95 backdrop-blur-sm border border-gray-300 rounded-lg shadow-lg p-4 min-w-[220px]">
@@ -25,7 +39,7 @@ export function SheetInfoPanel({ selectedSheet, onClose }: SheetInfoPanelProps) 
       <div className="space-y-1.5 text-xs text-gray-700">
         <div className="flex justify-between">
           <span className="text-gray-500">{t('sheet.wall')}:</span>
-          <span className="font-medium">{selectedSheet.wall}</span>
+          <span className="font-medium">{wallLabel}</span>
         </div>
         <div className="flex justify-between">
           <span className="text-gray-500">{t('sheet.bay')}:</span>
@@ -43,6 +57,10 @@ export function SheetInfoPanel({ selectedSheet, onClose }: SheetInfoPanelProps) 
         <div className="flex justify-between">
           <span className="text-gray-500">{t('sheet.width')}:</span>
           <span className="font-medium">{Math.round(selectedSheet.width * 1000)} mm</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-gray-500">{t('sheet.module')}:</span>
+          <span className="font-medium">{selectedSheet.module} mm</span>
         </div>
         <div className="flex justify-between">
           <span className="text-gray-500">{t('sheet.color')}:</span>

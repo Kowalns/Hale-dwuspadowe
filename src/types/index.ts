@@ -52,6 +52,7 @@ export interface SelectedSheet {
   width: number;
   color: string;
   thickness?: number;
+  module: number; // module width in mm (e.g. 1064, 1050, 1000)
 }
 
 export type SteelGrade = 'S235' | 'S355';

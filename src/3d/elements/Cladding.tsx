@@ -231,6 +231,82 @@ function createTrapezoidalGeometry(
 
 
 
+/**
+ * Individual sheet mesh component with memoized geometry and flicker-free highlighting.
+ * Geometry is created once per unique parameter tuple and disposed on unmount.
+ * Highlight is achieved by toggling emissive on a per-instance cloned material,
+ * avoiding child material mount/unmount that causes one-frame flicker.
+ */
+interface SheetMeshProps {
+  sheetWidth: number;
+  sheetHeight: number;
+  position: [number, number, number];
+  rotation?: [number, number, number];
+  isTrapezoid: boolean;
+  profileType: 'T18' | 'T35';
+  waveAxis: 'x' | 'y';
+  sandwichThickness: number;
+  baseMaterial: THREE.MeshStandardMaterial;
+  selected: boolean;
+  onPointerDown: (e: ThreeEvent<PointerEvent>) => void;
+}
+
+const SheetMesh = React.memo(function SheetMesh({
+  sheetWidth,
+  sheetHeight,
+  position,
+  rotation,
+  isTrapezoid,
+  profileType,
+  waveAxis,
+  sandwichThickness,
+  baseMaterial,
+  selected,
+  onPointerDown,
+}: SheetMeshProps) {
+  // Memoize geometry per unique parameter tuple
+  const geometry = useMemo(() => {
+    if (isTrapezoid) {
+      return createTrapezoidalGeometry(sheetWidth, sheetHeight, profileType, waveAxis, true);
+    }
+    return new THREE.BoxGeometry(sheetWidth, sheetHeight, sandwichThickness);
+  }, [sheetWidth, sheetHeight, isTrapezoid, profileType, waveAxis, sandwichThickness]);
+
+  // Dispose geometry on unmount or when it changes
+  useEffect(() => {
+    return () => { geometry.dispose(); };
+  }, [geometry]);
+
+  // Clone base material so emissive toggling doesn't bleed to other sheets
+  const material = useMemo(() => baseMaterial.clone(), [baseMaterial]);
+
+  useEffect(() => {
+    return () => { material.dispose(); };
+  }, [material]);
+
+  // Toggle emissive on the cloned material based on selection state
+  useEffect(() => {
+    if (selected) {
+      material.emissive.set('#ffffff');
+      material.emissiveIntensity = 0.3;
+    } else {
+      material.emissive.set('#000000');
+      material.emissiveIntensity = 0;
+    }
+  }, [selected, material]);
+
+  return (
+    <mesh
+      position={position}
+      rotation={rotation}
+      geometry={geometry}
+      material={material}
+      onPointerDown={onPointerDown}
+    />
+  );
+});
+
+
 interface ColorSegment { startLayer: number; endLayer: number; color: string; }
 
 /**
@@ -619,6 +695,15 @@ export const Cladding = React.memo(function Cladding({
     return cladding.panelWidth / 1000;
   }, [isSideWallTrapezoid, sideWallProfileType, cladding.panelWidth]);
 
+  // Module width in mm for display in SheetInfoPanel
+  const sheetModuleWidthMm = useMemo(() => {
+    if (isSideWallTrapezoid) {
+      const profileType: string = sideWallProfileType;
+      return profileType === 'T35' ? 1050 : 1064;
+    }
+    return cladding.panelWidth;
+  }, [isSideWallTrapezoid, sideWallProfileType, cladding.panelWidth]);
+
   // Gap width between sheets (2mm)
   const sheetGapWidth = 0.002;
 
@@ -668,6 +753,7 @@ export const Cladding = React.memo(function Cladding({
     width: number,
     color: string,
     thickness: number | undefined,
+    moduleWidth: number,
     event: ThreeEvent<PointerEvent>,
   ) => {
     if (placementMode) return; // Don't select sheets in placement mode
@@ -680,6 +766,7 @@ export const Cladding = React.memo(function Cladding({
       width,
       color,
       thickness,
+      module: moduleWidth,
     });
   }, [placementMode, onSelectSheet]);
 
@@ -773,29 +860,22 @@ export const Cladding = React.memo(function Cladding({
               {sheetPositions.map((sheet, sheetIdx) => {
                 const selected = isSheetSelected('side_left', bayIndex, sheetIdx);
                 return (
-                  <mesh
+                  <SheetMesh
                     key={`side-left-${bayIndex}-sheet-${sheetIdx}`}
+                    sheetWidth={sheet.width}
+                    sheetHeight={sideWallHeight}
                     position={[sheet.x, sideWallHeight / 2, zPosition]}
-                    material={sideWallMat}
+                    isTrapezoid={isSideWallTrapezoid}
+                    profileType={sideWallProfileType}
+                    waveAxis={wallWaveAxis}
+                    sandwichThickness={sandwichThicknessM}
+                    baseMaterial={sideWallMat}
+                    selected={selected}
                     onPointerDown={placementMode
                       ? (e) => handleSideWallClick('side_left', bayIndex, e)
-                      : (e) => handleSheetClick('side_left', bayIndex, sheetIdx, sideWallHeight, sheet.width, cladding.sideWallColor, isSideWallTrapezoid ? undefined : (cladding.sandwichThickness ?? 100), e)
+                      : (e) => handleSheetClick('side_left', bayIndex, sheetIdx, sideWallHeight, sheet.width, cladding.sideWallColor, isSideWallTrapezoid ? undefined : (cladding.sandwichThickness ?? 100), sheetModuleWidthMm, e)
                     }
-                  >
-                    {isSideWallTrapezoid
-                      ? <primitive object={createTrapezoidalGeometry(sheet.width, sideWallHeight, sideWallProfileType, wallWaveAxis, true)} attach="geometry" />
-                      : <boxGeometry args={[sheet.width, sideWallHeight, sandwichThicknessM]} />
-                    }
-                    {selected && (
-                      <meshStandardMaterial
-                        attach="material"
-                        color={getRALHex(cladding.sideWallColor)}
-                        emissive="#ffffff"
-                        emissiveIntensity={0.3}
-                        side={THREE.DoubleSide}
-                      />
-                    )}
-                  </mesh>
+                  />
                 );
               })}
               {/* Gap lines between sheets */}
@@ -854,29 +934,22 @@ export const Cladding = React.memo(function Cladding({
                   {sheetPositions.map((sheet, sheetIdx) => {
                     const selected = isSheetSelected('side_left', bayIndex, sheetIdx);
                     return (
-                      <mesh
+                      <SheetMesh
                         key={`side-left-${bayIndex}-seg-${segIdx}-sheet-${sheetIdx}`}
+                        sheetWidth={sheet.width}
+                        sheetHeight={segHeight}
                         position={[sheet.x, segCenterY, zPosition]}
-                        material={segMat}
+                        isTrapezoid={isSideWallTrapezoid}
+                        profileType={sideWallProfileType}
+                        waveAxis={wallWaveAxis}
+                        sandwichThickness={sandwichThicknessM}
+                        baseMaterial={segMat}
+                        selected={selected}
                         onPointerDown={placementMode
                           ? (e) => handleSideWallClick('side_left', bayIndex, e)
-                          : (e) => handleSheetClick('side_left', bayIndex, sheetIdx, segHeight, sheet.width, seg.color, isSideWallTrapezoid ? undefined : (cladding.sandwichThickness ?? 100), e)
+                          : (e) => handleSheetClick('side_left', bayIndex, sheetIdx, segHeight, sheet.width, seg.color, isSideWallTrapezoid ? undefined : (cladding.sandwichThickness ?? 100), sheetModuleWidthMm, e)
                         }
-                      >
-                        {isSideWallTrapezoid
-                          ? <primitive object={createTrapezoidalGeometry(sheet.width, segHeight, sideWallProfileType, wallWaveAxis, true)} attach="geometry" />
-                          : <boxGeometry args={[sheet.width, segHeight, sandwichThicknessM]} />
-                        }
-                        {selected && (
-                          <meshStandardMaterial
-                            attach="material"
-                            color={getRALHex(seg.color)}
-                            emissive="#ffffff"
-                            emissiveIntensity={0.3}
-                            side={THREE.DoubleSide}
-                          />
-                        )}
-                      </mesh>
+                      />
                     );
                   })}
                   {/* Gap lines between sheets in this segment */}
@@ -940,30 +1013,23 @@ export const Cladding = React.memo(function Cladding({
               {sheetPositions.map((sheet, sheetIdx) => {
                 const selected = isSheetSelected('side_right', bayIndex, sheetIdx);
                 return (
-                  <mesh
+                  <SheetMesh
                     key={`side-right-${bayIndex}-sheet-${sheetIdx}`}
+                    sheetWidth={sheet.width}
+                    sheetHeight={sideWallHeight}
                     position={[sheet.x, sideWallHeight / 2, zPosition]}
                     rotation={[0, Math.PI, 0]}
-                    material={sideWallMat}
+                    isTrapezoid={isSideWallTrapezoid}
+                    profileType={sideWallProfileType}
+                    waveAxis={wallWaveAxis}
+                    sandwichThickness={sandwichThicknessM}
+                    baseMaterial={sideWallMat}
+                    selected={selected}
                     onPointerDown={placementMode
                       ? (e) => handleSideWallClick('side_right', bayIndex, e)
-                      : (e) => handleSheetClick('side_right', bayIndex, sheetIdx, sideWallHeight, sheet.width, cladding.sideWallColor, isSideWallTrapezoid ? undefined : (cladding.sandwichThickness ?? 100), e)
+                      : (e) => handleSheetClick('side_right', bayIndex, sheetIdx, sideWallHeight, sheet.width, cladding.sideWallColor, isSideWallTrapezoid ? undefined : (cladding.sandwichThickness ?? 100), sheetModuleWidthMm, e)
                     }
-                  >
-                    {isSideWallTrapezoid
-                      ? <primitive object={createTrapezoidalGeometry(sheet.width, sideWallHeight, sideWallProfileType, wallWaveAxis, true)} attach="geometry" />
-                      : <boxGeometry args={[sheet.width, sideWallHeight, sandwichThicknessM]} />
-                    }
-                    {selected && (
-                      <meshStandardMaterial
-                        attach="material"
-                        color={getRALHex(cladding.sideWallColor)}
-                        emissive="#ffffff"
-                        emissiveIntensity={0.3}
-                        side={THREE.DoubleSide}
-                      />
-                    )}
-                  </mesh>
+                  />
                 );
               })}
               {/* Gap lines between sheets */}
@@ -1022,30 +1088,23 @@ export const Cladding = React.memo(function Cladding({
                   {sheetPositions.map((sheet, sheetIdx) => {
                     const selected = isSheetSelected('side_right', bayIndex, sheetIdx);
                     return (
-                      <mesh
+                      <SheetMesh
                         key={`side-right-${bayIndex}-seg-${segIdx}-sheet-${sheetIdx}`}
+                        sheetWidth={sheet.width}
+                        sheetHeight={segHeight}
                         position={[sheet.x, segCenterY, zPosition]}
                         rotation={[0, Math.PI, 0]}
-                        material={segMat}
+                        isTrapezoid={isSideWallTrapezoid}
+                        profileType={sideWallProfileType}
+                        waveAxis={wallWaveAxis}
+                        sandwichThickness={sandwichThicknessM}
+                        baseMaterial={segMat}
+                        selected={selected}
                         onPointerDown={placementMode
                           ? (e) => handleSideWallClick('side_right', bayIndex, e)
-                          : (e) => handleSheetClick('side_right', bayIndex, sheetIdx, segHeight, sheet.width, seg.color, isSideWallTrapezoid ? undefined : (cladding.sandwichThickness ?? 100), e)
+                          : (e) => handleSheetClick('side_right', bayIndex, sheetIdx, segHeight, sheet.width, seg.color, isSideWallTrapezoid ? undefined : (cladding.sandwichThickness ?? 100), sheetModuleWidthMm, e)
                         }
-                      >
-                        {isSideWallTrapezoid
-                          ? <primitive object={createTrapezoidalGeometry(sheet.width, segHeight, sideWallProfileType, wallWaveAxis, true)} attach="geometry" />
-                          : <boxGeometry args={[sheet.width, segHeight, sandwichThicknessM]} />
-                        }
-                        {selected && (
-                          <meshStandardMaterial
-                            attach="material"
-                            color={getRALHex(seg.color)}
-                            emissive="#ffffff"
-                            emissiveIntensity={0.3}
-                            side={THREE.DoubleSide}
-                          />
-                        )}
-                      </mesh>
+                      />
                     );
                   })}
                   {/* Gap lines between sheets in this segment */}
