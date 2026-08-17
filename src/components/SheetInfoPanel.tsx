@@ -16,6 +16,8 @@ const wallLabelKeys: Record<string, string> = {
   end_back: 'openings.walls.end_back',
   end_front_gable: 'sheet.wall.end_front_gable',
   end_back_gable: 'sheet.wall.end_back_gable',
+  roof_left: 'sheet.wall.roof_left',
+  roof_right: 'sheet.wall.roof_right',
 };
 
 export function SheetInfoPanel({ selectedSheet, onClose }: SheetInfoPanelProps) {

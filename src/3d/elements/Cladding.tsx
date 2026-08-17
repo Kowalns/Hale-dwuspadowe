@@ -99,10 +99,14 @@ function createMicrolinedGeometry(
  * Profile parameters for trapezoidal sheets (in meters).
  * T18: height 18mm, plateau 70mm, valley 188mm, period ~290mm
  * T35: height 35mm, plateau 126mm, valley 210mm, period ~381mm
+ * ROOF_SANDWICH: height 42mm, plateau 100mm, valley 200mm, period 350mm
  */
-function getTrapezoidalParams(type: 'T18' | 'T35') {
+function getTrapezoidalParams(type: 'T18' | 'T35' | 'ROOF_SANDWICH') {
   if (type === 'T35') {
     return { height: 0.035, plateau: 0.126, valley: 0.210, period: 0.381 };
+  }
+  if (type === 'ROOF_SANDWICH') {
+    return { height: 0.042, plateau: 0.100, valley: 0.200, period: 0.350 };
   }
   // T18
   return { height: 0.018, plateau: 0.033, valley: 0.188, period: 0.290 };
@@ -120,7 +124,7 @@ function createTrapezoidMeshGeometry(
   panelWidth: number,
   hLeft: number,
   hRight: number,
-  profileType: 'T18' | 'T35' | null,
+  profileType: 'T18' | 'T35' | 'ROOF_SANDWICH' | null,
   waveAxis: 'x' | 'y',
 ): THREE.BufferGeometry {
   const segX = 20;
@@ -201,7 +205,7 @@ function createTrapezoidMeshGeometry(
 function createTrapezoidalGeometry(
   width: number,
   height: number,
-  profileType: 'T18' | 'T35',
+  profileType: 'T18' | 'T35' | 'ROOF_SANDWICH',
   waveAxis: 'x' | 'y',
   invert: boolean = false,
 ): THREE.PlaneGeometry {
@@ -245,7 +249,7 @@ interface SheetMeshProps {
   position: [number, number, number];
   rotation?: [number, number, number];
   isTrapezoid: boolean;
-  profileType: 'T18' | 'T35';
+  profileType: 'T18' | 'T35' | 'ROOF_SANDWICH';
   waveAxis: 'x' | 'y';
   sandwichThickness: number;
   baseMaterial: THREE.MeshStandardMaterial;
@@ -349,10 +353,6 @@ export const Cladding = React.memo(function Cladding({
   const isSideWallTrapezoid = cladding.sideWallType === 'trapezoid';
   const isEndWallTrapezoid = cladding.endWallType === 'trapezoid';
 
-  // Determine trapezoidal parameters for roof (temporarily unused - flat roof for positioning fix)
-  const _isRoofTrapezoid = cladding.roofType === 'T18' || cladding.roofType === 'T35';
-  void _isRoofTrapezoid;
-
   // Wall thickness offset: shift walls outward by their thickness to avoid column collision
   const sideWallThicknessOffset = isSideWallTrapezoid
     ? getTrapezoidalParams((cladding.sideWallType as string) === 'T35' ? 'T35' : 'T18').height
@@ -382,17 +382,16 @@ export const Cladding = React.memo(function Cladding({
   // That means the wave pattern repeats along X. So waveAxis = 'x'.
   const roofWidth = hallLength + 2 * (endColumnOuterOffset + 2 * endWallThicknessOffset);
   const roofSlopeLengthWithOverhang = roofSlopeLength + eaveOverhangM;
-  const roofThickness = 0.02; // 20mm flat roof panel for now
-  const roofGeometry = useMemo(() => {
-    return new THREE.BoxGeometry(roofWidth, roofSlopeLengthWithOverhang, roofThickness);
-  }, [roofWidth, roofSlopeLengthWithOverhang]);
 
-  const roofGeometryRight = roofGeometry; // same geometry for both slopes
-
-  // Dispose geometries
-  useEffect(() => {
-    return () => { roofGeometry.dispose(); };
-  }, [roofGeometry]);
+  // Roof sheet parameters
+  const roofModuleWidth = cladding.roofType === 'T35' ? 1.050 
+    : cladding.roofType === 'T18' ? 1.064 
+    : 1.130; // sandwich roof
+  const roofProfileType: 'T18' | 'T35' | 'ROOF_SANDWICH' = 
+    cladding.roofType === 'T35' ? 'T35' 
+    : cladding.roofType === 'T18' ? 'T18' 
+    : 'ROOF_SANDWICH';
+  const numRoofSheets = Math.ceil(roofWidth / roofModuleWidth);
 
   // Materials
   const sideWallMat = useMemo(() => {
@@ -412,6 +411,14 @@ export const Cladding = React.memo(function Cladding({
   }, [cladding.endWallColor]);
   const roofMat = useMemo(() => makeCladdingMaterial(cladding.roofColor), [cladding.roofColor]);
 
+  // Highlighted roof material for selected sheet
+  const highlightedRoofMat = useMemo(() => {
+    const mat = roofMat.clone();
+    mat.emissive.set('#ffffff');
+    mat.emissiveIntensity = 0.3;
+    return mat;
+  }, [roofMat]);
+
   // Dispose materials on color change or unmount
   useEffect(() => {
     return () => { sideWallMat.dispose(); };
@@ -425,6 +432,9 @@ export const Cladding = React.memo(function Cladding({
   useEffect(() => {
     return () => { roofMat.dispose(); };
   }, [roofMat]);
+  useEffect(() => {
+    return () => { highlightedRoofMat.dispose(); };
+  }, [highlightedRoofMat]);
 
   // Side wall stripes
   const sideStripes = useMemo(
@@ -2033,41 +2043,77 @@ export const Cladding = React.memo(function Cladding({
 
 
 
-      {/* Roof - left slope (Z=0 side going up to ridge) */}
-      {/* Roof panels extend beyond side walls by eaveOverhang */}
+      {/* Roof - left and right slopes rendered as individual sheets */}
       {(() => {
-        // Roof center Y: bottom surface of roof box at eave must align with wallHeight (purlin tops)
-        // After rotation by (PI/2 - angle) around X:
-        // bottomEdge Y = centerY - (slopeLength/2) * sin(angle) - (thickness/2) * cos(angle)
-        // Set bottomEdge Y = wallHeight:
-        const roofCenterY = wallHeight + (roofSlopeLengthWithOverhang / 2) * Math.sin(roofAngleRad) + (roofThickness / 2) * Math.cos(roofAngleRad);
+        // Roof center Y: bottom edge of roof at eave must align with wallHeight
+        const roofCenterY = wallHeight + (roofSlopeLengthWithOverhang / 2) * Math.sin(roofAngleRad);
         // Z positions: center of each slope
         const leftRoofCenterZ = (span / 2) - (roofSlopeLengthWithOverhang / 2) * Math.cos(roofAngleRad);
         const rightRoofCenterZ = (span / 2) + (roofSlopeLengthWithOverhang / 2) * Math.cos(roofAngleRad);
+
         return (
           <>
-            <mesh
-              position={[
-                hallLength / 2,
-                roofCenterY,
-                leftRoofCenterZ,
-              ]}
-              rotation={[Math.PI / 2 - roofAngleRad, 0, 0]}
-              geometry={roofGeometry}
-              material={roofMat}
-            />
+            {/* Left slope sheets */}
+            <group position={[hallLength / 2, roofCenterY, leftRoofCenterZ]} rotation={[Math.PI / 2 - roofAngleRad, 0, 0]}>
+              {Array.from({ length: numRoofSheets }).map((_, s) => {
+                const sheetW = Math.min(roofModuleWidth, roofWidth - s * roofModuleWidth) - 0.002;
+                const sheetX = -roofWidth / 2 + s * roofModuleWidth + (sheetW + 0.002) / 2;
+                const isSelected = selectedSheet?.wall === 'roof_left' && selectedSheet?.sheetIndex === s;
+                return (
+                  <mesh
+                    key={`roof-left-${s}`}
+                    position={[sheetX, 0, 0]}
+                    material={isSelected ? highlightedRoofMat : roofMat}
+                    onPointerDown={(e) => {
+                      if (placementMode) return;
+                      e.stopPropagation();
+                      onSelectSheet?.({
+                        wall: 'roof_left',
+                        bayIndex: 0,
+                        sheetIndex: s,
+                        width: Math.round(sheetW * 1000),
+                        length: Math.round(roofSlopeLengthWithOverhang * 1000),
+                        color: cladding.roofColor,
+                        module: Math.round(roofModuleWidth * 1000),
+                      });
+                    }}
+                  >
+                    <primitive object={createTrapezoidalGeometry(sheetW, roofSlopeLengthWithOverhang, roofProfileType, 'x')} attach="geometry" />
+                  </mesh>
+                );
+              })}
+            </group>
 
-            {/* Roof - right slope (Z=span side going up to ridge) */}
-            <mesh
-              position={[
-                hallLength / 2,
-                roofCenterY,
-                rightRoofCenterZ,
-              ]}
-              rotation={[-(Math.PI / 2 - roofAngleRad), 0, 0]}
-              geometry={roofGeometryRight}
-              material={roofMat}
-            />
+            {/* Right slope sheets */}
+            <group position={[hallLength / 2, roofCenterY, rightRoofCenterZ]} rotation={[-(Math.PI / 2 - roofAngleRad), 0, 0]}>
+              {Array.from({ length: numRoofSheets }).map((_, s) => {
+                const sheetW = Math.min(roofModuleWidth, roofWidth - s * roofModuleWidth) - 0.002;
+                const sheetX = -roofWidth / 2 + s * roofModuleWidth + (sheetW + 0.002) / 2;
+                const isSelected = selectedSheet?.wall === 'roof_right' && selectedSheet?.sheetIndex === s;
+                return (
+                  <mesh
+                    key={`roof-right-${s}`}
+                    position={[sheetX, 0, 0]}
+                    material={isSelected ? highlightedRoofMat : roofMat}
+                    onPointerDown={(e) => {
+                      if (placementMode) return;
+                      e.stopPropagation();
+                      onSelectSheet?.({
+                        wall: 'roof_right',
+                        bayIndex: 0,
+                        sheetIndex: s,
+                        width: Math.round(sheetW * 1000),
+                        length: Math.round(roofSlopeLengthWithOverhang * 1000),
+                        color: cladding.roofColor,
+                        module: Math.round(roofModuleWidth * 1000),
+                      });
+                    }}
+                  >
+                    <primitive object={createTrapezoidalGeometry(sheetW, roofSlopeLengthWithOverhang, roofProfileType, 'x')} attach="geometry" />
+                  </mesh>
+                );
+              })}
+            </group>
           </>
         );
       })()}

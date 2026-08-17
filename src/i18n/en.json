@@ -237,6 +237,8 @@
     "wall": "Wall",
     "wall.end_front_gable": "Front gable (triangle)",
     "wall.end_back_gable": "Back gable (triangle)",
+    "wall.roof_left": "Roof (left slope)",
+    "wall.roof_right": "Roof (right slope)",
     "bay": "Bay",
     "index": "Sheet #"
   },

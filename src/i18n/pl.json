@@ -237,6 +237,8 @@
     "wall": "Sciana",
     "wall.end_front_gable": "Szczyt frontowy (trójkąt)",
     "wall.end_back_gable": "Szczyt tylny (trójkąt)",
+    "wall.roof_left": "Dach (lewa połać)",
+    "wall.roof_right": "Dach (prawa połać)",
     "bay": "Sekcja",
     "index": "Nr arkusza"
   },
