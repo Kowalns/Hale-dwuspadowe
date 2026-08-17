@@ -1,8 +1,9 @@
 import { useState, useCallback, useMemo } from 'react';
 import { FormPanel, DEFAULT_PARAMS } from './FormPanel';
 import { Scene } from '../3d/Scene';
+import { SheetInfoPanel } from './SheetInfoPanel';
 import { useHallCalculations } from '../hooks/useHallCalculations';
-import type { HallParameters, ProfileOverrides, RafterType, CladdingParameters, Opening, OpeningType, SkylightParameters } from '../types';
+import type { HallParameters, ProfileOverrides, RafterType, CladdingParameters, Opening, OpeningType, SkylightParameters, SelectedSheet } from '../types';
 import type { PricingData } from '../data/pricing';
 import { defaultPricing } from '../data/pricing';
 import { calculatePricing } from '../utils/pricing';
@@ -36,6 +37,7 @@ export function Layout() {
   const [sillHeight, setSillHeight] = useState(0.9);
   const [skylight, setSkylight] = useState<SkylightParameters>({ enabled: false, length: 6, width: 1.5 });
   const [pricing, setPricing] = useState<PricingData>(defaultPricing);
+  const [selectedSheet, setSelectedSheet] = useState<SelectedSheet | null>(null);
 
   const addOpening = useCallback((opening: Opening) => {
     setOpenings((prev) => [...prev, opening]);
@@ -109,7 +111,10 @@ export function Layout() {
           openingHeight={openingHeight}
           sillHeight={sillHeight}
           skylight={skylight}
+          selectedSheet={selectedSheet}
+          onSelectSheet={setSelectedSheet}
         />
+        <SheetInfoPanel selectedSheet={selectedSheet} onClose={() => setSelectedSheet(null)} />
       </section>
     </main>
   );

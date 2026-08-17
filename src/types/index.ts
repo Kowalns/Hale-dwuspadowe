@@ -44,6 +44,16 @@ export interface SkylightParameters {
   width: number; // meters (across ridge, along Z axis)
 }
 
+export interface SelectedSheet {
+  wall: string;
+  bayIndex: number;
+  sheetIndex: number;
+  length: number;
+  width: number;
+  color: string;
+  thickness?: number;
+}
+
 export type SteelGrade = 'S235' | 'S355';
 export type CoveringType = 'sheet' | 'sandwich';
 export type TerrainCategory = 1 | 2 | 3 | 4;

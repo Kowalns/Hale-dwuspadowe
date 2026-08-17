@@ -4,7 +4,7 @@ import { OrbitControls } from '@react-three/drei'
 import { EffectComposer, N8AO, ToneMapping } from '@react-three/postprocessing'
 import { ToneMappingMode } from 'postprocessing'
 import { HallModel } from './HallModel'
-import type { HallParameters, CalculationResults, CladdingParameters, Opening, OpeningType, SkylightParameters } from '../types'
+import type { HallParameters, CalculationResults, CladdingParameters, Opening, OpeningType, SkylightParameters, SelectedSheet } from '../types'
 
 interface SceneProps {
   params: HallParameters;
@@ -19,10 +19,12 @@ interface SceneProps {
   openingHeight?: number;
   sillHeight?: number;
   skylight?: SkylightParameters;
+  selectedSheet?: SelectedSheet | null;
+  onSelectSheet?: (sheet: SelectedSheet | null) => void;
 }
 
 function SceneContent(props: SceneProps) {
-  const { params, results, ...rest } = props;
+  const { params, results, selectedSheet: _selectedSheet, onSelectSheet: _onSelectSheet, ...rest } = props;
 
   return (
     <>
@@ -49,7 +51,7 @@ function SceneContent(props: SceneProps) {
         <meshStandardMaterial color="#e8e8e8" roughness={0.9} metalness={0} />
       </mesh>
 
-      <HallModel params={params} results={results} {...rest} />
+      <HallModel params={params} results={results} selectedSheet={_selectedSheet} onSelectSheet={_onSelectSheet} {...rest} />
 
       <OrbitControls
         makeDefault
@@ -77,6 +79,7 @@ export function Scene(props: SceneProps) {
       gl={{ powerPreference: 'high-performance', antialias: false }}
       dpr={[1, 2]}
       className="w-full h-full"
+      onPointerMissed={() => props.onSelectSheet?.(null)}
     >
       <color attach="background" args={['#f5f5f5']} />
       <Suspense fallback={null}>

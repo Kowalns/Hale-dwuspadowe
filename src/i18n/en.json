@@ -227,6 +227,17 @@
     "length": "Skylight length",
     "width": "Skylight width"
   },
+  "sheet": {
+    "title": "Sheet info",
+    "length": "Length",
+    "width": "Width",
+    "color": "Color",
+    "module": "Module",
+    "thickness": "Thickness",
+    "wall": "Wall",
+    "bay": "Bay",
+    "index": "Sheet #"
+  },
   "pricing": {
     "title": "Pricing",
     "column": {

@@ -227,6 +227,17 @@
     "length": "Dlugosc swietlika",
     "width": "Szerokosc swietlika"
   },
+  "sheet": {
+    "title": "Arkusz blachy",
+    "length": "Dlugosc",
+    "width": "Szerokosc",
+    "color": "Kolor",
+    "module": "Modul",
+    "thickness": "Grubosc",
+    "wall": "Sciana",
+    "bay": "Sekcja",
+    "index": "Nr arkusza"
+  },
   "pricing": {
     "title": "Wycena",
     "column": {

@@ -20,7 +20,7 @@ import { Openings } from './elements/Openings';
 import { GateFrame } from './elements/GateFrame';
 import { Skylight } from './elements/Skylight';
 import { getEffectiveRafterTop } from '../utils/geometry';
-import type { HallParameters, CalculationResults, CladdingParameters, Opening, OpeningType, SkylightParameters } from '../types';
+import type { HallParameters, CalculationResults, CladdingParameters, Opening, OpeningType, SkylightParameters, SelectedSheet } from '../types';
 
 interface HallModelProps {
   params: HallParameters;
@@ -35,6 +35,8 @@ interface HallModelProps {
   openingHeight?: number;
   sillHeight?: number;
   skylight?: SkylightParameters;
+  selectedSheet?: SelectedSheet | null;
+  onSelectSheet?: (sheet: SelectedSheet | null) => void;
 }
 
 /**
@@ -43,7 +45,7 @@ interface HallModelProps {
  * Origin is at bottom-left corner of building (X=0, Y=0, Z=0).
  * X = along building length, Y = up, Z = across building width (span)
  */
-export const HallModel = React.memo(function HallModel({ params, results, cladding, showCladding, openings, placementMode, onPlaceOpening, selectedOpeningType, openingWidth, openingHeight, sillHeight, skylight }: HallModelProps) {
+export const HallModel = React.memo(function HallModel({ params, results, cladding, showCladding, openings, placementMode, onPlaceOpening, selectedOpeningType, openingWidth, openingHeight, sillHeight, skylight, selectedSheet, onSelectSheet }: HallModelProps) {
   const { span, length: hallLength, wallHeight, roofAngle } = params;
   const purlinMounting = params.purlinMounting ?? 'on-top';
   const {
@@ -309,6 +311,8 @@ export const HallModel = React.memo(function HallModel({ params, results, claddi
           openingWidth={openingWidth}
           openingHeight={openingHeight}
           sillHeight={sillHeight}
+          selectedSheet={selectedSheet}
+          onSelectSheet={onSelectSheet}
         />
       )}
 
