@@ -1624,7 +1624,7 @@ export const Cladding = React.memo(function Cladding({
                     e.stopPropagation();
                     const maxH = Math.max(hLeft, hRight);
                     onSelectSheet({
-                      wall: 'end_front',
+                      wall: 'end_front_gable',
                       bayIndex: i,
                       sheetIndex: 0,
                       width: panelWidth,
@@ -1945,7 +1945,7 @@ export const Cladding = React.memo(function Cladding({
                     e.stopPropagation();
                     const maxH = Math.max(hLeft, hRight);
                     onSelectSheet({
-                      wall: 'end_back',
+                      wall: 'end_back_gable',
                       bayIndex: i,
                       sheetIndex: 0,
                       width: panelWidth,
