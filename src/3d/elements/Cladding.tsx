@@ -146,7 +146,7 @@ function createTrapezoidMeshGeometry(
       let z = 0;
       if (profileType) {
         const { height: amp, plateau, valley, period } = getTrapezoidalParams(profileType);
-        const coord = waveAxis === 'x' ? x : y;
+        const coord = waveAxis === 'x' ? x : ty * maxH;
         const extent = waveAxis === 'x' ? panelWidth : maxH;
         z = -trapezoidHeight(coord + extent / 2, period, plateau, valley, amp);
       }
