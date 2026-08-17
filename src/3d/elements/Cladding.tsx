@@ -1663,15 +1663,7 @@ export const Cladding = React.memo(function Cladding({
               />
             );
 
-            // 2mm gap line between layers
-            if (layer < numLayers - 1 && layerTopY < maxH) {
-              elements.push(
-                <mesh key={`end-front-gable-gap-${i}-${layer}`} position={[xPos - 0.001, wallHeight + layerTopY, panelCenterZ]}>
-                  <boxGeometry args={[0.002, panelWidth, 0.005]} />
-                  <meshStandardMaterial color="#404040" />
-                </mesh>
-              );
-            }
+            // Gap between layers handled by mesh spacing (no explicit gap geometry)
           }
         }
 
@@ -2011,15 +2003,7 @@ export const Cladding = React.memo(function Cladding({
               />
             );
 
-            // 2mm gap line between layers
-            if (layer < numLayers - 1 && layerTopY < maxH) {
-              elements.push(
-                <mesh key={`end-back-gable-gap-${i}-${layer}`} position={[xPos + 0.001, wallHeight + layerTopY, panelCenterZ]}>
-                  <boxGeometry args={[0.002, panelWidth, 0.005]} />
-                  <meshStandardMaterial color="#404040" />
-                </mesh>
-              );
-            }
+            // Gap between layers handled by mesh spacing (no explicit gap geometry)
           }
         }
 
