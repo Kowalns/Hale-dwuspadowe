@@ -121,7 +121,7 @@ function createTrapezoidMeshGeometry(
   profileType: 'T18' | 'T35' | null,
   waveAxis: 'x' | 'y',
 ): THREE.BufferGeometry {
-  const segX = 2;
+  const segX = 20;
   const maxH = Math.max(hLeft, hRight);
   if (maxH < 0.01) return new THREE.PlaneGeometry(panelWidth, 0.01);
 
